@@ -1,31 +1,31 @@
-// The demo's hexagonal species photo: pointy-top hex, colored border, photo
-// clipped inside. Geometry = HEX_CLIP polygon(50% 0, 100% 25, 100% 75, 50% 100,
-// 0 75, 0 25) from App.jsx, drawn with react-native-svg.
+// The Polygrove hexagon photo — EXACT explorer geometry (index.html .dc-hex /
+// .bighex): pointy-top hex, TALLER than wide (46x52, 148x167 → ratio 0.885),
+// colored border, #111 well, photo clipped inside.
 
 import { Image as SvgImage, ClipPath, Defs, Polygon, Svg } from 'react-native-svg';
 
-const hexPoints = (s: number, o = 0) =>
+const pts = (w: number, h: number, ox = 0, oy = 0) =>
   [[0.5, 0], [1, 0.25], [1, 0.75], [0.5, 1], [0, 0.75], [0, 0.25]]
-    .map(([x, y]) => `${o + x * s},${o + y * s}`).join(' ');
+    .map(([x, y]) => `${ox + x * w},${oy + y * h}`).join(' ');
 
 let _seq = 0;
 
 export default function HexPhoto({
-  uri, size = 72, borderColor = 'rgba(255,255,255,0.18)', borderWidth = 3,
-}: { uri?: string; size?: number; borderColor?: string; borderWidth?: number }) {
-  const inner = size - borderWidth * 2;
+  uri, width, height, borderColor = 'rgba(255,255,255,0.18)', borderWidth = 3,
+}: { uri?: string; width: number; height: number; borderColor?: string; borderWidth?: number }) {
+  const iw = width - borderWidth * 2, ih = height - borderWidth * 2;
   const id = `hx${_seq++}`;
   return (
-    <Svg width={size} height={size}>
+    <Svg width={width} height={height}>
       <Defs>
-        <ClipPath id={id}><Polygon points={hexPoints(inner, borderWidth)} /></ClipPath>
+        <ClipPath id={id}><Polygon points={pts(iw, ih, borderWidth, borderWidth)} /></ClipPath>
       </Defs>
-      <Polygon points={hexPoints(size)} fill={borderColor} />
-      <Polygon points={hexPoints(inner, borderWidth)} fill="#1a1a1a" />
+      <Polygon points={pts(width, height)} fill={borderColor} />
+      <Polygon points={pts(iw, ih, borderWidth, borderWidth)} fill="#111111" />
       {!!uri && (
         <SvgImage
           href={{ uri }} x={borderWidth} y={borderWidth}
-          width={inner} height={inner}
+          width={iw} height={ih}
           preserveAspectRatio="xMidYMid slice"
           clipPath={`url(#${id})`}
         />
