@@ -25,11 +25,18 @@ export default function PolygroveCard({ card }: { card: Card }) {
     setFlipped(!flipped);
     flip.value = withTiming(to, { duration: 500 });
   };
+  // backfaceVisibility alone is unreliable on iOS Fabric during animated
+  // rotateY — ALSO hard-switch opacity at the 90° midpoint (card is edge-on
+  // there, so the cut is invisible) and swap zIndex so the visible face wins
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1200 }, { rotateY: `${interpolate(flip.value, [0, 1], [0, 180])}deg` }],
+    opacity: flip.value < 0.5 ? 1 : 0,
+    zIndex: flip.value < 0.5 ? 2 : 1,
   }));
   const backStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1200 }, { rotateY: `${interpolate(flip.value, [0, 1], [180, 360])}deg` }],
+    opacity: flip.value < 0.5 ? 0 : 1,
+    zIndex: flip.value < 0.5 ? 1 : 2,
   }));
 
   const eats = card.foodweb?.eats?.[0]?.name;
