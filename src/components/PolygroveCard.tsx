@@ -11,6 +11,7 @@ import { Line, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, cardByName, photoFor } from '../lib/catalog';
 import { fieldNote } from '../lib/dossier';
+import FoodWebModal from './FoodWebModal';
 import HexPhoto from './HexPhoto';
 
 export default function PolygroveCard({ card }: { card: Card }) {
@@ -21,6 +22,7 @@ export default function PolygroveCard({ card }: { card: Card }) {
 
   const flip = useSharedValue(0);
   const [flipped, setFlipped] = useState(false);
+  const [fwOpen, setFwOpen] = useState(false);
   const doFlip = () => {
     const to = flipped ? 0 : 1;
     setFlipped(!flipped);
@@ -88,9 +90,9 @@ export default function PolygroveCard({ card }: { card: Card }) {
           <Text style={s.fwLabel}>FOOD WEB</Text>
           <View style={s.fwLine} />
         </View>
-        <MiniWeb card={card} tc={tc} />
-        <View style={{ marginTop: 'auto' }} />
+        <MiniWeb card={card} tc={tc} onExpand={() => setFwOpen(true)} />
         <View style={s.pillRow}><View style={s.pill}><Text style={s.pillTxt}>Tap card to flip</Text></View></View>
+        <FoodWebModal card={card} open={fwOpen} onClose={() => setFwOpen(false)} />
       </Animated.View>
     </Pressable>
   );
@@ -115,8 +117,10 @@ function Box({ k, v, vColor }: { k: string; v: string; vColor?: string }) {
 }
 
 // the back's mini food web (fwMiniHTML): eaten-by row above, focal center,
-// eats row below, grey connectors — neighbor hexes use their card photos
-function MiniWeb({ card, tc }: { card: Card; tc: string }) {
+// eats row below, grey connectors — neighbor hexes use their card photos.
+// FILLS the remaining card space (user, 2026-09-25); tap opens the full web.
+function MiniWeb({ card, tc, onExpand }: { card: Card; tc: string; onExpand: () => void }) {
+  const [dims, setDims] = useState({ w: 296, h: 148 });
   const eatenBy = (card.foodweb?.eatenBy || []).slice(0, 3);
   const eats = (card.foodweb?.eats || []).slice(0, 3);
   if (!eatenBy.length && !eats.length) {
@@ -126,21 +130,27 @@ function MiniWeb({ card, tc }: { card: Card; tc: string }) {
       </View>
     );
   }
-  const W = 296, H = 132, hexW = 30, hexH = 34;
+  const W = dims.w, H = dims.h, hexW = 30, hexH = 34;
+  const topY = Math.max(26, H * 0.18), botY = H - Math.max(30, H * 0.2);
+  // one-sided webs center vertically instead of stranding the focal mid-box
+  const focalY = eatenBy.length && eats.length ? H / 2
+    : eatenBy.length ? H * 0.62 : H * 0.34;
   const colX = (n: number, i: number) => (W / (n + 1)) * (i + 1);
   const rows: { items: typeof eats; y: number }[] = [
-    { items: eatenBy, y: 22 }, { items: eats, y: H - 22 },
+    { items: eatenBy, y: eats.length ? topY : H * 0.3 },
+    { items: eats, y: eatenBy.length ? botY : H * 0.68 },
   ];
   return (
-    <View style={s.fwBox}>
-      <View style={s.fwChip}><Text style={s.fwChipTxt}>Food web</Text></View>
+    <Pressable style={s.fwBox} onPress={onExpand}
+      onLayout={e => setDims({ w: e.nativeEvent.layout.width - 24, h: e.nativeEvent.layout.height - 12 })}>
+      <View style={s.fwChip}><Text style={s.fwChipTxt}>Tap to expand</Text></View>
       <View style={{ width: W, height: H, alignSelf: 'center' }}>
         <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
           {eatenBy.map((l, i) => (
-            <Line key={`b${i}`} x1={colX(eatenBy.length, i)} y1={22 + hexH / 2} x2={W / 2} y2={H / 2 - 4} stroke="#3a3a3a" strokeWidth={1.4} />
+            <Line key={`b${i}`} x1={colX(eatenBy.length, i)} y1={rows[0].y + hexH / 2} x2={W / 2} y2={focalY - 4} stroke="#3a3a3a" strokeWidth={1.4} />
           ))}
           {eats.map((l, i) => (
-            <Line key={`e${i}`} x1={colX(eats.length, i)} y1={H - 22 - hexH / 2} x2={W / 2} y2={H / 2 + 4} stroke="#3a3a3a" strokeWidth={1.4} />
+            <Line key={`e${i}`} x1={colX(eats.length, i)} y1={rows[1].y - hexH / 2} x2={W / 2} y2={focalY + 4} stroke="#3a3a3a" strokeWidth={1.4} />
           ))}
         </Svg>
         {rows.map(({ items, y }, r) =>
@@ -154,11 +164,11 @@ function MiniWeb({ card, tc }: { card: Card; tc: string }) {
               </View>
             );
           }))}
-        <View style={{ position: 'absolute', left: W / 2 - 19, top: H / 2 - 21 }}>
+        <View style={{ position: 'absolute', left: W / 2 - 19, top: focalY - 21 }}>
           <HexPhoto uri={photoFor(card.id, 120)} width={38} height={42} borderColor={tc} borderWidth={3} />
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -194,7 +204,7 @@ const s = StyleSheet.create({
   fwLine: { flex: 1, height: 1, backgroundColor: '#333333' },
   fwLabel: { color: '#888888', fontSize: 10, letterSpacing: 2.2, fontFamily: F.sans },
   // .dc-fw
-  fwBox: { height: 148, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12, overflow: 'hidden' },
+  fwBox: { flex: 1, minHeight: 148, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12, overflow: 'hidden' },
   fwChip: { position: 'absolute', top: 8, left: 10, backgroundColor: '#2a2a2a', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3, zIndex: 2 },
   fwChipTxt: { color: '#999999', fontSize: 10.5, fontFamily: F.sans },
   fwName: { color: '#999999', fontSize: 7.5, fontFamily: F.sans, maxWidth: 64, marginTop: 1 },
