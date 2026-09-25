@@ -80,14 +80,21 @@ export default function PackOpening() {
       </View>
 
       <View style={s.stage}>
-        {/* next card waits behind at 0.95 scale, like the demo stack */}
+        {/* next card waits behind at 0.95 scale, like the demo stack.
+            NOTE: overlays carry explicit top/left/right/bottom — absolute
+            children WITHOUT offsets keep their flow position on iOS and the
+            cards stacked vertically (user's phone, 2026-09-25) */}
         {pack[idx + 1] && (
-          <View style={[s.cardSlot, { transform: [{ scale: 0.95 }] }]} pointerEvents="none">
-            <PolygroveCard key={pack[idx + 1].id} card={pack[idx + 1]} />
+          <View style={s.overlay} pointerEvents="none">
+            <View style={[s.cardBox, { transform: [{ scale: 0.95 }] }]}>
+              <PolygroveCard key={pack[idx + 1].id} card={pack[idx + 1]} />
+            </View>
           </View>
         )}
         <SwipeSlot key={pack[idx].id} onSwiped={onSwiped}>
-          <PolygroveCard card={pack[idx]} />
+          <View style={s.cardBox}>
+            <PolygroveCard card={pack[idx]} />
+          </View>
         </SwipeSlot>
       </View>
 
@@ -128,7 +135,7 @@ function SwipeSlot({ children, onSwiped }: { children: React.ReactNode; onSwiped
 
   return (
     <GestureDetector gesture={pan}>
-      <Animated.View style={[s.cardSlot, style]}>{children}</Animated.View>
+      <Animated.View style={[s.overlay, style]}>{children}</Animated.View>
     </GestureDetector>
   );
 }
@@ -146,8 +153,12 @@ const s = StyleSheet.create({
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#333' },
   dotOn: { width: 18, backgroundColor: C.greenSoft },
   dotDone: { backgroundColor: '#2E7D32' },
-  stage: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  cardSlot: { position: 'absolute', width: '96%', maxWidth: 370, height: '96%', maxHeight: 560 },
+  stage: { flex: 1 },
+  overlay: {
+    position: 'absolute', top: 0, bottom: 0, left: 0, right: 0,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardBox: { width: '96%', maxWidth: 370, height: '96%', maxHeight: 560 },
   hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   hintL: { fontFamily: F.sansMed, fontSize: 11.5, color: '#666' },
   hintC: { fontFamily: F.sans, fontSize: 10.5, color: C.faint },
