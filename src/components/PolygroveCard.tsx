@@ -4,14 +4,14 @@
 // BACK: dc-head (46x52 hex + name/sci + ☆), 2x2 centered slot boxes, field
 // note, FOOD WEB divider + mini web, "Tap card to flip". Tap flips (0.55s).
 
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { Line, Svg } from 'react-native-svg';
+import { Image as SvgImage, ClipPath, Defs, G, Line, Polygon, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
-import { Card, cardByName, photoFor } from '../lib/catalog';
+import { Card, FoodwebLink, cardByName, photoFor } from '../lib/catalog';
 import { fieldNote } from '../lib/dossier';
-import FoodWebModal from './FoodWebModal';
 import HexPhoto from './HexPhoto';
 
 export default function PolygroveCard({ card }: { card: Card }) {
@@ -20,9 +20,9 @@ export default function PolygroveCard({ card }: { card: Card }) {
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => { let on = true; fieldNote(card.sci).then(n => on && setNote(n)); return () => { on = false; }; }, [card.sci]);
 
+  const router = useRouter();
   const flip = useSharedValue(0);
   const [flipped, setFlipped] = useState(false);
-  const [fwOpen, setFwOpen] = useState(false);
   const doFlip = () => {
     const to = flipped ? 0 : 1;
     setFlipped(!flipped);
@@ -90,9 +90,8 @@ export default function PolygroveCard({ card }: { card: Card }) {
           <Text style={s.fwLabel}>FOOD WEB</Text>
           <View style={s.fwLine} />
         </View>
-        <MiniWeb card={card} tc={tc} onExpand={() => setFwOpen(true)} />
+        <MiniWeb card={card} tc={tc} onExpand={() => router.push(`/web/${card.id}`)} />
         <View style={s.pillRow}><View style={s.pill}><Text style={s.pillTxt}>Tap card to flip</Text></View></View>
-        <FoodWebModal card={card} open={fwOpen} onClose={() => setFwOpen(false)} />
       </Animated.View>
     </Pressable>
   );
@@ -116,58 +115,87 @@ function Box({ k, v, vColor }: { k: string; v: string; vColor?: string }) {
   );
 }
 
-// the back's mini food web (fwMiniHTML): eaten-by row above, focal center,
-// eats row below, grey connectors — neighbor hexes use their card photos.
-// FILLS the remaining card space (user, 2026-09-25); tap opens the full web.
+// the back's mini food web — EXACT port of the explorer's fwGraphSVG (index.html
+// :805, 'sm' instance: viewBox 300x200, nodeR 9, centerR 16, radiusFactor 0.34,
+// no labels): predators fan the top semicircle, prey the bottom, arrows flow
+// DOWN and meet each hexagon exactly at its boundary. Tap opens the full web.
+const hexPtsStr = (x: number, y: number, r: number) =>
+  `${x},${y - r} ${x + r},${y - r / 2} ${x + r},${y + r / 2} ${x},${y + r} ${x - r},${y + r / 2} ${x - r},${y - r / 2}`;
+function rayHex(x: number, y: number, s2: number, ux: number, uy: number): [number, number] {
+  const V = [[x, y - s2], [x + s2, y - s2 / 2], [x + s2, y + s2 / 2], [x, y + s2], [x - s2, y + s2 / 2], [x - s2, y - s2 / 2]];
+  let best: [number, number] = [x + ux * s2, y + uy * s2], bt = 1e9;
+  for (let e = 0; e < 6; e++) {
+    const [x1, y1] = V[e], [x2, y2] = V[(e + 1) % 6], ex = x2 - x1, ey = y2 - y1;
+    const den = ux * ey - uy * ex; if (Math.abs(den) < 1e-9) continue;
+    const t = ((x1 - x) * ey - (y1 - y) * ex) / den; if (t <= 0 || t >= bt) continue;
+    const u = Math.abs(ex) > Math.abs(ey) ? ((x + t * ux) - x1) / ex : ((y + t * uy) - y1) / ey;
+    if (u >= -0.001 && u <= 1.001) { bt = t; best = [x + t * ux, y + t * uy]; }
+  }
+  return best;
+}
 function MiniWeb({ card, tc, onExpand }: { card: Card; tc: string; onExpand: () => void }) {
-  const [dims, setDims] = useState({ w: 296, h: 148 });
-  const eatenBy = (card.foodweb?.eatenBy || []).slice(0, 3);
-  const eats = (card.foodweb?.eats || []).slice(0, 3);
-  if (!eatenBy.length && !eats.length) {
+  const preds = (card.foodweb?.eatenBy || []).slice(0, 4);
+  const prey = (card.foodweb?.eats || []).slice(0, 4);
+  if (!preds.length && !prey.length) {
     return (
       <View style={[s.fwBox, { alignItems: 'center', justifyContent: 'center' }]}>
         <Text style={{ color: C.faint, fontFamily: F.sans, fontSize: 11 }}>no recorded interactions</Text>
       </View>
     );
   }
-  const W = dims.w, H = dims.h, hexW = 30, hexH = 34;
-  const topY = Math.max(26, H * 0.18), botY = H - Math.max(30, H * 0.2);
-  // one-sided webs center vertically instead of stranding the focal mid-box
-  const focalY = eatenBy.length && eats.length ? H / 2
-    : eatenBy.length ? H * 0.62 : H * 0.34;
-  const colX = (n: number, i: number) => (W / (n + 1)) * (i + 1);
-  const rows: { items: typeof eats; y: number }[] = [
-    { items: eatenBy, y: eats.length ? topY : H * 0.3 },
-    { items: eats, y: eatenBy.length ? botY : H * 0.68 },
-  ];
+  const W = 300, H = 200, nodeR = 9, centerR = 16;
+  const cx = W / 2, cy = H / 2, rowOff = Math.min(W, H) * 0.34;
+  const mk = (list: FoodwebLink[], pred: boolean) => list.map((sp, i) => {
+    const a = ((pred ? -180 : 0) + (i + 0.5) * 180 / list.length) * Math.PI / 180;
+    return { ...sp, x: cx + Math.cos(a) * rowOff, y: cy + Math.sin(a) * rowOff, pred };
+  });
+  const nodes = [...mk(preds, true), ...mk(prey, false)];
+  let clipSeq = 0;
   return (
-    <Pressable style={s.fwBox} onPress={onExpand}
-      onLayout={e => setDims({ w: e.nativeEvent.layout.width - 24, h: e.nativeEvent.layout.height - 12 })}>
+    <Pressable style={s.fwBox} onPress={onExpand}>
       <View style={s.fwChip}><Text style={s.fwChipTxt}>Tap to expand</Text></View>
-      <View style={{ width: W, height: H, alignSelf: 'center' }}>
-        <Svg width={W} height={H} style={StyleSheet.absoluteFill}>
-          {eatenBy.map((l, i) => (
-            <Line key={`b${i}`} x1={colX(eatenBy.length, i)} y1={rows[0].y + hexH / 2} x2={W / 2} y2={focalY - 4} stroke="#3a3a3a" strokeWidth={1.4} />
-          ))}
-          {eats.map((l, i) => (
-            <Line key={`e${i}`} x1={colX(eats.length, i)} y1={rows[1].y - hexH / 2} x2={W / 2} y2={focalY + 4} stroke="#3a3a3a" strokeWidth={1.4} />
-          ))}
-        </Svg>
-        {rows.map(({ items, y }, r) =>
-          items.map((l, i) => {
-            const other = cardByName(l.name);
-            const oc = other ? (TROPHIC_COLOR[other.trophic] || '#666') : '#444';
-            return (
-              <View key={`${r}-${i}`} style={{ position: 'absolute', left: colX(items.length, i) - hexW / 2, top: y - hexH / 2, alignItems: 'center' }}>
-                <HexPhoto uri={other ? photoFor(other.id, 120) : undefined} width={hexW} height={hexH} borderColor={oc} borderWidth={2} />
-                <Text style={s.fwName} numberOfLines={1}>{l.name}</Text>
-              </View>
-            );
-          }))}
-        <View style={{ position: 'absolute', left: W / 2 - 19, top: focalY - 21 }}>
-          <HexPhoto uri={photoFor(card.id, 120)} width={38} height={42} borderColor={tc} borderWidth={3} />
-        </View>
-      </View>
+      <Svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%">
+        {nodes.map((sp, i) => {
+          const dx = sp.x - cx, dy = sp.y - cy, dist = Math.hypot(dx, dy), ux = dx / dist, uy = dy / dist;
+          const [fx, fy] = rayHex(cx, cy, centerR + 1, ux, uy);
+          const [nx2, ny2] = rayHex(sp.x, sp.y, nodeR + 1, -ux, -uy);
+          // top: predator → focal; bottom: focal → prey — arrows always flow DOWN
+          const [x1, y1, x2, y2] = sp.pred ? [nx2, ny2, fx, fy] : [fx, fy, nx2, ny2];
+          const lux = (x2 - x1) / Math.hypot(x2 - x1, y2 - y1), luy = (y2 - y1) / Math.hypot(x2 - x1, y2 - y1);
+          const bx = x2 - lux * 6.5, by = y2 - luy * 6.5, px = -luy, py = lux;
+          return (
+            <G key={`l${i}`}>
+              <Line x1={x1} y1={y1} x2={bx} y2={by} stroke="#3a3a3a" strokeWidth={1.2} />
+              <Polygon points={`${x2},${y2} ${bx + px * 3},${by + py * 3} ${bx - px * 3},${by - py * 3}`} fill="#5a5a5a" />
+            </G>
+          );
+        })}
+        {nodes.map((sp, i) => {
+          const t = cardByName(sp.name);
+          const accent = t ? (TROPHIC_COLOR[t.trophic] || '#8fa08f') : '#8fa08f';
+          const nph = t ? photoFor(t.id, 120) : undefined;
+          const cid = `mw${clipSeq++}`;
+          return nph ? (
+            <G key={`n${i}`}>
+              <Defs><ClipPath id={cid}><Polygon points={hexPtsStr(sp.x, sp.y, nodeR)} /></ClipPath></Defs>
+              <Polygon points={hexPtsStr(sp.x, sp.y, nodeR)} fill="#1a1a1a" />
+              <SvgImage href={{ uri: nph }} x={sp.x - nodeR} y={sp.y - nodeR} width={nodeR * 2} height={nodeR * 2}
+                preserveAspectRatio="xMidYMid slice" clipPath={`url(#${cid})`} />
+              <Polygon points={hexPtsStr(sp.x, sp.y, nodeR)} fill="none" stroke={accent} strokeWidth={1.2} strokeLinejoin="round" />
+            </G>
+          ) : (
+            <Polygon key={`n${i}`} points={hexPtsStr(sp.x, sp.y, nodeR)}
+              fill={t ? accent : '#444'} stroke={t ? '#1a1a1a' : accent} strokeWidth={1} strokeLinejoin="round" opacity={t ? 1 : 0.85} />
+          );
+        })}
+        <Defs><ClipPath id="mwfocal"><Polygon points={hexPtsStr(cx, cy, centerR)} /></ClipPath></Defs>
+        <Polygon points={hexPtsStr(cx, cy, centerR)} fill="#1a1a1a" />
+        {!!photoFor(card.id, 120) && (
+          <SvgImage href={{ uri: photoFor(card.id, 120)! }} x={cx - centerR} y={cy - centerR}
+            width={centerR * 2} height={centerR * 2} preserveAspectRatio="xMidYMid slice" clipPath="url(#mwfocal)" />
+        )}
+        <Polygon points={hexPtsStr(cx, cy, centerR)} fill="none" stroke={tc} strokeWidth={3} strokeLinejoin="round" />
+      </Svg>
     </Pressable>
   );
 }
