@@ -43,7 +43,9 @@ export default function PolygroveCard({ card }: { card: Card }) {
   const slot5val = card.habitat || card.origin || card.biome || '—';
 
   return (
-    <Pressable onPress={doFlip} style={{ flex: 1 }}>
+    // width/height 100%, NOT flex:1 — flex:1 here collapsed to content height
+    // on iOS (found natively on the simulator, 2026-09-25)
+    <Pressable onPress={doFlip} style={{ width: '100%', height: '100%' }}>
       {/* FRONT — .face.front */}
       <Animated.View style={[s.phone, frontStyle]}>
         <View style={s.site}>
@@ -139,7 +141,9 @@ function MiniWeb({ card, onExpand }: { card: Card; onExpand: () => void }) {
 const s = StyleSheet.create({
   // .phone — the card body itself
   phone: {
-    ...StyleSheet.absoluteFillObject,
+    // explicit insets, NOT ...StyleSheet.absoluteFillObject — the spread
+    // silently fails on iOS Fabric here (found on the simulator, 2026-09-25)
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: '#333333', borderRadius: 22,
     paddingTop: 12, paddingHorizontal: 16, paddingBottom: 8,
     shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 40, shadowOffset: { width: 0, height: 14 },

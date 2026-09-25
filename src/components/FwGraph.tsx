@@ -5,13 +5,13 @@
 
 import { Platform } from 'react-native';
 import { G, Image as SvgImage, ClipPath, Defs, Line, Polygon, Svg, TSpan, Text as SvgText } from 'react-native-svg';
+import { F, TROPHIC_COLOR } from '../constants/polygrove';
+import { Card, cardByName, photoFor } from '../lib/catalog';
 
 // rnsvg's onPress on web leaks RN responder props into the DOM (console noise) —
 // use the DOM's own onClick there
 const pressProps = (fn?: () => void): any =>
   fn ? (Platform.OS === 'web' ? { onClick: fn } : { onPress: fn }) : {};
-import { F, TROPHIC_COLOR } from '../constants/polygrove';
-import { Card, cardByName, photoFor } from '../lib/catalog';
 
 const hexPts = (x: number, y: number, s: number) =>
   `${x},${y - s} ${x + s},${y - s / 2} ${x + s},${y + s / 2} ${x},${y + s} ${x - s},${y + s / 2} ${x - s},${y - s / 2}`;
