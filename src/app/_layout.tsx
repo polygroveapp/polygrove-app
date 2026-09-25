@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { C } from '../constants/polygrove';
 
 export default function RootLayout() {
@@ -15,7 +16,7 @@ export default function RootLayout() {
   });
   if (!fontsLoaded) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -24,6 +25,6 @@ export default function RootLayout() {
           animation: 'slide_from_right',
         }}
       />
-    </>
+    </GestureHandlerRootView>
   );
 }
