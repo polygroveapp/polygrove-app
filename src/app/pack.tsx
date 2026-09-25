@@ -37,7 +37,7 @@ export default function PackOpening() {
   const insets = useSafeAreaInsets();
   const catReady = getCards().length > 0;
   useEffect(() => { if (!catReady) router.replace('/'); }, [catReady, router]);
-  const pack = useMemo(drawPack, []);
+  const pack = useMemo(() => drawPack(), []);
   const [idx, setIdx] = useState(0);
   const [kept, setKept] = useState(0);
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
