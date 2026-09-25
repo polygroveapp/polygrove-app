@@ -54,8 +54,12 @@ export const getCards = () => _cards ?? [];
 export const cardById = (id: string) => _cards?.find(c => c.id === id);
 export const cardByName = (n: string) => _byName[n.toLowerCase()];
 
-// Wikimedia thumb URLs are resizable by rewriting the /NNNpx- segment
+// Wikimedia thumb URLs are resizable by rewriting the /NNNpx- segment — but the
+// thumb.wikimedia.org CDN only serves FIXED buckets (others 400): snap up.
+const THUMB_BUCKETS = [120, 250, 330, 500, 960, 1280];
 export function photoFor(id: string, px = 120): string | undefined {
   const u = _photos[id];
-  return u ? u.replace(/\/\d+px-/, `/${px}px-`) : undefined;
+  if (!u) return undefined;
+  const bucket = THUMB_BUCKETS.find(b => b >= px) ?? 1280;
+  return u.replace(/\/\d+px-/, `/${bucket}px-`);
 }

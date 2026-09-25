@@ -1,135 +1,102 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator, FlatList, Image, Pressable, ScrollView,
-  StyleSheet, Text, TextInput, View,
-} from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
-import { Card, loadCatalog, photoFor } from '../lib/catalog';
+import { C, F } from '../constants/polygrove';
+import { loadCatalog } from '../lib/catalog';
+import { loadCollection, useCollection } from '../lib/collection';
 
-export default function DeckBrowser() {
+export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [cards, setCards] = useState<Card[] | null>(null);
+  const [ready, setReady] = useState(false);
   const [stage, setStage] = useState('Connecting…');
   const [error, setError] = useState<string | null>(null);
-  const [q, setQ] = useState('');
-  const [group, setGroup] = useState<string | null>(null);
+  const owned = useCollection();
 
   useEffect(() => {
-    loadCatalog(setStage).then(r => setCards(r.cards)).catch(e => setError(String(e)));
+    Promise.all([loadCatalog(setStage), loadCollection()])
+      .then(() => setReady(true))
+      .catch(e => setError(String(e)));
   }, []);
 
-  const groups = useMemo(
-    () => (cards ? [...new Set(cards.map(c => c.group))].sort() : []),
-    [cards],
-  );
-  const rows = useMemo(() => {
-    if (!cards) return [];
-    const ql = q.trim().toLowerCase();
-    return cards.filter(c =>
-      (!group || c.group === group) &&
-      (!ql || c.name.toLowerCase().includes(ql) || c.sci.toLowerCase().includes(ql)));
-  }, [cards, q, group]);
-
-  if (error) return (
-    <View style={[s.center, { paddingTop: insets.top }]}>
-      <Text style={s.loadTitle}>Polygrove</Text>
-      <Text style={[s.stage, { color: '#E57373' }]}>Couldn’t reach the deck.</Text>
-      <Text style={s.stage}>{error}</Text>
-      <Pressable onPress={() => { setError(null); loadCatalog(setStage).then(r => setCards(r.cards)).catch(e => setError(String(e))); }}
-        style={s.retry}><Text style={s.retryTxt}>Try again</Text></Pressable>
-    </View>
-  );
-
-  if (!cards) return (
-    <View style={[s.center, { paddingTop: insets.top }]}>
-      <Text style={s.loadTitle}>Polygrove</Text>
-      <ActivityIndicator color={C.green} style={{ marginVertical: 14 }} />
-      <Text style={s.stage}>{stage}</Text>
-    </View>
-  );
+  // the demo's breathing green pulse on the pack button
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(withTiming(1.03, { duration: 900 }), withTiming(1, { duration: 900 })),
+      -1, true);
+  }, [pulse]);
+  const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: insets.top }}>
-      <View style={s.header}>
+    <View style={[s.root, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
+      <View style={{ alignItems: 'center' }}>
         <Text style={s.logo}>Polygrove</Text>
-        <Text style={s.count}>{rows.length.toLocaleString()} species</Text>
+        <Text style={s.tag}>every living thing is a card</Text>
       </View>
-      <TextInput
-        value={q} onChangeText={setQ} placeholder="Search species…"
-        placeholderTextColor={C.faint} style={s.search} autoCorrect={false}
-      />
-      <View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
-          <Chip label="All" on={!group} onPress={() => setGroup(null)} />
-          {groups.map(g => <Chip key={g} label={g} on={group === g} onPress={() => setGroup(group === g ? null : g)} />)}
-        </ScrollView>
+
+      <View style={{ flex: 1, justifyContent: 'center', gap: 14 }}>
+        {error ? (
+          <View style={{ alignItems: 'center', gap: 8 }}>
+            <Text style={[s.tag, { color: '#E57373' }]}>Couldn’t reach the deck. {error}</Text>
+            <Pressable onPress={() => { setError(null); loadCatalog(setStage).then(() => setReady(true)).catch(e => setError(String(e))); }}>
+              <Text style={{ color: C.greenSoft, fontFamily: F.sansBold }}>Try again</Text>
+            </Pressable>
+          </View>
+        ) : !ready ? (
+          <View style={{ alignItems: 'center', gap: 10 }}>
+            <ActivityIndicator color={C.green} />
+            <Text style={s.tag}>{stage}</Text>
+          </View>
+        ) : (
+          <>
+            <Animated.View style={pulseStyle}>
+              <Pressable onPress={() => router.push('/pack')} style={s.packBtn}>
+                <Text style={s.packEmoji}>🎴</Text>
+                <Text style={s.packTxt}>Open Discovery Pack</Text>
+              </Pressable>
+            </Animated.View>
+
+            <Pressable onPress={() => router.push('/collection')} style={s.secondary}>
+              <Text style={s.secondaryTxt}>Journal</Text>
+              <Text style={s.secondaryCount}>{owned.length} collected</Text>
+            </Pressable>
+
+            <Pressable onPress={() => router.push('/deck')} style={s.secondary}>
+              <Text style={s.secondaryTxt}>Browse the deck</Text>
+              <Text style={s.secondaryCount}>10,394 species</Text>
+            </Pressable>
+          </>
+        )}
       </View>
-      <FlatList
-        data={rows}
-        keyExtractor={c => c.id}
-        initialNumToRender={16}
-        windowSize={7}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
-        renderItem={({ item }) => <Row card={item} onPress={() => router.push(`/species/${item.id}`)} />}
-      />
+
+      <Text style={s.foot}>content: polygrovedb.pages.dev · GBIF, Wikipedia & 25 open sources</Text>
     </View>
-  );
-}
-
-function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={[s.chip, on && s.chipOn]}>
-      <Text style={[s.chipTxt, on && s.chipTxtOn]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function Row({ card, onPress }: { card: Card; onPress: () => void }) {
-  const tc = TROPHIC_COLOR[card.trophic] || C.dim;
-  const photo = photoFor(card.id, 120);
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { backgroundColor: '#1a1f1a' }]}>
-      <View style={[s.thumbRing, { borderColor: tc }]}>
-        {photo
-          ? <Image source={{ uri: photo }} style={s.thumb} />
-          : <View style={[s.thumb, s.thumbEmpty]}><Text style={{ color: C.faint, fontSize: 10 }}>—</Text></View>}
-      </View>
-      <View style={{ flex: 1, marginLeft: 12 }}>
-        <Text style={s.rowName} numberOfLines={1}>{card.name}</Text>
-        <Text style={s.rowSci} numberOfLines={1}>{card.sci}</Text>
-      </View>
-      <Text style={[s.rowGroup, { color: tc }]}>{card.group}</Text>
-    </Pressable>
   );
 }
 
 const s = StyleSheet.create({
-  center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  loadTitle: { fontFamily: F.display, fontSize: 30, color: C.text },
-  stage: { fontFamily: F.sans, fontSize: 13, color: C.dim, marginTop: 4, textAlign: 'center' },
-  retry: { marginTop: 18, paddingHorizontal: 22, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(76,175,80,0.4)', backgroundColor: 'rgba(76,175,80,0.15)' },
-  retryTxt: { fontFamily: F.sansBold, color: C.green, fontSize: 13 },
-  header: { flexDirection: 'row', alignItems: 'baseline', paddingHorizontal: 16, paddingTop: 10 },
-  logo: { fontFamily: F.display, fontSize: 24, color: C.text },
-  count: { fontFamily: F.sans, fontSize: 12, color: C.dim, marginLeft: 10 },
-  search: {
-    marginHorizontal: 16, marginTop: 12, paddingHorizontal: 16, paddingVertical: 9,
-    borderRadius: 14, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(0,0,0,0.3)',
-    color: C.text, fontFamily: F.sans, fontSize: 14,
+  root: { flex: 1, backgroundColor: C.bg, paddingHorizontal: 26 },
+  logo: { fontFamily: F.display, fontSize: 38, color: C.text },
+  tag: { fontFamily: F.sans, fontSize: 13, color: C.dim, marginTop: 6, textAlign: 'center' },
+  packBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    paddingVertical: 18, borderRadius: 16, backgroundColor: '#2E7D32',
+    shadowColor: '#4CAF50', shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
-  chips: { paddingHorizontal: 16, paddingVertical: 10, gap: 7 },
-  chip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)' },
-  chipOn: { borderColor: 'rgba(76,175,80,0.5)', backgroundColor: 'rgba(76,175,80,0.15)' },
-  chipTxt: { fontFamily: F.sansMed, fontSize: 12, color: C.dim },
-  chipTxtOn: { color: C.greenSoft },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 9 },
-  thumbRing: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  thumb: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#1a1a1a' },
-  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
-  rowName: { fontFamily: F.sansBold, fontSize: 14.5, color: C.text },
-  rowSci: { fontFamily: F.sans, fontSize: 11.5, color: C.dim, fontStyle: 'italic', marginTop: 1 },
-  rowGroup: { fontFamily: F.sansBold, fontSize: 10.5, marginLeft: 8 },
+  packEmoji: { fontSize: 18 },
+  packTxt: { fontFamily: F.display, fontSize: 16, color: C.text },
+  secondary: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 15, paddingHorizontal: 18, borderRadius: 16,
+    borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  secondaryTxt: { fontFamily: F.sansBold, fontSize: 15, color: C.text },
+  secondaryCount: { fontFamily: F.sans, fontSize: 12, color: C.dim },
+  foot: { fontFamily: F.sans, fontSize: 10, color: C.faint, textAlign: 'center' },
 });
