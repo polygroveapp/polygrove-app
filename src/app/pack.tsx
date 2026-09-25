@@ -4,7 +4,7 @@
 
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming,
@@ -40,10 +40,14 @@ export default function PackOpening() {
   const pack = useMemo(drawPack, []);
   const [idx, setIdx] = useState(0);
   const [kept, setKept] = useState(0);
-  // pixel-measured card size: percentage heights inside the absolute overlays
-  // came out wrong on iOS (squashed card, user's phone 2026-09-25)
-  const [stg, setStg] = useState({ w: 0, h: 0 });
-  const cardSize = { width: Math.min(stg.w * 0.96, 370), height: Math.min(stg.h * 0.96, 560) };
+  // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
+  // 100dvh-130px), width min(430,screen)*0.88): window-based, no onLayout —
+  // measured-flex sizing kept collapsing on the phone (2026-09-25)
+  const win = useWindowDimensions();
+  const cardSize = {
+    width: Math.min(win.width - 44, 370),
+    height: Math.min(600, win.height - 130 - insets.top - insets.bottom),
+  };
 
   if (!catReady) return null;
 
@@ -83,25 +87,23 @@ export default function PackOpening() {
         </View>
       </View>
 
-      <View style={s.stage} onLayout={e => setStg({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      <View style={s.stage}>
         {/* next card waits behind at 0.95 scale, like the demo stack.
             NOTE: overlays carry explicit top/left/right/bottom — absolute
             children WITHOUT offsets keep their flow position on iOS and the
             cards stacked vertically (user's phone, 2026-09-25) */}
-        {stg.h > 0 && pack[idx + 1] && (
+        {pack[idx + 1] && (
           <View style={s.overlay} pointerEvents="none">
             <View style={[cardSize, { transform: [{ scale: 0.95 }] }]}>
               <PolygroveCard key={pack[idx + 1].id} card={pack[idx + 1]} />
             </View>
           </View>
         )}
-        {stg.h > 0 && (
-          <SwipeSlot key={pack[idx].id} onSwiped={onSwiped}>
-            <View style={cardSize}>
-              <PolygroveCard card={pack[idx]} />
-            </View>
-          </SwipeSlot>
-        )}
+        <SwipeSlot key={pack[idx].id} onSwiped={onSwiped}>
+          <View style={cardSize}>
+            <PolygroveCard card={pack[idx]} />
+          </View>
+        </SwipeSlot>
       </View>
 
       <View style={s.hintRow}>
@@ -111,7 +113,7 @@ export default function PackOpening() {
       </View>
       {/* TEMP debug (native layout hunt, 2026-09-25) */}
       <Text style={{ position: 'absolute', bottom: 2, left: 8, fontSize: 9, color: '#444' }}>
-        stage {Math.round(stg.w)}×{Math.round(stg.h)} · card {Math.round(cardSize.width)}×{Math.round(cardSize.height)}
+        win {Math.round(win.width)}×{Math.round(win.height)} · card {Math.round(cardSize.width)}×{Math.round(cardSize.height)}
       </Text>
     </View>
   );
