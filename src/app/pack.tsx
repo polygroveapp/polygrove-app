@@ -109,6 +109,10 @@ export default function PackOpening() {
         <Text style={s.hintC}>{idx + 1} of {pack.length} · tap card for details</Text>
         <Text style={s.hintR}>journal ▸</Text>
       </View>
+      {/* TEMP debug (native layout hunt, 2026-09-25) */}
+      <Text style={{ position: 'absolute', bottom: 2, left: 8, fontSize: 9, color: '#444' }}>
+        stage {Math.round(stg.w)}×{Math.round(stg.h)} · card {Math.round(cardSize.width)}×{Math.round(cardSize.height)}
+      </Text>
     </View>
   );
 }
