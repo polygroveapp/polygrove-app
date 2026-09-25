@@ -63,3 +63,11 @@ export function photoFor(id: string, px = 120): string | undefined {
   const bucket = THUMB_BUCKETS.find(b => b >= px) ?? 1280;
   return u.replace(/\/\d+px-/, `/${bucket}px-`);
 }
+
+// the photo's Wikimedia Commons file page — the attribution/license source.
+// thumb URLs look like .../commons/thumb/2/2f/<Filename>/120px-<Filename>?...
+export function photoCommonsPage(id: string): string | undefined {
+  const u = _photos[id];
+  const m = u?.match(/\/thumb\/[0-9a-f]\/[0-9a-f]{2}\/([^/]+)\//);
+  return m ? `https://commons.wikimedia.org/wiki/File:${m[1]}` : undefined;
+}

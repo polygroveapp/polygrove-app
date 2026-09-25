@@ -5,11 +5,12 @@
 // note, FOOD WEB divider + mini web, "Tap card to flip". Tap flips (0.55s).
 
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
-import { Card, photoFor } from '../lib/catalog';
+import { Card, photoCommonsPage, photoFor } from '../lib/catalog';
 import { fieldNote } from '../lib/dossier';
 import FwGraph from './FwGraph';
 import HexPhoto from './HexPhoto';
@@ -17,6 +18,7 @@ import HexPhoto from './HexPhoto';
 export default function PolygroveCard({ card }: { card: Card }) {
   const tc = TROPHIC_COLOR[card.trophic] || '#81C784';
   const photo = photoFor(card.id, 500);
+  const commons = photoCommonsPage(card.id);
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => { let on = true; fieldNote(card.sci).then(n => on && setNote(n)); return () => { on = false; }; }, [card.sci]);
 
@@ -55,6 +57,21 @@ export default function PolygroveCard({ card }: { card: Card }) {
         </View>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <HexPhoto uri={photo} width={148} height={167} borderColor={tc} borderWidth={6} />
+          {/* corners of the photo area (user, 2026-09-25): ⤢ full photo
+              bottom-left, ⓘ Commons attribution bottom-right, both above the
+              accent divider. Nested Pressables so the card flip doesn't fire. */}
+          {!!photo && (
+            <Pressable hitSlop={8} style={[s.photoBtn, { left: 0 }]}
+              onPress={() => router.push(`/photo/${card.id}`)}>
+              <Text style={s.photoBtnTxt}>⤢</Text>
+            </Pressable>
+          )}
+          {!!commons && (
+            <Pressable hitSlop={8} style={[s.photoBtn, { right: 0 }]}
+              onPress={() => WebBrowser.openBrowserAsync(commons)}>
+              <Text style={[s.photoBtnTxt, { fontStyle: 'italic', fontFamily: F.sansBold }]}>i</Text>
+            </Pressable>
+          )}
         </View>
         <View style={{ borderTopWidth: 2, borderTopColor: tc, marginTop: 10, marginBottom: 7 }} />
         <Text style={[s.name, { fontSize: 18 }]} numberOfLines={1}>{card.name}</Text>
@@ -176,6 +193,13 @@ const s = StyleSheet.create({
   fwChip: { position: 'absolute', top: 8, left: 10, backgroundColor: '#2a2a2a', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3, zIndex: 2 },
   fwChipTxt: { color: '#999999', fontSize: 10.5, fontFamily: F.sans },
   fwName: { color: '#999999', fontSize: 7.5, fontFamily: F.sans, maxWidth: 64, marginTop: 1 },
+  // photo-area corner buttons (demo's attribution-i styling)
+  photoBtn: {
+    position: 'absolute', bottom: 2, width: 22, height: 22, borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.35)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  photoBtnTxt: { color: '#777777', fontSize: 12, lineHeight: 14 },
   // .dc-pill
   pillRow: { alignItems: 'center', marginTop: 9, marginBottom: 5 },
   pill: { backgroundColor: '#222222', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 5 },
