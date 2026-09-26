@@ -75,6 +75,10 @@ export const cardByName = (n: string) => _byName[n.toLowerCase()];
 const THUMB_BUCKETS = [120, 250, 330, 500, 960, 1280];
 export function photoFor(id: string, px = 120): string | undefined {
   if (_localPhoto[id]) return _localPhoto[id];   // on-disk snapshot/queue photo
+  return photoRemote(id, px);
+}
+// the CDN url regardless of any on-disk copy (offline.ts downloads + commons)
+export function photoRemote(id: string, px = 120): string | undefined {
   const u = _photos[id] || _extraPhotoUrl[id];
   if (!u) return undefined;
   const bucket = THUMB_BUCKETS.find(b => b >= px) ?? 1280;

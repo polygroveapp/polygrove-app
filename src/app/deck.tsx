@@ -1,3 +1,7 @@
+// SPECIES — the 🌲 tab: every species in the ecoregion you're in, journaled
+// ones lit, the rest waiting (the demo's Species screen, 2026-09-26). Needs
+// the catalog, so it's online-only by design — the journal is the offline view.
+
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -5,62 +9,58 @@ import {
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import BottomNav from '../components/BottomNav';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, loadCatalog, photoFor } from '../lib/catalog';
+import { loadCollection, owns, useCollection } from '../lib/collection';
+import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 
-export default function DeckBrowser() {
+export default function SpeciesTab() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [cards, setCards] = useState<Card[] | null>(null);
-  const [stage, setStage] = useState('Connecting…');
+  const eco = useCurrentEco();
+  const owned = useCollection(eco?.eid);
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [group, setGroup] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadCatalog(setStage).then(r => setCards(r.cards)).catch(e => setError(String(e)));
-  }, []);
+  const load = () =>
+    Promise.all([loadCatalog(), loadCollection(), loadCurrentEco()])
+      .then(() => setReady(true)).catch(e => setError(String(e)));
+  useEffect(() => { load(); }, []);
+  const retry = () => { setError(null); load(); };
 
-  const groups = useMemo(
-    () => (cards ? [...new Set(cards.map(c => c.group))].sort() : []),
-    [cards],
+  const cards = useMemo(
+    () => (ready && eco ? [...ecoMembers(eco.eid)].sort((a, b) => a.name.localeCompare(b.name)) : []),
+    [ready, eco],
   );
+  const groups = useMemo(() => [...new Set(cards.map(c => c.group))].sort(), [cards]);
   const rows = useMemo(() => {
-    if (!cards) return [];
     const ql = q.trim().toLowerCase();
     return cards.filter(c =>
       (!group || c.group === group) &&
       (!ql || c.name.toLowerCase().includes(ql) || c.sci.toLowerCase().includes(ql)));
   }, [cards, q, group]);
 
-  if (error) return (
-    <View style={[s.center, { paddingTop: insets.top }]}>
-      <Text style={s.loadTitle}>Polygrove</Text>
-      <Text style={[s.stage, { color: '#E57373' }]}>Couldn’t reach the deck.</Text>
-      <Text style={s.stage}>{error}</Text>
-      <Pressable onPress={() => { setError(null); loadCatalog(setStage).then(r => setCards(r.cards)).catch(e => setError(String(e))); }}
-        style={s.retry}><Text style={s.retryTxt}>Try again</Text></Pressable>
+  let body: React.ReactNode;
+  if (error) body = (
+    <View style={s.center}>
+      <Text style={[s.stage, { color: '#E57373' }]}>The species list needs an internet connection.</Text>
+      <Pressable onPress={retry} style={s.retry}><Text style={s.retryTxt}>Try again</Text></Pressable>
     </View>
   );
-
-  if (!cards) return (
-    <View style={[s.center, { paddingTop: insets.top }]}>
-      <Text style={s.loadTitle}>Polygrove</Text>
-      <ActivityIndicator color={C.green} style={{ marginVertical: 14 }} />
-      <Text style={s.stage}>{stage}</Text>
+  else if (!ready) body = <View style={s.center}><ActivityIndicator color={C.green} /></View>;
+  else if (!eco) body = (
+    <View style={s.center}>
+      <Text style={s.stage}>Pick an ecoregion first.</Text>
+      <Pressable onPress={() => router.push('/map')} style={s.retry}><Text style={s.retryTxt}>Open the map</Text></Pressable>
     </View>
   );
-
-  return (
-    <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: insets.top }}>
-      <View style={s.header}>
-        <Text style={s.logo}>Polygrove</Text>
-        <Text style={s.count}>{rows.length.toLocaleString()} species</Text>
-      </View>
-      <TextInput
-        value={q} onChangeText={setQ} placeholder="Search species…"
-        placeholderTextColor={C.faint} style={s.search} autoCorrect={false}
-      />
+  else body = (
+    <>
+      <TextInput value={q} onChangeText={setQ} placeholder="Search species…"
+        placeholderTextColor={C.faint} style={s.search} autoCorrect={false} />
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
           <Chip label="All" on={!group} onPress={() => setGroup(null)} />
@@ -72,9 +72,28 @@ export default function DeckBrowser() {
         keyExtractor={c => c.id}
         initialNumToRender={16}
         windowSize={7}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
-        renderItem={({ item }) => <Row card={item} onPress={() => router.push(`/species/${item.id}`)} />}
+        extraData={owned}
+        contentContainerStyle={{ paddingBottom: 12 }}
+        renderItem={({ item }) => (
+          <Row card={item} owned={owns(eco.eid, item.species_id)} onPress={() => router.push(`/species/${item.id}`)} />
+        )}
       />
+    </>
+  );
+
+  return (
+    <View style={s.root}>
+      <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+        <Text style={s.logo}>Species</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={s.eco} numberOfLines={1}>{eco ? eco.name : '—'}</Text>
+          {ready && eco && (
+            <Text style={s.count}>{owned.length} of {cards.length.toLocaleString()} journaled</Text>
+          )}
+        </View>
+      </View>
+      {body}
+      <BottomNav active="species" />
     </View>
   );
 }
@@ -87,12 +106,12 @@ function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () 
   );
 }
 
-function Row({ card, onPress }: { card: Card; onPress: () => void }) {
+function Row({ card, owned, onPress }: { card: Card; owned: boolean; onPress: () => void }) {
   const tc = TROPHIC_COLOR[card.trophic] || C.dim;
   const photo = photoFor(card.id, 120);
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { backgroundColor: '#1a1f1a' }]}>
-      <View style={[s.thumbRing, { borderColor: tc }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { backgroundColor: '#1a1f1a' }, !owned && { opacity: 0.45 }]}>
+      <View style={[s.thumbRing, { borderColor: owned ? tc : '#333' }]}>
         {photo
           ? <Image source={{ uri: photo }} style={s.thumb} />
           : <View style={[s.thumb, s.thumbEmpty]}><Text style={{ color: C.faint, fontSize: 10 }}>—</Text></View>}
@@ -101,20 +120,21 @@ function Row({ card, onPress }: { card: Card; onPress: () => void }) {
         <Text style={s.rowName} numberOfLines={1}>{card.name}</Text>
         <Text style={s.rowSci} numberOfLines={1}>{card.sci}</Text>
       </View>
-      <Text style={[s.rowGroup, { color: tc }]}>{card.group}</Text>
+      <Text style={[s.rowGroup, { color: owned ? tc : '#555' }]}>{owned ? card.group : '?'}</Text>
     </Pressable>
   );
 }
 
 const s = StyleSheet.create({
-  center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  loadTitle: { fontFamily: F.display, fontSize: 30, color: C.text },
+  root: { flex: 1, backgroundColor: C.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   stage: { fontFamily: F.sans, fontSize: 13, color: C.dim, marginTop: 4, textAlign: 'center' },
   retry: { marginTop: 18, paddingHorizontal: 22, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(76,175,80,0.4)', backgroundColor: 'rgba(76,175,80,0.15)' },
   retryTxt: { fontFamily: F.sansBold, color: C.green, fontSize: 13 },
-  header: { flexDirection: 'row', alignItems: 'baseline', paddingHorizontal: 16, paddingTop: 10 },
-  logo: { fontFamily: F.display, fontSize: 24, color: C.text },
-  count: { fontFamily: F.sans, fontSize: 12, color: C.dim, marginLeft: 10 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 },
+  logo: { fontFamily: F.display, fontSize: 22, color: C.text },
+  eco: { fontFamily: F.sansBold, fontSize: 10.5, color: '#8B5035', letterSpacing: 1.2, textTransform: 'uppercase' },
+  count: { fontFamily: F.sans, fontSize: 11.5, color: C.dim, marginTop: 1 },
   search: {
     marginHorizontal: 16, marginTop: 12, paddingHorizontal: 16, paddingVertical: 9,
     borderRadius: 14, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(0,0,0,0.3)',

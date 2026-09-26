@@ -12,17 +12,20 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PolygroveCard from '../components/PolygroveCard';
 import { C, F } from '../constants/polygrove';
-import { Card, getCards, loadCatalog, photoFor } from '../lib/catalog';
+import { Card, loadCatalog, photoFor } from '../lib/catalog';
 import { addToCollection, owns } from '../lib/collection';
+import { discoveryReady, loadDaily, markDiscoveryOpened } from '../lib/daily';
+import { currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
 import {
   PACK_SIZE, Stashed, offlineReady, popPack, releaseStashed, snapshotStashed, topUp,
 } from '../lib/offline';
 
-// live draw — the fallback when the queue can't serve (fresh install before
-// the first top-up lands, or a 20-pack offline binge that found signal again)
-function drawPack(): Card[] {
-  const all = getCards();
-  const pool = all.filter(c => !owns(c.species_id) && photoFor(c.id));
+// live draw from the ecoregion's deck — the fallback when its queue can't
+// serve (a fresh ecoregion before the first top-up lands, or a 20-pack
+// offline binge that found signal again)
+function drawPack(eid: number): Card[] {
+  const all = ecoMembers(eid);
+  const pool = all.filter(c => !owns(eid, c.species_id));
   const src = pool.length >= PACK_SIZE ? pool : all;
   const pack: Card[] = [];
   const seen = new Set<number>();
@@ -45,19 +48,28 @@ export default function PackOpening() {
   // disk); the queue refills its tail in the background
   const [pack, setPack] = useState<Stashed[] | null>(null);
   const [noNet, setNoNet] = useState(false);
+  const [eid, setEid] = useState<number | null>(null);
   useEffect(() => {
     (async () => {
       await offlineReady();
-      let p = popPack();
+      const eco = await loadCurrentEco();
+      if (!eco) { router.replace('/map'); return; }   // no ecoregion = nothing to draw from
+      await loadDaily();
+      if (!discoveryReady()) { router.replace('/'); return; }   // one Discovery Pack a day
+      setEid(eco.eid);
+      let p = popPack(eco.eid);
       if (!p) {
         try {
           await loadCatalog();
-          p = drawPack().map(liveStash);
+          p = drawPack(eco.eid).map(liveStash);
           topUp();
         } catch { setNoNet(true); return; }
       }
+      if (!p.length) { setNoNet(true); return; }
+      markDiscoveryOpened();   // the daily pack is spent the moment it's dealt
       setPack(p);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [idx, setIdx] = useState(0);
   const [kept, setKept] = useState(0);
@@ -95,9 +107,7 @@ export default function PackOpening() {
         <Pressable onPress={() => router.replace('/collection')} style={s.primary}>
           <Text style={s.primaryTxt}>View Journal</Text>
         </Pressable>
-        <Pressable onPress={() => router.replace('/pack')} style={s.ghost}>
-          <Text style={s.ghostTxt}>Open another pack</Text>
-        </Pressable>
+        <Text style={s.doneSub}>Next Discovery Pack in 24 hours</Text>
         <Pressable onPress={() => router.replace('/')} style={s.ghost}>
           <Text style={s.ghostTxt}>Home</Text>
         </Pressable>
@@ -107,7 +117,7 @@ export default function PackOpening() {
 
   const onSwiped = (dir: 1 | -1) => {
     if (dir === 1) {
-      addToCollection(pack[idx].card);
+      addToCollection(eid ?? currentEco()!.eid, pack[idx].card);
       snapshotStashed(pack[idx]);   // journal = offline forever
       setKept(k => k + 1);
     } else {
