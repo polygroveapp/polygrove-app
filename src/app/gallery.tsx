@@ -59,7 +59,11 @@ export default function Gallery() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
-      <Pressable onPress={close} hitSlop={12} style={[s.x, { top: insets.top + 8 }]}><Text style={s.xTxt}>✕</Text></Pressable>
+      {/* top-LEFT, as a labeled pill: the faint ✕ top-right hid under Expo's dev
+          gear on the simulator and was easy to miss (user, 2026-09-26) */}
+      <Pressable onPress={close} hitSlop={12} style={[s.x, { top: insets.top + 8 }]}>
+        <Text style={s.xTxt}>✕  Close</Text>
+      </Pressable>
       <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 20 }}>
         <View style={s.head}>
           <Text style={s.label}>☀️ Cards</Text>
@@ -91,8 +95,11 @@ export default function Gallery() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0a0f0a' },
-  x: { position: 'absolute', right: 16, zIndex: 10, padding: 6 },
-  xTxt: { color: 'rgba(255,255,255,0.4)', fontSize: 24, lineHeight: 26 },
+  x: {
+    position: 'absolute', left: 16, zIndex: 10, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+  },
+  xTxt: { color: C.text, fontFamily: F.sansBold, fontSize: 13 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 },
   label: { fontFamily: F.sansBold, fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1 },
   dots: { flexDirection: 'row', gap: 4 },
