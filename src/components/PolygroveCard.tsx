@@ -66,7 +66,7 @@ export default function PolygroveCard({ card }: { card: Card }) {
           <Svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
             <Defs>
               <RadialGradient id={glowId} cx="50%" cy="50%" rx="62%" ry="56%">
-                <Stop offset="0" stopColor={tc} stopOpacity={0.28} />
+                <Stop offset="0" stopColor={tc} stopOpacity={0.21} />
                 <Stop offset="0.7" stopColor={tc} stopOpacity={0} />
               </RadialGradient>
             </Defs>
