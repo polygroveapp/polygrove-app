@@ -58,10 +58,10 @@ export default function FieldNotes() {
       <View style={s.filterRow}>
         <FilterBtn label="Level" value={level ? levelOpts.find(o => o.key === level)?.label : undefined}
           open={open === 'level'} onPress={() => setOpen(open === 'level' ? null : 'level')} />
-        <FilterBtn label="Taxonomy" value={group ?? undefined}
-          open={open === 'group'} onPress={() => setOpen(open === 'group' ? null : 'group')} />
         <FilterBtn label="Role" value={trophic ?? undefined} color={trophic ? TROPHIC_COLOR[trophic] : undefined}
           open={open === 'trophic'} onPress={() => setOpen(open === 'trophic' ? null : 'trophic')} />
+        <FilterBtn label="Taxonomy" value={group ?? undefined}
+          open={open === 'group'} onPress={() => setOpen(open === 'group' ? null : 'group')} />
       </View>
       {open && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
