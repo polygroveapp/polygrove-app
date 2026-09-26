@@ -36,7 +36,12 @@ function unwrap(g: FC): FC {
       : (f.geometry.coordinates as number[][][][]);
     for (const poly of polys) for (const ring of poly) {
       let w = 180, e = -180;
-      for (const [x] of ring) { if (x < w) w = x; if (x > e) e = x; }
+      for (const pt of ring) {
+        // MapKit's Mercator ends at ±85.05° and WRAPS anything beyond to the
+        // opposite edge, drawing a line across the whole map — clamp
+        if (pt[1] > 85) pt[1] = 85; else if (pt[1] < -85) pt[1] = -85;
+        if (pt[0] < w) w = pt[0]; if (pt[0] > e) e = pt[0];
+      }
       if (e - w > 180) for (const pt of ring) if (pt[0] < 0) pt[0] += 360;
     }
   }
