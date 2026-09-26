@@ -14,6 +14,17 @@ type ShardRow = [string, string, string]; // [source, fact, value]
 const _shards: Record<number, Promise<Record<string, ShardRow[]>>> = {};
 const _notes: Record<string, string | null> = {};
 
+// every GloBI interaction row for a species — e.g.
+// ['GloBI', 'preysOn — 1710 partners, 6980 records', 'top: Gonomyia lucidula, …']
+export async function globiRecords(sci: string): Promise<{ fact: string; value: string; derived: boolean }[]> {
+  const sh = djb2(sci);
+  _shards[sh] ||= fetch(`${BASE}/${sh}.json`).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+  const rows = (await _shards[sh])[sci] || [];
+  return rows
+    .filter(r => String(r[0]).startsWith('GloBI'))
+    .map(r => ({ fact: String(r[1]), value: String(r[2]), derived: String(r[0]).includes('derived') }));
+}
+
 export async function fieldNote(sci: string): Promise<string | null> {
   if (sci in _notes) return _notes[sci];
   const sh = djb2(sci);

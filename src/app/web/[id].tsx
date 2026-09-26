@@ -4,11 +4,13 @@
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import FwGraph from '../../components/FwGraph';
 import { C, F } from '../../constants/polygrove';
 import { cardById, getCards, loadCatalog } from '../../lib/catalog';
+import { globiRecords } from '../../lib/dossier';
 
 export default function FoodWebScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -16,6 +18,8 @@ export default function FoodWebScreen() {
   const insets = useSafeAreaInsets();
   const [ready, setReady] = useState(getCards().length > 0);
   useEffect(() => { if (!ready) loadCatalog().then(() => setReady(true)).catch(() => setReady(true)); }, [ready]);
+  const [recs, setRecs] = useState<{ fact: string; value: string; derived: boolean }[] | null>(null);
+  const [showRecs, setShowRecs] = useState(false);
   const card = ready ? cardById(String(id)) : undefined;
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
@@ -49,6 +53,34 @@ export default function FoodWebScreen() {
       <Pressable onPress={goBack} style={[s.x, { top: insets.top + 12 }]} hitSlop={8}>
         <Text style={s.xTxt}>×</Text>
       </Pressable>
+      {/* ⓘ (user, 2026-09-26): every GloBI interaction record behind this web */}
+      <Pressable hitSlop={10} style={[s.iBtn, { bottom: insets.bottom + 18 }]}
+        onPress={async () => { setShowRecs(true); if (!recs) setRecs(await globiRecords(card.sci)); }}>
+        <Text style={s.iTxt}>i</Text>
+      </Pressable>
+      {showRecs && (
+        <Pressable style={s.recWrap} onPress={() => setShowRecs(false)}>
+          <View style={s.recPanel} onStartShouldSetResponder={() => true}>
+            <Text style={s.recTitle}>GloBI RECORDS</Text>
+            <Text style={s.recSub}>{card.name} · every recorded interaction</Text>
+            <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ paddingBottom: 6 }}>
+              {recs === null ? (
+                <ActivityIndicator color={C.green} style={{ marginVertical: 20 }} />
+              ) : recs.length === 0 ? (
+                <Text style={s.recNone}>no interaction records</Text>
+              ) : recs.map((r, i) => (
+                <View key={i} style={s.recRow}>
+                  <Text style={s.recFact}>{r.fact}{r.derived ? '  · derived' : ''}</Text>
+                  <Text style={s.recVal}>{r.value}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            <Pressable onPress={() => WebBrowser.openBrowserAsync('https://www.globalbioticinteractions.org/')}>
+              <Text style={s.recCredit}>source: GloBI — globalbioticinteractions.org ›</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      )}
       <Text style={s.hint}>tap outside to close</Text>
     </Pressable>
   );
@@ -69,4 +101,25 @@ const s = StyleSheet.create({
   },
   xTxt: { color: C.text, fontSize: 18, lineHeight: 20 },
   hint: { position: 'absolute', bottom: 24, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: '#666666', fontFamily: F.sans },
+  iBtn: {
+    position: 'absolute', right: 22, width: 30, height: 30, borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  iTxt: { color: '#999999', fontSize: 14, fontStyle: 'italic', fontFamily: F.sansBold },
+  recWrap: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', padding: 20,
+  },
+  recPanel: {
+    backgroundColor: '#181818', borderRadius: 16, borderWidth: 1, borderColor: '#333333',
+    padding: 16, width: '100%', maxWidth: 380,
+  },
+  recTitle: { fontFamily: F.sansBold, fontSize: 10, letterSpacing: 1.8, color: '#888888', textAlign: 'center' },
+  recSub: { fontFamily: F.sans, fontSize: 11.5, color: '#666666', textAlign: 'center', marginTop: 3, marginBottom: 10 },
+  recRow: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingVertical: 8 },
+  recFact: { fontFamily: F.sansBold, fontSize: 12.5, color: C.text },
+  recVal: { fontFamily: F.sans, fontSize: 11.5, color: '#999999', marginTop: 2, lineHeight: 16 },
+  recNone: { fontFamily: F.sans, fontSize: 12, color: '#666666', textAlign: 'center', marginVertical: 16 },
+  recCredit: { fontFamily: F.sansMed, fontSize: 11, color: C.greenSoft, textAlign: 'center', marginTop: 10 },
 });
