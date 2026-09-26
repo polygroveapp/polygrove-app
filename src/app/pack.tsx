@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming,
+  Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PolygroveCard from '../components/PolygroveCard';
@@ -61,6 +61,7 @@ export default function PackOpening() {
   }, []);
   const [idx, setIdx] = useState(0);
   const [kept, setKept] = useState(0);
+  const [flinging, setFlinging] = useState(false);
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
   // 100dvh-130px), width min(430,screen)*0.88): window-based, no onLayout —
   // measured-flex sizing kept collapsing on the phone (2026-09-25)
@@ -114,6 +115,12 @@ export default function PackOpening() {
     }
     setIdx(i => i + 1);
   };
+  // the fling starts the card behind moving forward at once; the swap waits
+  // until it has fully arrived, so there is nothing left to snap
+  const onFling = (dir: 1 | -1) => {
+    setFlinging(true);
+    setTimeout(() => { onSwiped(dir); setFlinging(false); }, FORWARD_MS);
+  };
 
   return (
     <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 14 }]}>
@@ -129,22 +136,18 @@ export default function PackOpening() {
       </View>
 
       <View style={s.stage}>
-        {/* next card waits behind at 0.95 scale, like the demo stack.
-            NOTE: overlays carry explicit top/left/right/bottom — absolute
-            children WITHOUT offsets keep their flow position on iOS and the
-            cards stacked vertically (user's phone, 2026-09-25) */}
-        {pack[idx + 1] && (
-          <View style={s.overlay} pointerEvents="none">
-            <View style={[cardSize, { transform: [{ scale: 0.95 }] }]}>
-              <PolygroveCard key={pack[idx + 1].card.id} card={pack[idx + 1].card} />
+        {/* the top card and the one waiting behind it are ONE keyed list: when
+            the top card leaves, the card behind keeps its component (no remount,
+            no photo reload flash) and is brought forward from the stack WHILE
+            the top card flies off (user, 2026-09-26). Behind renders first so
+            it sits underneath. */}
+        {pack.slice(idx, idx + 2).reverse().map(st => (
+          <SwipeSlot key={st.card.id} top={st === pack[idx]} bringForward={flinging} onFling={onFling}>
+            <View style={cardSize}>
+              <PolygroveCard card={st.card} />
             </View>
-          </View>
-        )}
-        <SwipeSlot key={pack[idx].card.id} onSwiped={onSwiped}>
-          <View style={cardSize}>
-            <PolygroveCard card={pack[idx].card} />
-          </View>
-        </SwipeSlot>
+          </SwipeSlot>
+        ))}
       </View>
 
       <View style={s.hintRow}>
@@ -156,26 +159,36 @@ export default function PackOpening() {
   );
 }
 
-function SwipeSlot({ children, onSwiped }: { children: React.ReactNode; onSwiped: (d: 1 | -1) => void }) {
+// the card behind waits slightly smaller, lower and dimmer, then is brought
+// forward slowly while the top card flies off (user, 2026-09-26)
+const FORWARD_MS = 520;
+const FORWARD_EASE = Easing.out(Easing.cubic);
+
+function SwipeSlot({ children, top, bringForward, onFling }: {
+  children: React.ReactNode;
+  top: boolean;            // the swipeable card (false = waiting behind)
+  bringForward: boolean;   // the card above is flying off — come forward now
+  onFling: (d: 1 | -1) => void;
+}) {
   const tx = useSharedValue(0);
   const op = useSharedValue(1);
-  // arrive from the waiting stack: start at the stack's 0.95 and zoom up
-  // smoothly (the old hard swap read as a glitch, user 2026-09-26)
-  const sc = useSharedValue(0.95);
-  useEffect(() => { sc.value = withTiming(1, { duration: 180 }); }, [sc]);
+  const fwd = useSharedValue(top ? 1 : 0);   // 0 = waiting in the stack, 1 = in front
+  useEffect(() => {
+    if (top || bringForward) fwd.value = withTiming(1, { duration: FORWARD_MS, easing: FORWARD_EASE });
+  }, [top, bringForward, fwd]);
 
   const pan = Gesture.Pan()
+    .enabled(top)
     .activeOffsetX([-12, 12])   // let taps through to the card flip
     .onChange(e => { tx.value = e.translationX; })
     .onEnd(() => {
       if (Math.abs(tx.value) > 100) {
         const d = tx.value > 0 ? 1 : -1;
         // start both animations HERE, once — a withTiming born inside
-        // useAnimatedStyle restarts every frame and never progresses (the
-        // jitter, user 2026-09-26)
+        // useAnimatedStyle restarts every frame and never progresses
         tx.value = withTiming(d * 600, { duration: 300 });
         op.value = withTiming(0, { duration: 300 });
-        runOnJS(setTimeoutSwipe)(onSwiped, d);
+        runOnJS(onFling)(d);
       } else {
         tx.value = withSpring(0, { damping: 16, stiffness: 160 });
       }
@@ -184,21 +197,22 @@ function SwipeSlot({ children, onSwiped }: { children: React.ReactNode; onSwiped
   const style = useAnimatedStyle(() => ({
     transform: [
       { translateX: tx.value },
+      { translateY: 14 * (1 - fwd.value) },
       { rotate: `${tx.value * 0.12}deg` },   // the demo's drag tilt
-      { scale: sc.value },
+      { scale: 0.95 + 0.05 * fwd.value },
     ],
-    opacity: op.value,
+    opacity: op.value * (0.55 + 0.45 * fwd.value),
   }));
 
+  // NOTE: s.overlay carries explicit top/left/right/bottom — absolute children
+  // WITHOUT offsets keep their flow position on iOS (user's phone, 2026-09-25)
   return (
     <GestureDetector gesture={pan}>
-      <Animated.View style={[s.overlay, style]}>{children}</Animated.View>
+      <Animated.View style={[s.overlay, style]} pointerEvents={top ? 'auto' : 'none'}>
+        {children}
+      </Animated.View>
     </GestureDetector>
   );
-}
-
-function setTimeoutSwipe(onSwiped: (d: 1 | -1) => void, d: 1 | -1) {
-  setTimeout(() => onSwiped(d), 300);
 }
 
 const s = StyleSheet.create({
