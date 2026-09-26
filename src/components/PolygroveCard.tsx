@@ -7,12 +7,12 @@
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, photoCommonsPage, photoFor } from '../lib/catalog';
-import { fieldNote } from '../lib/dossier';
+import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
 import FwGraph from './FwGraph';
 import HexPhoto from './HexPhoto';
 
@@ -32,6 +32,33 @@ export default function PolygroveCard({ card }: { card: Card }) {
   const flip = useSharedValue(0);
   const [flipped, setFlipped] = useState(false);
   const [srcPop, setSrcPop] = useState<{ label: string; source: string; confidence: string } | null>(null);
+
+  // "Tap to expand" literally grows the food web box (user, 2026-09-26): the
+  // box's measured rect animates out to fill the card face, showing the big
+  // labeled web; a tap on the background shrinks it back.
+  type Rect = { x: number; y: number; w: number; h: number };
+  const [face, setFace] = useState<Rect>({ x: 0, y: 0, w: 0, h: 0 });
+  const [box, setBox] = useState<Rect | null>(null);
+  const [webBig, setWebBig] = useState(false);
+  const [recs, setRecs] = useState<GlobiRow[] | null>(null);
+  const [showRecs, setShowRecs] = useState(false);
+  const grow = useSharedValue(0);
+  const openWeb = () => { setShowRecs(false); setWebBig(true); grow.value = withTiming(1, { duration: 320 }); };
+  const closeWeb = () => {
+    setShowRecs(false);
+    grow.value = withTiming(0, { duration: 260 }, done => { if (done) runOnJS(setWebBig)(false); });
+  };
+  const bigStyle = useAnimatedStyle(() => {
+    const b = box ?? { x: 0, y: 0, w: face.w, h: face.h };
+    const g = grow.value;
+    return {
+      left: b.x + (0 - b.x) * g,
+      top: b.y + (0 - b.y) * g,
+      width: b.w + (face.w - b.w) * g,
+      height: b.h + (face.h - b.h) * g,
+      borderRadius: 10 + 12 * g,
+    };
+  });
   const [glowId] = useState(() => `glow${++_glowSeq}`);
   const doFlip = () => {
     const to = flipped ? 0 : 1;
@@ -110,7 +137,8 @@ export default function PolygroveCard({ card }: { card: Card }) {
       </Animated.View>
 
       {/* BACK — .face.back */}
-      <Animated.View style={[s.phone, backStyle]}>
+      <Animated.View style={[s.phone, backStyle]}
+        onLayout={(e: LayoutChangeEvent) => { const { width, height } = e.nativeEvent.layout; setFace({ x: 0, y: 0, w: width, h: height }); }}>
         <View style={s.head}>
           <HexPhoto uri={photoFor(card.id, 120)} width={46} height={52} borderColor={tc} borderWidth={4} />
           <View style={{ flex: 1, marginLeft: 12 }}>
@@ -137,8 +165,54 @@ export default function PolygroveCard({ card }: { card: Card }) {
           <Text style={s.fwLabel}>FOOD WEB</Text>
           <View style={s.fwLine} />
         </View>
-        <MiniWeb card={card} onExpand={() => router.push(`/web/${card.id}`)} />
+        <MiniWeb card={card} onExpand={openWeb}
+          onLayout={e => { const { x, y, width, height } = e.nativeEvent.layout; setBox({ x, y, w: width, h: height }); }} />
         <View style={s.pillRow}><View style={s.pill}><Text style={s.pillTxt}>Tap card to flip</Text></View></View>
+
+        {/* EXPANDED FOOD WEB — the box, grown to the face */}
+        {webBig && (
+          <Animated.View style={[s.webBig, bigStyle]}>
+            <Pressable style={{ flex: 1 }} onPress={closeWeb}>
+              <View style={s.webBigHead}>
+                <Text style={s.fwLabel}>FOOD WEB</Text>
+                <Text style={s.webBigHint}>tap to shrink</Text>
+              </View>
+              {/* the square web centered in the tall box */}
+              <View style={{ flex: 1, justifyContent: 'center' }} onStartShouldSetResponder={() => true}>
+                <View style={{ width: '100%', aspectRatio: 1 }}>
+                  <FwGraph card={card} viewW={500} viewH={500} nodeR={20} centerR={32}
+                    fontSize={14} radiusFactor={0.34} showLabels
+                    onNodePress={cid => router.push(`/species/${cid}`)} />
+                </View>
+              </View>
+              {/* ⓘ: every GloBI record behind this web, in-card */}
+              <Pressable hitSlop={10} style={s.webBigI}
+                onPress={async () => { setShowRecs(true); if (!recs) setRecs(await globiRecords(card.sci)); }}>
+                <Text style={s.webBigITxt}>i</Text>
+              </Pressable>
+              {showRecs && (
+                <Pressable style={s.recWrap} onPress={() => setShowRecs(false)}>
+                  <View style={s.recPanel} onStartShouldSetResponder={() => true}>
+                    <Text style={s.recTitle}>GloBI RECORDS</Text>
+                    <ScrollView style={{ maxHeight: 260 }} contentContainerStyle={{ paddingBottom: 4 }}>
+                      {recs === null ? <Text style={s.recNone}>…</Text>
+                        : recs.length === 0 ? <Text style={s.recNone}>no interaction records</Text>
+                        : recs.map((r, i) => (
+                          <View key={i} style={s.recRow}>
+                            <Text style={s.recFact}>{r.fact}{r.derived ? '  · derived' : ''}</Text>
+                            <Text style={s.recVal}>{r.value}</Text>
+                          </View>
+                        ))}
+                    </ScrollView>
+                    <Pressable onPress={() => WebBrowser.openBrowserAsync('https://www.globalbioticinteractions.org/')}>
+                      <Text style={s.recCredit}>source: GloBI ›</Text>
+                    </Pressable>
+                  </View>
+                </Pressable>
+              )}
+            </Pressable>
+          </Animated.View>
+        )}
       </Animated.View>
 
       {/* SOURCE POPUP — in-card, tap to dismiss */}
@@ -186,8 +260,8 @@ function Box({ k, v, vColor, onPress }: { k: string; v: string; vColor?: string;
 
 // the back's mini food web — the shared fwGraphSVG port, 'sm' instance
 // (300x200, nodeR 9, centerR 16, no labels), same as the website's card.
-// Tap opens the full labeled web.
-function MiniWeb({ card, onExpand }: { card: Card; onExpand: () => void }) {
+// Tap grows the box into the full labeled web (onLayout feeds the animation).
+function MiniWeb({ card, onExpand, onLayout }: { card: Card; onExpand: () => void; onLayout: (e: LayoutChangeEvent) => void }) {
   const hasWeb = (card.foodweb?.eatenBy?.length || 0) + (card.foodweb?.eats?.length || 0) > 0;
   if (!hasWeb) {
     return (
@@ -197,7 +271,7 @@ function MiniWeb({ card, onExpand }: { card: Card; onExpand: () => void }) {
     );
   }
   return (
-    <Pressable style={s.fwBox} onPress={onExpand}>
+    <Pressable style={s.fwBox} onPress={onExpand} onLayout={onLayout}>
       <View style={s.fwChip}><Text style={s.fwChipTxt}>Tap to expand</Text></View>
       <FwGraph card={card} viewW={300} viewH={200} nodeR={9} centerR={16}
         fontSize={8} radiusFactor={0.34} showLabels={false} />
@@ -241,6 +315,24 @@ const s = StyleSheet.create({
   // .dc-fw
   fwBox: { flex: 1, minHeight: 148, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 12, overflow: 'hidden' },
   fwChip: { position: 'absolute', top: 8, left: 10, backgroundColor: '#2a2a2a', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3, zIndex: 2 },
+  // the expanded food web — the box grown to the face
+  webBig: { position: 'absolute', backgroundColor: '#161616', overflow: 'hidden', zIndex: 15, padding: 10 },
+  webBigHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingBottom: 4 },
+  webBigHint: { color: '#555555', fontSize: 10, fontFamily: F.sans },
+  webBigI: {
+    position: 'absolute', right: 12, bottom: 12, width: 26, height: 26, borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  webBigITxt: { color: '#999999', fontSize: 13, fontStyle: 'italic', fontFamily: F.sansBold },
+  recWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', padding: 14 },
+  recPanel: { backgroundColor: '#1e1e1e', borderRadius: 14, borderWidth: 1, borderColor: '#333333', padding: 14, width: '100%' },
+  recTitle: { fontFamily: F.sansBold, fontSize: 10, letterSpacing: 1.8, color: '#888888', textAlign: 'center', marginBottom: 6 },
+  recRow: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingVertical: 7 },
+  recFact: { fontFamily: F.sansBold, fontSize: 12, color: C.text },
+  recVal: { fontFamily: F.sans, fontSize: 11, color: '#999999', marginTop: 2, lineHeight: 15 },
+  recNone: { fontFamily: F.sans, fontSize: 12, color: '#666666', textAlign: 'center', marginVertical: 14 },
+  recCredit: { fontFamily: F.sansMed, fontSize: 11, color: C.greenSoft, textAlign: 'center', marginTop: 8 },
   fwChipTxt: { color: '#999999', fontSize: 10.5, fontFamily: F.sans },
   fwName: { color: '#999999', fontSize: 7.5, fontFamily: F.sans, maxWidth: 64, marginTop: 1 },
   // photo-area corner buttons (demo's attribution-i styling)
