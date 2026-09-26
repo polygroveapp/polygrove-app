@@ -82,12 +82,12 @@ export default function PolygroveCard({ card }: { card: Card }) {
             <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
           </Svg>
           <HexPhoto uri={photo} width={148} height={167} borderColor={tc} borderWidth={6} />
-          {/* ⓘ bottom-left → the Commons file page (user, 2026-09-26): the ONLY
+          {/* ⓘ bottom-right → the Commons file page (user, 2026-09-26): the ONLY
               full-photo view — our hex crop is an edit, so the uncropped
               original is shown at its source, credited. Nested Pressable so
               the card flip doesn't fire. */}
           {!!commons && (
-            <Pressable hitSlop={10} style={[s.photoBtn, { left: 12 }]}
+            <Pressable hitSlop={10} style={[s.photoBtn, { right: 12 }]}
               onPress={() => WebBrowser.openBrowserAsync(commons)}>
               <Text style={[s.photoBtnTxt, { fontStyle: 'italic', fontFamily: F.sansBold }]}>i</Text>
             </Pressable>
