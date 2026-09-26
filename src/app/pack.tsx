@@ -158,7 +158,11 @@ export default function PackOpening() {
 
 function SwipeSlot({ children, onSwiped }: { children: React.ReactNode; onSwiped: (d: 1 | -1) => void }) {
   const tx = useSharedValue(0);
-  const gone = useSharedValue(0);
+  const op = useSharedValue(1);
+  // arrive from the waiting stack: start at the stack's 0.95 and zoom up
+  // smoothly (the old hard swap read as a glitch, user 2026-09-26)
+  const sc = useSharedValue(0.95);
+  useEffect(() => { sc.value = withTiming(1, { duration: 180 }); }, [sc]);
 
   const pan = Gesture.Pan()
     .activeOffsetX([-12, 12])   // let taps through to the card flip
@@ -166,8 +170,11 @@ function SwipeSlot({ children, onSwiped }: { children: React.ReactNode; onSwiped
     .onEnd(() => {
       if (Math.abs(tx.value) > 100) {
         const d = tx.value > 0 ? 1 : -1;
-        gone.value = 1;
+        // start both animations HERE, once — a withTiming born inside
+        // useAnimatedStyle restarts every frame and never progresses (the
+        // jitter, user 2026-09-26)
         tx.value = withTiming(d * 600, { duration: 300 });
+        op.value = withTiming(0, { duration: 300 });
         runOnJS(setTimeoutSwipe)(onSwiped, d);
       } else {
         tx.value = withSpring(0, { damping: 16, stiffness: 160 });
@@ -178,8 +185,9 @@ function SwipeSlot({ children, onSwiped }: { children: React.ReactNode; onSwiped
     transform: [
       { translateX: tx.value },
       { rotate: `${tx.value * 0.12}deg` },   // the demo's drag tilt
+      { scale: sc.value },
     ],
-    opacity: gone.value ? withTiming(0, { duration: 300 }) : 1,
+    opacity: op.value,
   }));
 
   return (
