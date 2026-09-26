@@ -244,10 +244,10 @@ const s = StyleSheet.create({
   // photo-area corner buttons (demo's attribution-i styling)
   photoBtn: {
     position: 'absolute', bottom: 10, width: 23, height: 23, borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(0,0,0,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center', justifyContent: 'center',
   },
-  photoBtnTxt: { color: '#888888', fontSize: 12, lineHeight: 14 },
+  photoBtnTxt: { color: '#6e6e6e', fontSize: 12, lineHeight: 14 },
   // the demo's photo field: EXACT #111 black base (radial accent glow on top),
   // full-bleed past the card padding (user, 2026-09-26)
   hexGlow: {
