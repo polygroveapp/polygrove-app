@@ -56,9 +56,9 @@ export default function PolygroveCard({ card }: { card: Card }) {
       {/* FRONT — .face.front */}
       <Animated.View style={[s.phone, frontStyle]}>
         <View style={s.site}>
-          <Text style={s.siteGlyph}>⚑</Text>
+          <View style={s.headerBtn}><Text style={s.siteGlyph}>⚑</Text></View>
           <Text style={s.siteMid}>polygrove.io</Text>
-          <Text style={s.siteGlyph}>☆</Text>
+          <View style={s.headerBtn}><Text style={s.siteGlyph}>☆</Text></View>
         </View>
         {/* the demo's photo field (user, 2026-09-26): full-bleed near-black with
             a radial accent glow behind the hex */}
@@ -76,16 +76,16 @@ export default function PolygroveCard({ card }: { card: Card }) {
           {/* corners of the photo area (user, 2026-09-25): ⤢ full photo
               bottom-left, ⓘ Commons attribution bottom-right, both above the
               accent divider. Nested Pressables so the card flip doesn't fire. */}
-          {!!photo && (
-            <Pressable hitSlop={8} style={[s.photoBtn, { left: 10 }]}
-              onPress={() => setPhotoFull(true)}>
-              <Text style={s.photoBtnTxt}>⤢</Text>
-            </Pressable>
-          )}
           {!!commons && (
-            <Pressable hitSlop={8} style={[s.photoBtn, { right: 10 }]}
+            <Pressable hitSlop={10} style={[s.photoBtn, { left: 12 }]}
               onPress={() => WebBrowser.openBrowserAsync(commons)}>
               <Text style={[s.photoBtnTxt, { fontStyle: 'italic', fontFamily: F.sansBold }]}>i</Text>
+            </Pressable>
+          )}
+          {!!photo && (
+            <Pressable hitSlop={10} style={[s.photoBtn, { right: 12 }]}
+              onPress={() => setPhotoFull(true)}>
+              <Text style={s.photoBtnTxt}>⤢</Text>
             </Pressable>
           )}
         </View>
@@ -206,7 +206,7 @@ const s = StyleSheet.create({
   },
   // .dc-site
   site: { flexDirection: 'row', alignItems: 'center', paddingTop: 2, paddingBottom: 7 },
-  siteGlyph: { color: '#555555', fontSize: 14, fontFamily: F.sans },
+  siteGlyph: { color: '#666666', fontSize: 12.5, fontFamily: F.sans, lineHeight: 15 },
   siteMid: { flex: 1, textAlign: 'center', color: '#555555', fontSize: 11, letterSpacing: 1.1, fontFamily: F.sans },
   // .dc-name / .dc-sci / .dc-ico
   name: { fontFamily: F.display, fontSize: 15, color: C.text },
@@ -233,11 +233,16 @@ const s = StyleSheet.create({
   fwName: { color: '#999999', fontSize: 7.5, fontFamily: F.sans, maxWidth: 64, marginTop: 1 },
   // photo-area corner buttons (demo's attribution-i styling)
   photoBtn: {
-    position: 'absolute', bottom: 2, width: 22, height: 22, borderRadius: 11,
-    backgroundColor: 'rgba(0,0,0,0.35)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    position: 'absolute', bottom: 10, width: 23, height: 23, borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
-  photoBtnTxt: { color: '#777777', fontSize: 12, lineHeight: 14 },
+  photoBtnTxt: { color: '#888888', fontSize: 12, lineHeight: 14 },
+  headerBtn: {
+    width: 23, height: 23, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center', justifyContent: 'center',
+  },
   // the demo's photo field: EXACT #111 black base (radial accent glow on top),
   // full-bleed past the card padding (user, 2026-09-26)
   hexGlow: {
