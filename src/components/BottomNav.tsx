@@ -1,6 +1,6 @@
-// The demo's fixed bottom tab bar: 🏕️ Home · 🌲 Species · ❓ About (home mock,
-// 2026-09-26; camping tent instead of the demo's house per user). Plain
-// buttons over expo-router — the stack stays simple.
+// The demo's fixed bottom tab bar: ⛺ Home · 🌲 Species · ❓ About (home mock,
+// 2026-09-26; plain tent instead of the demo's house per user). Plain buttons
+// over expo-router — the stack stays simple.
 
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from '../constants/polygrove';
 
 const TABS = [
-  { id: 'home', icon: '🏕️', label: 'Home', href: '/' },
+  { id: 'home', icon: '⛺', label: 'Home', href: '/' },
   { id: 'species', icon: '🌲', label: 'Species', href: '/deck' },
   { id: 'about', icon: '❓', label: 'About', href: '/about' },
 ] as const;
