@@ -44,40 +44,47 @@ export default function FieldNotes() {
   const trophics = useMemo(() => TROPHIC_ORDER.filter(t => cards.some(c => c.trophic === t)), [cards]);
   // no "Undiscovered" option — a screen of identical ? tiles says nothing
   const levelOpts = MASTERY.map(m => ({ key: m.key, label: m.label }));
-  const rows = useMemo(() => cards.filter(c => {
-    if (group && c.group !== group) return false;
-    if (trophic && c.trophic !== trophic) return false;
-    if (level) {
+  type Sel = { level: string | null; group: string | null; trophic: string | null };
+  const matches = (c: Card, sel: Sel) => {
+    if (sel.group && c.group !== sel.group) return false;
+    if (sel.trophic && c.trophic !== sel.trophic) return false;
+    if (sel.level) {
       const journaled = eco ? owns(eco.eid, c.species_id) : false;
-      return journaled && getTier(0).key === level;   // every journaled card is Clay until the quiz
+      return journaled && getTier(0).key === sel.level;   // every journaled card is Clay until the quiz
     }
     return true;
-  }), [cards, group, trophic, level, eco, owned]);   // eslint-disable-line react-hooks/exhaustive-deps
+  };
+  const cur: Sel = { level, group, trophic };
+  const rows = useMemo(() => cards.filter(c => matches(c, cur)),
+    [cards, group, trophic, level, eco, owned]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // how many cards each option would leave, given the other two filters —
+  // the count sits at the right of every chip and button (user, 2026-09-26)
+  const countIf = (patch: Partial<Sel>) => cards.reduce((n, c) => n + (matches(c, { ...cur, ...patch }) ? 1 : 0), 0);
 
   const filterBar = (
     <View style={s.filters}>
       <View style={s.filterRow}>
         <FilterBtn label="Level" value={level ? levelOpts.find(o => o.key === level)?.label : undefined}
-          color={level ? MASTERY.find(m => m.key === level)?.border : undefined}
+          color={level ? MASTERY.find(m => m.key === level)?.border : undefined} count={rows.length}
           open={open === 'level'} onPress={() => setOpen(open === 'level' ? null : 'level')} />
-        <FilterBtn label="Role" value={trophic ?? undefined} color={trophic ? TROPHIC_COLOR[trophic] : undefined}
+        <FilterBtn label="Role" value={trophic ?? undefined} color={trophic ? TROPHIC_COLOR[trophic] : undefined} count={rows.length}
           open={open === 'trophic'} onPress={() => setOpen(open === 'trophic' ? null : 'trophic')} />
-        <FilterBtn label="Taxonomy" value={group ?? undefined}
+        <FilterBtn label="Taxonomy" value={group ?? undefined} count={rows.length}
           open={open === 'group'} onPress={() => setOpen(open === 'group' ? null : 'group')} />
       </View>
       {open && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
           {open === 'level' && <>
-            <Chip label="All" on={!level} onPress={() => setLevel(null)} />
-            {MASTERY.map(m => <Chip key={m.key} label={m.label} on={level === m.key} color={m.border} onPress={() => setLevel(level === m.key ? null : m.key)} />)}
+            <Chip label="All" count={countIf({ level: null })} on={!level} onPress={() => setLevel(null)} />
+            {MASTERY.map(m => <Chip key={m.key} label={m.label} count={countIf({ level: m.key })} on={level === m.key} color={m.border} onPress={() => setLevel(level === m.key ? null : m.key)} />)}
           </>}
           {open === 'group' && <>
-            <Chip label="All" on={!group} onPress={() => setGroup(null)} />
-            {groups.map(g => <Chip key={g} label={g} on={group === g} onPress={() => setGroup(group === g ? null : g)} />)}
+            <Chip label="All" count={countIf({ group: null })} on={!group} onPress={() => setGroup(null)} />
+            {groups.map(g => <Chip key={g} label={g} count={countIf({ group: g })} on={group === g} onPress={() => setGroup(group === g ? null : g)} />)}
           </>}
           {open === 'trophic' && <>
-            <Chip label="All" on={!trophic} onPress={() => setTrophic(null)} />
-            {trophics.map(t => <Chip key={t} label={t} on={trophic === t} color={TROPHIC_COLOR[t]} onPress={() => setTrophic(trophic === t ? null : t)} />)}
+            <Chip label="All" count={countIf({ trophic: null })} on={!trophic} onPress={() => setTrophic(null)} />
+            {trophics.map(t => <Chip key={t} label={t} count={countIf({ trophic: t })} on={trophic === t} color={TROPHIC_COLOR[t]} onPress={() => setTrophic(trophic === t ? null : t)} />)}
           </>}
         </ScrollView>
       )}
@@ -143,15 +150,18 @@ export default function FieldNotes() {
   );
 }
 
-function FilterBtn({ label, value, open, color, onPress }: {
-  label: string; value?: string; open: boolean; color?: string; onPress: () => void;
+function FilterBtn({ label, value, open, color, count, onPress }: {
+  label: string; value?: string; open: boolean; color?: string; count: number; onPress: () => void;
 }) {
   // a chosen value tints the button its color (tier for Level, trophic for
   // Role); "All" and the open state stay grey (user, 2026-09-26)
   const tint = value && color ? { borderColor: `${color}80`, backgroundColor: `${color}1f` } : null;
   return (
     <Pressable onPress={onPress} style={[s.filterBtn, (open || value) && s.filterBtnOn, tint]}>
-      <Text style={s.filterLabel}>{label}</Text>
+      <View style={s.filterTop}>
+        <Text style={s.filterLabel}>{label}</Text>
+        <Text style={s.filterCount}>{count}</Text>
+      </View>
       <Text style={[s.filterValue, value && color ? { color } : null]} numberOfLines={1}>
         {value ?? 'All'} {open ? '▴' : '▾'}
       </Text>
@@ -159,10 +169,12 @@ function FilterBtn({ label, value, open, color, onPress }: {
   );
 }
 
-function Chip({ label, on, color, onPress }: { label: string; on: boolean; color?: string; onPress: () => void }) {
+function Chip({ label, count, on, color, onPress }: { label: string; count: number; on: boolean; color?: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={[s.chip, on && s.chipOn, on && color ? { borderColor: `${color}80`, backgroundColor: `${color}22` } : null]}>
-      <Text style={[s.chipTxt, on && s.chipTxtOn, on && color ? { color } : null]}>{label}</Text>
+      <Text style={[s.chipTxt, on && s.chipTxtOn, on && color ? { color } : null]}>
+        {label}<Text style={s.chipCount}>  {count}</Text>
+      </Text>
     </Pressable>
   );
 }
@@ -238,8 +250,11 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',
   },
   filterBtnOn: { borderColor: '#555555', backgroundColor: 'rgba(255,255,255,0.08)' },
+  filterTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   filterLabel: { fontFamily: F.sansBold, fontSize: 8.5, color: '#666', textTransform: 'uppercase', letterSpacing: 1 },
+  filterCount: { fontFamily: F.sansMed, fontSize: 9.5, color: '#777' },
   filterValue: { fontFamily: F.sansMed, fontSize: 12.5, color: C.text, marginTop: 1 },
+  chipCount: { fontFamily: F.sans, fontSize: 10.5, color: '#777' },
   chips: { gap: 7, paddingTop: 10, paddingRight: 8 },
   chip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)' },
   chipOn: { borderColor: '#666666', backgroundColor: 'rgba(255,255,255,0.1)' },
