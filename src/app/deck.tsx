@@ -192,7 +192,8 @@ function Cell({ card, journaled, onPress }: { card: Card; journaled: boolean; on
         <HexPhoto uri={photo} width={58} height={66} borderColor={journaled ? tc : '#2a2a2a'} borderWidth={3} />
         {!journaled && <Text style={s.unknown}>?</Text>}
       </View>
-      <View style={[s.divider, { backgroundColor: journaled ? tc : '#262626' }]} />
+      {/* the divider carries the LEVEL (mastery tier); the hexagon carries the role */}
+      <View style={[s.divider, { backgroundColor: journaled ? t.border : '#262626' }]} />
       <Text style={s.name} numberOfLines={2}>{journaled ? card.name : '???'}</Text>
       <View style={s.foot}>
         <Text style={[s.tier, { color: journaled ? t.border : '#333333' }]} numberOfLines={1}>
