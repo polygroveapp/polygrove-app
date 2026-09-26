@@ -7,7 +7,7 @@
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, photoCommonsPage, photoFor } from '../lib/catalog';
@@ -25,6 +25,7 @@ export default function PolygroveCard({ card }: { card: Card }) {
   const router = useRouter();
   const flip = useSharedValue(0);
   const [flipped, setFlipped] = useState(false);
+  const [photoFull, setPhotoFull] = useState(false);
   const doFlip = () => {
     const to = flipped ? 0 : 1;
     setFlipped(!flipped);
@@ -62,7 +63,7 @@ export default function PolygroveCard({ card }: { card: Card }) {
               accent divider. Nested Pressables so the card flip doesn't fire. */}
           {!!photo && (
             <Pressable hitSlop={8} style={[s.photoBtn, { left: 0 }]}
-              onPress={() => router.push(`/photo/${card.id}`)}>
+              onPress={() => setPhotoFull(true)}>
               <Text style={s.photoBtnTxt}>⤢</Text>
             </Pressable>
           )}
@@ -112,6 +113,26 @@ export default function PolygroveCard({ card }: { card: Card }) {
         <MiniWeb card={card} onExpand={() => router.push(`/web/${card.id}`)} />
         <View style={s.pillRow}><View style={s.pill}><Text style={s.pillTxt}>Tap card to flip</Text></View></View>
       </Animated.View>
+
+      {/* FULL PHOTO — fullscreen WITHIN the card (user, 2026-09-25): the photo
+          fills the card's rounded rect, tap to close */}
+      {photoFull && !!photo && (
+        <Pressable style={s.photoFull} onPress={() => setPhotoFull(false)}>
+          <Image source={{ uri: photoFor(card.id, 960) }} style={{ flex: 1 }} resizeMode="contain" />
+          <View style={s.photoFullCap}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.name, { color: tc }]} numberOfLines={1}>{card.name}</Text>
+              <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
+            </View>
+            {!!commons && (
+              <Pressable hitSlop={8} onPress={() => WebBrowser.openBrowserAsync(commons)}>
+                <Text style={s.photoFullSrc}>ⓘ source</Text>
+              </Pressable>
+            )}
+          </View>
+          <Text style={s.photoFullHint}>tap to close</Text>
+        </Pressable>
+      )}
     </Pressable>
   );
 }
@@ -200,6 +221,15 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   photoBtnTxt: { color: '#777777', fontSize: 12, lineHeight: 14 },
+  // full-photo overlay: fills the card's rounded rect
+  photoFull: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10,
+    backgroundColor: '#0c0c0c', borderRadius: 22, borderWidth: 1, borderColor: '#333333',
+    overflow: 'hidden', paddingBottom: 8,
+  },
+  photoFullCap: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingHorizontal: 14, paddingTop: 8 },
+  photoFullSrc: { fontFamily: F.sansMed, fontSize: 11.5, color: '#8a8f8a', paddingVertical: 4 },
+  photoFullHint: { textAlign: 'center', fontFamily: F.sans, fontSize: 10, color: '#555555', marginTop: 4 },
   // .dc-pill
   pillRow: { alignItems: 'center', marginTop: 9, marginBottom: 5 },
   pill: { backgroundColor: '#222222', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 5 },
