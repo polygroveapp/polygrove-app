@@ -3,7 +3,7 @@
 // off — RIGHT journals it, LEFT releases it. Tap flips to the details back.
 
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -12,11 +12,14 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PolygroveCard from '../components/PolygroveCard';
 import { C, F } from '../constants/polygrove';
-import { Card, getCards, photoFor } from '../lib/catalog';
+import { Card, getCards, loadCatalog, photoFor } from '../lib/catalog';
 import { addToCollection, owns } from '../lib/collection';
+import {
+  PACK_SIZE, Stashed, offlineReady, popPack, releaseStashed, snapshotStashed, topUp,
+} from '../lib/offline';
 
-const PACK_SIZE = 5;
-
+// live draw — the fallback when the queue can't serve (fresh install before
+// the first top-up lands, or a 20-pack offline binge that found signal again)
 function drawPack(): Card[] {
   const all = getCards();
   const pool = all.filter(c => !owns(c.species_id) && photoFor(c.id));
@@ -32,12 +35,30 @@ function drawPack(): Card[] {
   return pack;
 }
 
+const liveStash = (card: Card): Stashed =>
+  ({ card, note: null, globi: [], photoUrl: photoFor(card.id, 500) });
+
 export default function PackOpening() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const catReady = getCards().length > 0;
-  useEffect(() => { if (!catReady) router.replace('/'); }, [catReady, router]);
-  const pack = useMemo(() => drawPack(), []);
+  // every pack pops the queue's front (one code path, photos already on
+  // disk); the queue refills its tail in the background
+  const [pack, setPack] = useState<Stashed[] | null>(null);
+  const [noNet, setNoNet] = useState(false);
+  useEffect(() => {
+    (async () => {
+      await offlineReady();
+      let p = popPack();
+      if (!p) {
+        try {
+          await loadCatalog();
+          p = drawPack().map(liveStash);
+          topUp();
+        } catch { setNoNet(true); return; }
+      }
+      setPack(p);
+    })();
+  }, []);
   const [idx, setIdx] = useState(0);
   const [kept, setKept] = useState(0);
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
@@ -49,7 +70,21 @@ export default function PackOpening() {
     height: Math.min(600, win.height - 130 - insets.top - insets.bottom),
   };
 
-  if (!catReady) return null;
+  if (noNet) return (
+    <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 20 }]}>
+      <View style={s.center}>
+        <Text style={s.doneTitle}>Out of packs</Text>
+        <Text style={[s.doneSub, { textAlign: 'center', lineHeight: 19 }]}>
+          You’re offline and the pack reserve is empty.{'\n'}
+          Reconnect and packs restock on their own.
+        </Text>
+        <Pressable onPress={() => router.replace('/')} style={s.primary}>
+          <Text style={s.primaryTxt}>Home</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+  if (!pack) return <View style={s.root} />;
 
   if (idx >= pack.length) return (
     <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 20 }]}>
@@ -70,7 +105,13 @@ export default function PackOpening() {
   );
 
   const onSwiped = (dir: 1 | -1) => {
-    if (dir === 1) { addToCollection(pack[idx]); setKept(k => k + 1); }
+    if (dir === 1) {
+      addToCollection(pack[idx].card);
+      snapshotStashed(pack[idx]);   // journal = offline forever
+      setKept(k => k + 1);
+    } else {
+      releaseStashed(pack[idx]);    // released → photo file dropped
+    }
     setIdx(i => i + 1);
   };
 
@@ -95,13 +136,13 @@ export default function PackOpening() {
         {pack[idx + 1] && (
           <View style={s.overlay} pointerEvents="none">
             <View style={[cardSize, { transform: [{ scale: 0.95 }] }]}>
-              <PolygroveCard key={pack[idx + 1].id} card={pack[idx + 1]} />
+              <PolygroveCard key={pack[idx + 1].card.id} card={pack[idx + 1].card} />
             </View>
           </View>
         )}
-        <SwipeSlot key={pack[idx].id} onSwiped={onSwiped}>
+        <SwipeSlot key={pack[idx].card.id} onSwiped={onSwiped}>
           <View style={cardSize}>
-            <PolygroveCard card={pack[idx]} />
+            <PolygroveCard card={pack[idx].card} />
           </View>
         </SwipeSlot>
       </View>

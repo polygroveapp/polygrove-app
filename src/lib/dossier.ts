@@ -11,12 +11,23 @@ function djb2(s: string) {
 }
 
 type ShardRow = [string, string, string]; // [source, fact, value]
+export type GlobiRow = { fact: string; value: string; derived: boolean };
 const _shards: Record<number, Promise<Record<string, ShardRow[]>>> = {};
 const _notes: Record<string, string | null> = {};
+const _globiSeed: Record<string, GlobiRow[]> = {};
+
+// offline snapshots (offline.ts) pre-fill the caches so collected/queued cards
+// read their field note + GloBI rows with no network. Snapshot data wins —
+// a collected card is a snapshot of what you caught, not synced.
+export function seedDossier(sci: string, note: string | null, globi: GlobiRow[]) {
+  if (!(sci in _notes)) _notes[sci] = note;
+  if (!_globiSeed[sci] && globi.length) _globiSeed[sci] = globi;
+}
 
 // every GloBI interaction row for a species — e.g.
 // ['GloBI', 'preysOn — 1710 partners, 6980 records', 'top: Gonomyia lucidula, …']
-export async function globiRecords(sci: string): Promise<{ fact: string; value: string; derived: boolean }[]> {
+export async function globiRecords(sci: string): Promise<GlobiRow[]> {
+  if (_globiSeed[sci]) return _globiSeed[sci];
   const sh = djb2(sci);
   _shards[sh] ||= fetch(`${BASE}/${sh}.json`).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
   const rows = (await _shards[sh])[sci] || [];

@@ -4,6 +4,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F, TROPHIC_COLOR } from '../../constants/polygrove';
 import { FoodwebLink, cardById, cardByName, getCards, loadCatalog, photoFor } from '../../lib/catalog';
+import { offlineReady } from '../../lib/offline';
 
 export default function SpeciesCard() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -11,7 +12,11 @@ export default function SpeciesCard() {
   const insets = useSafeAreaInsets();
   // deep links land here with a COLD cache — load the catalog ourselves
   const [ready, setReady] = useState(getCards().length > 0);
-  useEffect(() => { if (!ready) loadCatalog().then(() => setReady(true)).catch(() => setReady(true)); }, [ready]);
+  useEffect(() => {
+    // offline snapshots register collected cards, so this page works with no
+    // catalog (cold deep link, no signal)
+    if (!ready) Promise.allSettled([offlineReady(), loadCatalog()]).then(() => setReady(true));
+  }, [ready]);
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const card = ready ? cardById(String(id)) : undefined;
 

@@ -5,15 +5,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { cardById, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, useCollection } from '../lib/collection';
+import { offlineReady } from '../lib/offline';
 
 export default function Journal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const owned = useCollection();
-  // deep links land here cold — load both stores ourselves
+  // deep links land here cold — load all stores ourselves; offline snapshots
+  // (offlineReady) keep the grid working when the catalog fetch fails
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    Promise.all([loadCollection(), loadCatalog()]).finally(() => setReady(true));
+    Promise.allSettled([loadCollection(), offlineReady(), loadCatalog()]).then(() => setReady(true));
   }, []);
   if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
 

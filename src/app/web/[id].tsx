@@ -11,13 +11,16 @@ import FwGraph from '../../components/FwGraph';
 import { C, F } from '../../constants/polygrove';
 import { cardById, getCards, loadCatalog } from '../../lib/catalog';
 import { globiRecords } from '../../lib/dossier';
+import { offlineReady } from '../../lib/offline';
 
 export default function FoodWebScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [ready, setReady] = useState(getCards().length > 0);
-  useEffect(() => { if (!ready) loadCatalog().then(() => setReady(true)).catch(() => setReady(true)); }, [ready]);
+  useEffect(() => {
+    if (!ready) Promise.allSettled([offlineReady(), loadCatalog()]).then(() => setReady(true));
+  }, [ready]);
   const [recs, setRecs] = useState<{ fact: string; value: string; derived: boolean }[] | null>(null);
   const [showRecs, setShowRecs] = useState(false);
   const card = ready ? cardById(String(id)) : undefined;
