@@ -19,6 +19,7 @@ import { loadCollection, useCollection } from '../lib/collection';
 import { loadDaily, useDiscoveryCountdown } from '../lib/daily';
 import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 import { offlineReady, packsReady, topUp } from '../lib/offline';
+import { SOLAR_PACK_COST, loadSol, useSol } from '../lib/sol';
 
 export default function Home() {
   const router = useRouter();
@@ -28,13 +29,15 @@ export default function Home() {
   const eco = useCurrentEco();
   const owned = useCollection(eco?.eid);
   const daily = useDiscoveryCountdown();
+  const solBal = useSol();
+  const solOk = solBal >= SOLAR_PACK_COST;
 
   // the hub gates on LOCAL stores only — offline launch still reaches the
   // queue and journal. The catalog loads behind it and tops up the queue.
   const fetchCatalog = () =>
     loadCatalog().then(() => topUp()).catch(() => setOffline(true));
   useEffect(() => {
-    Promise.all([loadCollection(), loadCurrentEco(), loadDaily(), offlineReady()])
+    Promise.all([loadCollection(), loadCurrentEco(), loadDaily(), loadSol(), offlineReady()])
       .then(() => setReady(true));
     fetchCatalog();
   }, []);
@@ -128,15 +131,31 @@ export default function Home() {
               </Pressable>
             )}
 
-            {/* solar pack — dormant until Sol points exist (quiz milestone) */}
-            <View style={s.solarBtn}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Text style={{ fontSize: 20 }}>☀️</Text>
-                <Text style={s.solarTxt}>Open Solar Pack</Text>
+            {/* solar pack — 100 Sol a pack, outside the daily limit (demo rule) */}
+            {solOk ? (
+              <Pressable onPress={() => router.push('/pack?solar=1')}>
+                <LinearGradient colors={['#FF6F00', '#FFC107', '#FFD54F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  style={[s.solarBtn, { borderColor: '#FFC107' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Text style={{ fontSize: 20 }}>☀️</Text>
+                    <Text style={[s.solarTxt, { color: '#1a1a1a' }]}>Open Solar Pack</Text>
+                  </View>
+                  <Text style={[s.solarSol, { color: '#1a1a1a' }]}>{solBal}/{SOLAR_PACK_COST} Sol 🔆</Text>
+                </LinearGradient>
+              </Pressable>
+            ) : (
+              <View style={[s.solarBtn, s.solarBtnDim]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 20 }}>☀️</Text>
+                  <Text style={s.solarTxt}>Open Solar Pack</Text>
+                </View>
+                <Text style={s.solarSol}>{solBal}/{SOLAR_PACK_COST} Sol 🔆</Text>
               </View>
-              <Text style={s.solarSol}>0/100 Sol 🔆</Text>
-            </View>
-            <Text style={s.hint}>Take a quiz to earn <Text style={{ color: C.gold }}>Sol Points 🔆</Text></Text>
+            )}
+            <Text style={s.hint}>
+              {solOk ? 'Open a Solar Pack with ' : 'Take a quiz to earn '}
+              <Text style={{ color: C.gold }}>Sol Points 🔆</Text>
+            </Text>
 
             {/* review · solar quiz */}
             <View style={s.row2}>
@@ -216,12 +235,12 @@ const s = StyleSheet.create({
   tree: { fontSize: 22 },
   packTxt: { fontFamily: F.display, fontSize: 16, color: C.text },
   hint: { fontFamily: F.sans, fontSize: 10, color: '#666', textAlign: 'center', marginTop: 6, marginBottom: 12 },
-  // solar pack (dormant)
+  // solar pack — lit gradient when affordable, dim otherwise (demo styles)
   solarBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 18, paddingHorizontal: 20, borderRadius: 16,
-    backgroundColor: 'rgba(255,111,0,0.2)', borderWidth: 1, borderColor: 'rgba(255,111,0,0.3)',
+    paddingVertical: 18, paddingHorizontal: 20, borderRadius: 16, borderWidth: 1,
   },
+  solarBtnDim: { backgroundColor: 'rgba(255,111,0,0.2)', borderColor: 'rgba(255,111,0,0.3)' },
   solarTxt: { fontFamily: F.display, fontSize: 16, color: '#666' },
   solarSol: { fontFamily: F.sansBold, fontSize: 14, color: '#666' },
   // review / quiz

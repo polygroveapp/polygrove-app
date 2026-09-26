@@ -2,7 +2,7 @@
 // Drag rotates the card (offset * 0.12deg, demo SwipeCard); past 100px it flies
 // off — RIGHT journals it, LEFT releases it. Tap flips to the details back.
 
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -15,6 +15,7 @@ import { C, F } from '../constants/polygrove';
 import { Card, loadCatalog, photoFor } from '../lib/catalog';
 import { addToCollection, owns } from '../lib/collection';
 import { discoveryReady, loadDaily, markDiscoveryOpened } from '../lib/daily';
+import { SOLAR_PACK_COST, canAffordSolar, loadSol, spendSol } from '../lib/sol';
 import { currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
 import {
   PACK_SIZE, Stashed, offlineReady, popPack, releaseStashed, snapshotStashed, topUp,
@@ -44,6 +45,8 @@ const liveStash = (card: Card): Stashed =>
 export default function PackOpening() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // ?solar=1 → a Solar Pack: costs Sol, ignores the daily limit
+  const solar = useLocalSearchParams<{ solar?: string }>().solar === '1';
   // every pack pops the queue's front (one code path, photos already on
   // disk); the queue refills its tail in the background
   const [pack, setPack] = useState<Stashed[] | null>(null);
@@ -54,8 +57,8 @@ export default function PackOpening() {
       await offlineReady();
       const eco = await loadCurrentEco();
       if (!eco) { router.replace('/map'); return; }   // no ecoregion = nothing to draw from
-      await loadDaily();
-      if (!discoveryReady()) { router.replace('/'); return; }   // one Discovery Pack a day
+      await Promise.all([loadDaily(), loadSol()]);
+      if (solar ? !canAffordSolar() : !discoveryReady()) { router.replace('/'); return; }
       setEid(eco.eid);
       let p = popPack(eco.eid);
       if (!p) {
@@ -66,7 +69,8 @@ export default function PackOpening() {
         } catch { setNoNet(true); return; }
       }
       if (!p.length) { setNoNet(true); return; }
-      markDiscoveryOpened();   // the daily pack is spent the moment it's dealt
+      // the pack is paid for the moment it's dealt
+      if (solar) spendSol(SOLAR_PACK_COST); else markDiscoveryOpened();
       setPack(p);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -107,7 +111,7 @@ export default function PackOpening() {
         <Pressable onPress={() => router.replace('/collection')} style={s.primary}>
           <Text style={s.primaryTxt}>View Journal</Text>
         </Pressable>
-        <Text style={s.doneSub}>Next Discovery Pack in 24 hours</Text>
+        <Text style={s.doneSub}>{solar ? 'Solar Pack · 100 Sol 🔆' : 'Next Discovery Pack in 24 hours'}</Text>
         <Pressable onPress={() => router.replace('/')} style={s.ghost}>
           <Text style={s.ghostTxt}>Home</Text>
         </Pressable>
