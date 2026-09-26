@@ -76,6 +76,8 @@ export default function Gallery() {
             ))}
           </View>
         </View>
+        {/* the demo's Quiz pill under the card: THE way into the quiz (user,
+            2026-09-26). Green = quiz; gold "Practice" once a card is mastered. */}
         <GestureDetector gesture={pan}>
           <Animated.View style={[{ height: cardSize.height, alignItems: 'center' }, dragStyle]}>
             {cards.map((c, i) => {
@@ -90,6 +92,13 @@ export default function Gallery() {
             })}
           </Animated.View>
         </GestureDetector>
+        {cur && (
+          <View style={s.quizRow}>
+            <Pressable onPress={() => router.push(`/quiz/${cur.id}`)} style={s.quizBtn}>
+              <Text style={s.quizTxt}>Quiz</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     </Pressable>
   );
@@ -106,4 +115,11 @@ const s = StyleSheet.create({
   label: { fontFamily: F.sansBold, fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1 },
   dots: { flexDirection: 'row', gap: 4 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#333' },
+  // demo: padding 7px 24px, green 15% fill, 40% border, radius 20, 12px bold
+  quizRow: { alignItems: 'center', marginTop: 10 },
+  quizBtn: {
+    paddingVertical: 7, paddingHorizontal: 24, borderRadius: 20,
+    backgroundColor: 'rgba(76,175,80,0.15)', borderWidth: 1, borderColor: 'rgba(76,175,80,0.4)',
+  },
+  quizTxt: { fontFamily: F.sansBold, fontSize: 12, color: C.green },
 });
