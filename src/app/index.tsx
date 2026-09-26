@@ -17,7 +17,7 @@ import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { cardById, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, useCollection } from '../lib/collection';
 import { loadDaily, useDiscoveryCountdown } from '../lib/daily';
-import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { ensureEcoNames, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 import { offlineReady, packsReady, topUp } from '../lib/offline';
 import { SOLAR_PACK_COST, loadSol, useSol } from '../lib/sol';
 
@@ -41,8 +41,8 @@ export default function Home() {
       .then(() => setReady(true));
     fetchCatalog();
   }, []);
-  // a new ecoregion = a new queue to fill
-  useEffect(() => { if (eco) topUp(); }, [eco?.eid]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // a new ecoregion = a new queue to fill (+ its local names if never fetched)
+  useEffect(() => { if (eco) { topUp(); ensureEcoNames(); } }, [eco?.eid]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // the demo's greenPulse, verbatim (App.jsx keyframes): the GLOW itself
   // blooms — shadow 16px@0.25 → 28px@0.85 with a wide halo — over 1.8s,
@@ -67,7 +67,10 @@ export default function Home() {
   }));
 
   const journaledPct = eco && eco.size > 0 ? Math.round((owned.length / eco.size) * 100) : 0;
-  const recent = owned.slice(0, 6).map(o => cardById(o.id)).filter(Boolean);
+  // recent cards wear the name they were journaled under (the local one)
+  const recent = owned.slice(0, 6)
+    .map(o => { const c = cardById(o.id); return c ? { ...c, name: o.name } : null; })
+    .filter(Boolean);
 
   return (
     <View style={s.root}>

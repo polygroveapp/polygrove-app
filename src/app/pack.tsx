@@ -16,7 +16,7 @@ import { Card, loadCatalog, photoFor } from '../lib/catalog';
 import { addToCollection, owns } from '../lib/collection';
 import { discoveryReady, loadDaily, markDiscoveryOpened } from '../lib/daily';
 import { SOLAR_PACK_COST, canAffordSolar, loadSol, spendSol } from '../lib/sol';
-import { currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
+import { currentEco, ecoMembers, loadCurrentEco, localize } from '../lib/ecoregions';
 import {
   PACK_SIZE, Stashed, offlineReady, popPack, releaseStashed, snapshotStashed, topUp,
 } from '../lib/offline';
@@ -49,7 +49,7 @@ export default function PackOpening() {
   const solar = useLocalSearchParams<{ solar?: string }>().solar === '1';
   // every pack pops the queue's front (one code path, photos already on
   // disk); the queue refills its tail in the background
-  const [pack, setPack] = useState<Stashed[] | null>(null);
+  const [pack, setPack] = useState<(Stashed & { local: Card })[] | null>(null);
   const [noNet, setNoNet] = useState(false);
   const [eid, setEid] = useState<number | null>(null);
   useEffect(() => {
@@ -71,7 +71,10 @@ export default function PackOpening() {
       if (!p.length) { setNoNet(true); return; }
       // the pack is paid for the moment it's dealt
       if (solar) spendSol(SOLAR_PACK_COST); else markDiscoveryOpened();
-      setPack(p);
+      // the cards as they're called HERE — the stash keeps the English card
+      // (snapshots are shared across ecoregions); the deck record and the
+      // face you see carry the local name
+      setPack(p.map(st => ({ ...st, local: localize(st.card, eco) })));
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -121,7 +124,7 @@ export default function PackOpening() {
 
   const onSwiped = (dir: 1 | -1) => {
     if (dir === 1) {
-      addToCollection(eid ?? currentEco()!.eid, pack[idx].card);
+      addToCollection(eid ?? currentEco()!.eid, pack[idx].local);   // journaled under its local name
       snapshotStashed(pack[idx]);   // journal = offline forever
       setKept(k => k + 1);
     } else {
@@ -158,7 +161,7 @@ export default function PackOpening() {
         {pack.slice(idx, idx + 2).reverse().map(st => (
           <SwipeSlot key={st.card.id} top={st === pack[idx]} bringForward={flinging} onFling={onFling}>
             <View style={cardSize}>
-              <PolygroveCard card={st.card} />
+              <PolygroveCard card={st.local} />
             </View>
           </SwipeSlot>
         ))}

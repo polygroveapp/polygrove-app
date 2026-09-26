@@ -13,7 +13,7 @@ import BottomNav from '../components/BottomNav';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
-import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { ecoMembers, loadCurrentEco, localize, useCurrentEco } from '../lib/ecoregions';
 
 export default function SpeciesTab() {
   const router = useRouter();
@@ -31,8 +31,11 @@ export default function SpeciesTab() {
   useEffect(() => { load(); }, []);
   const retry = () => { setError(null); load(); };
 
+  // the deck under its LOCAL names (English kept as nameEn for search)
   const cards = useMemo(
-    () => (ready && eco ? [...ecoMembers(eco.eid)].sort((a, b) => a.name.localeCompare(b.name)) : []),
+    () => (ready && eco
+      ? ecoMembers(eco.eid).map(c => localize(c, eco)).sort((a, b) => a.name.localeCompare(b.name))
+      : []),
     [ready, eco],
   );
   const groups = useMemo(() => [...new Set(cards.map(c => c.group))].sort(), [cards]);
@@ -40,7 +43,8 @@ export default function SpeciesTab() {
     const ql = q.trim().toLowerCase();
     return cards.filter(c =>
       (!group || c.group === group) &&
-      (!ql || c.name.toLowerCase().includes(ql) || c.sci.toLowerCase().includes(ql)));
+      (!ql || c.name.toLowerCase().includes(ql) || c.sci.toLowerCase().includes(ql)
+        || (c.nameEn?.toLowerCase().includes(ql) ?? false)));
   }, [cards, q, group]);
 
   let body: React.ReactNode;
@@ -118,7 +122,7 @@ function Row({ card, owned, onPress }: { card: Card; owned: boolean; onPress: ()
       </View>
       <View style={{ flex: 1, marginLeft: 12 }}>
         <Text style={s.rowName} numberOfLines={1}>{card.name}</Text>
-        <Text style={s.rowSci} numberOfLines={1}>{card.sci}</Text>
+        <Text style={s.rowSci} numberOfLines={1}>{card.nameEn ? `${card.nameEn} · ` : ''}{card.sci}</Text>
       </View>
       <Text style={[s.rowGroup, { color: owned ? tc : '#555' }]}>{owned ? card.group : '?'}</Text>
     </Pressable>

@@ -11,7 +11,7 @@ import MapView, { Geojson, MapPressEvent, Polygon, Region } from 'react-native-m
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from '../constants/polygrove';
 import { loadCatalog } from '../lib/catalog';
-import { ECO_GEOMETRY_URL, ecoDeckSize, loadCurrentEco, setCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { ECO_GEOMETRY_URL, ecoDeckSize, fetchEcoNames, loadCurrentEco, setCurrentEco, useCurrentEco } from '../lib/ecoregions';
 
 type LatLng = { latitude: number; longitude: number };
 type Feature = { properties: { eco: number; name: string }; geometry: { type: 'MultiPolygon' | 'Polygon'; coordinates: number[][][] | number[][][][] } };
@@ -126,7 +126,11 @@ export default function EcoMap() {
 
   const enter = async () => {
     if (!pick) return;
-    await setCurrentEco({ eid: pick.eid, name: pick.name, bbox: pick.bbox, size: ecoDeckSize(pick.eid) });
+    // the ecoregion's local species names ride along (persisted for offline);
+    // if we can't fetch them now, home fills them in later
+    let lang: string | undefined, names: Record<string, string> | undefined;
+    try { ({ lang, names } = await fetchEcoNames(pick.eid)); } catch { /* offline */ }
+    await setCurrentEco({ eid: pick.eid, name: pick.name, bbox: pick.bbox, size: ecoDeckSize(pick.eid), lang, names });
     if (router.canGoBack()) router.back(); else router.replace('/');
   };
 

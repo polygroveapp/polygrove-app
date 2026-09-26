@@ -97,7 +97,11 @@ export default function PolygroveCard({ card }: { card: Card }) {
         </View>
         <View style={{ borderTopWidth: 2, borderTopColor: tc, marginHorizontal: -16, marginBottom: 7 }} />
         <Text style={[s.name, { fontSize: 18 }]} numberOfLines={1}>{card.name}</Text>
-        <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
+        {/* a local name up top keeps the English name here so you still know
+            what it is (user, 2026-09-26) */}
+        <Text style={s.sci} numberOfLines={1}>
+          {card.sci}{card.nameEn ? <Text style={s.nameEn}>  ·  {card.nameEn}</Text> : null}
+        </Text>
         <Text style={{ fontSize: 12.5, marginTop: 6, marginBottom: 10, fontFamily: F.sans }}>
           <Text style={{ color: tc, fontFamily: F.sansBold }}>{card.trophic || '?'}</Text>
           <Text style={{ color: '#888888' }}> · {card.group}</Text>
@@ -115,7 +119,9 @@ export default function PolygroveCard({ card }: { card: Card }) {
           <HexPhoto uri={photoFor(card.id, 120)} width={46} height={52} borderColor={tc} borderWidth={4} />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.name} numberOfLines={1}>{card.name}</Text>
-            <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
+            <Text style={s.sci} numberOfLines={1}>
+              {card.sci}{card.nameEn ? <Text style={s.nameEn}>  ·  {card.nameEn}</Text> : null}
+            </Text>
           </View>
           <Text style={s.ico}>☆</Text>
         </View>
@@ -223,6 +229,7 @@ const s = StyleSheet.create({
   // .dc-name / .dc-sci / .dc-ico
   name: { fontFamily: F.display, fontSize: 15, color: C.text },
   sci: { color: '#888888', fontSize: 12, fontFamily: F.sans, fontStyle: 'italic' },
+  nameEn: { color: '#777777', fontStyle: 'normal', fontFamily: F.sansMed },
   ico: { marginLeft: 'auto', color: '#555555', fontSize: 16 },
   head: { flexDirection: 'row', alignItems: 'center', marginBottom: 9 },
   // .dc-row / .dc-box
