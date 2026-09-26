@@ -36,19 +36,19 @@ export default function FieldNotes() {
   );
 
   // three filters (user, 2026-09-26): card level · taxonomy · trophic role
-  const [level, setLevel] = useState<string | null>(null);     // 'undiscovered' | tier key
+  const [level, setLevel] = useState<string | null>(null);     // a mastery tier key
   const [group, setGroup] = useState<string | null>(null);
   const [trophic, setTrophic] = useState<string | null>(null);
   const [open, setOpen] = useState<'level' | 'group' | 'trophic' | null>(null);
   const groups = useMemo(() => [...new Set(cards.map(c => c.group))].sort(), [cards]);
   const trophics = useMemo(() => TROPHIC_ORDER.filter(t => cards.some(c => c.trophic === t)), [cards]);
-  const levelOpts = [{ key: 'undiscovered', label: 'Undiscovered' }, ...MASTERY.map(m => ({ key: m.key, label: m.label }))];
+  // no "Undiscovered" option — a screen of identical ? tiles says nothing
+  const levelOpts = MASTERY.map(m => ({ key: m.key, label: m.label }));
   const rows = useMemo(() => cards.filter(c => {
     if (group && c.group !== group) return false;
     if (trophic && c.trophic !== trophic) return false;
     if (level) {
       const journaled = eco ? owns(eco.eid, c.species_id) : false;
-      if (level === 'undiscovered') return !journaled;
       return journaled && getTier(0).key === level;   // every journaled card is Clay until the quiz
     }
     return true;
