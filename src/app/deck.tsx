@@ -146,12 +146,13 @@ export default function FieldNotes() {
 function FilterBtn({ label, value, open, color, onPress }: {
   label: string; value?: string; open: boolean; color?: string; onPress: () => void;
 }) {
-  // a chosen value tints the whole button its color (tier for Level, trophic for Role)
+  // a chosen value tints the button its color (tier for Level, trophic for
+  // Role); "All" and the open state stay grey (user, 2026-09-26)
   const tint = value && color ? { borderColor: `${color}80`, backgroundColor: `${color}1f` } : null;
   return (
     <Pressable onPress={onPress} style={[s.filterBtn, (open || value) && s.filterBtnOn, tint]}>
       <Text style={s.filterLabel}>{label}</Text>
-      <Text style={[s.filterValue, color ? { color } : null, value ? { color: color ?? C.greenSoft } : null]} numberOfLines={1}>
+      <Text style={[s.filterValue, value && color ? { color } : null]} numberOfLines={1}>
         {value ?? 'All'} {open ? '▴' : '▾'}
       </Text>
     </Pressable>
@@ -236,14 +237,14 @@ const s = StyleSheet.create({
     flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,
     borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  filterBtnOn: { borderColor: 'rgba(76,175,80,0.45)', backgroundColor: 'rgba(76,175,80,0.1)' },
+  filterBtnOn: { borderColor: '#555555', backgroundColor: 'rgba(255,255,255,0.08)' },
   filterLabel: { fontFamily: F.sansBold, fontSize: 8.5, color: '#666', textTransform: 'uppercase', letterSpacing: 1 },
   filterValue: { fontFamily: F.sansMed, fontSize: 12.5, color: C.text, marginTop: 1 },
   chips: { gap: 7, paddingTop: 10, paddingRight: 8 },
   chip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)' },
-  chipOn: { borderColor: 'rgba(76,175,80,0.5)', backgroundColor: 'rgba(76,175,80,0.15)' },
+  chipOn: { borderColor: '#666666', backgroundColor: 'rgba(255,255,255,0.1)' },
   chipTxt: { fontFamily: F.sansMed, fontSize: 12, color: C.dim },
-  chipTxtOn: { color: C.greenSoft },
+  chipTxtOn: { color: C.text },
   // grid tile — the pack card in miniature
   // the regular card's border (PolygroveCard s.phone: 1px #333) — the level
   // shows only in the footer, the role in the hexagon + divider
