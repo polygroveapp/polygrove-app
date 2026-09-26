@@ -98,7 +98,7 @@ export default function PolygroveCard({ card }: { card: Card }) {
         </Text>
         {/* the demo's faint section line above the field note (user, 2026-09-26) */}
         <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', marginHorizontal: -16, marginBottom: 10 }} />
-        <FieldNote tc={tc} note={note} />
+        <FieldNote tc={tc} note={note} sci={card.sci} />
         <View style={{ flex: 0, marginTop: 'auto' }} />
         <View style={s.pillRow}><View style={s.pill}><Text style={s.pillTxt}>Tap for details</Text></View></View>
       </Animated.View>
@@ -121,7 +121,7 @@ export default function PolygroveCard({ card }: { card: Card }) {
           <Box k="Size" v={card.size || '—'} />
           <Box k={slot5label} v={slot5val} />
         </View>
-        <FieldNote tc={tc} note={note} />
+        <FieldNote tc={tc} note={note} sci={card.sci} />
         <View style={s.fwLabelRow}>
           <View style={s.fwLine} />
           <Text style={s.fwLabel}>FOOD WEB</Text>
@@ -154,12 +154,19 @@ export default function PolygroveCard({ card }: { card: Card }) {
   );
 }
 
-function FieldNote({ tc, note }: { tc: string; note: string | null }) {
+function FieldNote({ tc, note, sci }: { tc: string; note: string | null; sci: string }) {
+  // tap opens the article the note came from (user, 2026-09-26) — Wikipedia's
+  // Go search resolves scientific names through redirects
+  const wiki = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(sci)}&go=Go`;
   return (
-    <View style={[s.note, { borderLeftColor: tc, backgroundColor: `${tc}14` }]}>
+    <Pressable style={[s.note, { borderLeftColor: tc, backgroundColor: `${tc}14` }]}
+      onPress={() => WebBrowser.openBrowserAsync(wiki)}>
       <Text style={[s.noteK, { color: tc }]}>✦ FIELD NOTE</Text>
-      <Text style={s.noteTxt} numberOfLines={3}>{note ?? '…'}</Text>
-    </View>
+      <Text style={s.noteTxt} numberOfLines={3}>
+        {note ?? '…'}
+        {note ? <Text style={{ color: '#666666', fontSize: 10.5 }}>  — Wikipedia</Text> : null}
+      </Text>
+    </Pressable>
   );
 }
 
