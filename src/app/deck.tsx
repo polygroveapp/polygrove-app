@@ -4,12 +4,13 @@
 // with a ❓ and "???" until you find them. Needs the catalog → online-only;
 // the Journal is the offline view.
 
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import BottomNav from '../components/BottomNav';
+import HexPhoto from '../components/HexPhoto';
 import { C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
 import { Card, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
@@ -162,30 +163,37 @@ function Chip({ label, on, color, onPress }: { label: string; on: boolean; color
   );
 }
 
-// one grid card — the demo's tile, verbatim: 3:4, 2px tier border, photo
-// with a name gradient, "CLAY LEVEL" + six mastery dots; 35% opacity + ❓
-// until journaled. Mastery score is 0 for everyone until the quiz lands.
+// one grid tile — a miniature of the pack card (user, 2026-09-26): the card
+// body, the hexagon photo on the black glow field, the name, then the
+// mastery level. Undiscovered = an empty hexagon with a ?. Mastery score is
+// 0 for everyone until the quiz lands.
+let _glowSeq = 0;
 function Cell({ card, journaled, onPress }: { card: Card; journaled: boolean; onPress: () => void }) {
   const score = 0;
   const t = getTier(score);
-  const photo = journaled ? photoFor(card.id, 330) : undefined;
+  const tc = TROPHIC_COLOR[card.trophic] || C.dim;
+  const photo = journaled ? photoFor(card.id, 250) : undefined;
+  const [glowId] = useState(() => `fn${++_glowSeq}`);
   return (
     <Pressable onPress={onPress} disabled={!journaled}
-      style={[s.cell, journaled
-        ? { borderColor: t.border, backgroundColor: '#1a1a1a', shadowColor: t.border }
-        : { borderColor: '#222222', backgroundColor: '#111111', opacity: 0.35 }]}>
-      <View style={[s.photoWrap, !journaled && { backgroundColor: '#0d0d0d' }]}>
-        {journaled ? (
-          <>
-            {!!photo && <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} resizeMode="cover" />}
-            <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.8)']} style={s.nameGrad}>
-              <Text style={s.name} numberOfLines={2}>{card.name}</Text>
-            </LinearGradient>
-          </>
-        ) : (
-          <Text style={s.unknown}>?</Text>
+      style={[s.cell, journaled ? { borderColor: t.border } : { borderColor: '#262626', opacity: 0.45 }]}>
+      <View style={s.photoWrap}>
+        {journaled && (
+          <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+            <Defs>
+              <RadialGradient id={glowId} cx="50%" cy="50%" rx="62%" ry="56%">
+                <Stop offset="0" stopColor={tc} stopOpacity={0.21} />
+                <Stop offset="0.7" stopColor={tc} stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
+          </Svg>
         )}
+        <HexPhoto uri={photo} width={58} height={66} borderColor={journaled ? tc : '#2a2a2a'} borderWidth={3} />
+        {!journaled && <Text style={s.unknown}>?</Text>}
       </View>
+      <View style={[s.divider, { backgroundColor: journaled ? tc : '#262626' }]} />
+      <Text style={s.name} numberOfLines={2}>{journaled ? card.name : '???'}</Text>
       <View style={s.foot}>
         <Text style={[s.tier, { color: journaled ? t.border : '#333333' }]} numberOfLines={1}>
           {journaled ? `${t.label} LEVEL` : '???'}
@@ -232,16 +240,16 @@ const s = StyleSheet.create({
   chipOn: { borderColor: 'rgba(76,175,80,0.5)', backgroundColor: 'rgba(76,175,80,0.15)' },
   chipTxt: { fontFamily: F.sansMed, fontSize: 12, color: C.dim },
   chipTxtOn: { color: C.greenSoft },
-  // grid card
+  // grid tile — the pack card in miniature
   cell: {
-    flex: 1 / 3, aspectRatio: 3 / 4, marginBottom: 10, borderRadius: 12, borderWidth: 2, overflow: 'hidden',
-    shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+    flex: 1 / 3, aspectRatio: 3 / 4, marginBottom: 10, borderRadius: 12, borderWidth: 1.5,
+    backgroundColor: '#1a1a1a', overflow: 'hidden',
   },
-  photoWrap: { flex: 1, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  nameGrad: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 12, paddingHorizontal: 6, paddingBottom: 4 },
-  name: { fontFamily: F.sansBold, fontSize: 9, color: C.text, lineHeight: 11 },
-  unknown: { fontFamily: F.display, fontSize: 28, color: '#1f1f1f' },
-  foot: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6, paddingVertical: 3 },
+  photoWrap: { flex: 1, backgroundColor: '#111111', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  divider: { height: 1.5 },
+  name: { fontFamily: F.display, fontSize: 8.5, color: C.text, lineHeight: 11, paddingHorizontal: 6, paddingTop: 5, minHeight: 27 },
+  unknown: { position: 'absolute', fontFamily: F.display, fontSize: 20, color: '#3a3a3a' },
+  foot: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 6, paddingTop: 2, paddingBottom: 5 },
   tier: { fontFamily: F.sansBold, fontSize: 7, textTransform: 'uppercase', flexShrink: 1 },
   dot: { width: 4, height: 4, borderRadius: 2 },
 });
