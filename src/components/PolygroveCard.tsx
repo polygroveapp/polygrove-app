@@ -88,7 +88,9 @@ export default function PolygroveCard({ card }: { card: Card }) {
               the card flip doesn't fire. */}
           {!!commons && (
             <Pressable hitSlop={10} style={[s.photoBtn, { right: 12 }]}
-              onPress={() => WebBrowser.openBrowserAsync(commons)}>
+              onPress={() => WebBrowser.openBrowserAsync(commons, {
+                presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+              })}>
               <Text style={[s.photoBtnTxt, { fontStyle: 'italic', fontFamily: F.sansBold }]}>i</Text>
             </Pressable>
           )}
