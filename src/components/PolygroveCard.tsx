@@ -7,7 +7,7 @@
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
@@ -31,7 +31,6 @@ export default function PolygroveCard({ card }: { card: Card }) {
   const router = useRouter();
   const flip = useSharedValue(0);
   const [flipped, setFlipped] = useState(false);
-  const [photoFull, setPhotoFull] = useState(false);
   const [srcPop, setSrcPop] = useState<{ label: string; source: string; confidence: string } | null>(null);
   const [glowId] = useState(() => `glow${++_glowSeq}`);
   const doFlip = () => {
@@ -83,19 +82,14 @@ export default function PolygroveCard({ card }: { card: Card }) {
             <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
           </Svg>
           <HexPhoto uri={photo} width={148} height={167} borderColor={tc} borderWidth={6} />
-          {/* corners of the photo area (user, 2026-09-25): ⤢ full photo
-              bottom-left, ⓘ Commons attribution bottom-right, both above the
-              accent divider. Nested Pressables so the card flip doesn't fire. */}
+          {/* ⓘ bottom-left → the Commons file page (user, 2026-09-26): the ONLY
+              full-photo view — our hex crop is an edit, so the uncropped
+              original is shown at its source, credited. Nested Pressable so
+              the card flip doesn't fire. */}
           {!!commons && (
-            <Pressable hitSlop={10} style={[s.photoBtn, { right: 12 }]}
+            <Pressable hitSlop={10} style={[s.photoBtn, { left: 12 }]}
               onPress={() => WebBrowser.openBrowserAsync(commons)}>
               <Text style={[s.photoBtnTxt, { fontStyle: 'italic', fontFamily: F.sansBold }]}>i</Text>
-            </Pressable>
-          )}
-          {!!photo && (
-            <Pressable hitSlop={10} style={[s.photoBtn, { left: 12 }]}
-              onPress={() => setPhotoFull(true)}>
-              <Text style={s.photoBtnTxt}>⤢</Text>
             </Pressable>
           )}
         </View>
@@ -159,25 +153,6 @@ export default function PolygroveCard({ card }: { card: Card }) {
         </Pressable>
       )}
 
-      {/* FULL PHOTO — fullscreen WITHIN the card (user, 2026-09-25): the photo
-          fills the card's rounded rect, tap to close */}
-      {photoFull && !!photo && (
-        <Pressable style={s.photoFull} onPress={() => setPhotoFull(false)}>
-          <Image source={{ uri: photoFor(card.id, 960) }} style={{ flex: 1 }} resizeMode="contain" />
-          <View style={s.photoFullCap}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.name, { color: tc }]} numberOfLines={1}>{card.name}</Text>
-              <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
-            </View>
-            {!!commons && (
-              <Pressable hitSlop={8} onPress={() => WebBrowser.openBrowserAsync(commons)}>
-                <Text style={s.photoFullSrc}>ⓘ source</Text>
-              </Pressable>
-            )}
-          </View>
-          <Text style={s.photoFullHint}>tap to close</Text>
-        </Pressable>
-      )}
     </Pressable>
   );
 }
@@ -297,15 +272,6 @@ const s = StyleSheet.create({
   chipDerived: { backgroundColor: 'rgba(100,181,246,0.15)', borderColor: 'rgba(100,181,246,0.4)' },
   srcPopChipTxt: { fontFamily: F.sansBold, fontSize: 10.5, color: C.text },
   srcPopHint: { fontFamily: F.sans, fontSize: 9.5, color: '#555555', marginTop: 8 },
-  // full-photo overlay: fills the card's rounded rect
-  photoFull: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10,
-    backgroundColor: '#0c0c0c', borderRadius: 22, borderWidth: 1, borderColor: '#333333',
-    overflow: 'hidden', paddingBottom: 8,
-  },
-  photoFullCap: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingHorizontal: 14, paddingTop: 8 },
-  photoFullSrc: { fontFamily: F.sansMed, fontSize: 11.5, color: '#8a8f8a', paddingVertical: 4 },
-  photoFullHint: { textAlign: 'center', fontFamily: F.sans, fontSize: 10, color: '#555555', marginTop: 4 },
   // .dc-pill
   pillRow: { alignItems: 'center', marginTop: 9, marginBottom: 5 },
   pill: { backgroundColor: '#222222', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 5 },
