@@ -177,8 +177,9 @@ export default function PolygroveCard({ card }: { card: Card }) {
                 <Text style={s.fwLabel}>FOOD WEB</Text>
                 <Text style={s.webBigHint}>tap to shrink</Text>
               </View>
-              {/* the square web centered in the tall box */}
-              <View style={{ flex: 1, justifyContent: 'center' }} onStartShouldSetResponder={() => true}>
+              {/* the square web centered in the tall box; nodes take their own
+                  taps, anything else bubbles up to the shrink */}
+              <View style={{ flex: 1, justifyContent: 'center' }}>
                 <View style={{ width: '100%', aspectRatio: 1 }}>
                   <FwGraph card={card} viewW={500} viewH={500} nodeR={20} centerR={32}
                     fontSize={14} radiusFactor={0.34} showLabels
