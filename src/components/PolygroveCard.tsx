@@ -9,11 +9,14 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, photoCommonsPage, photoFor } from '../lib/catalog';
 import { fieldNote } from '../lib/dossier';
 import FwGraph from './FwGraph';
 import HexPhoto from './HexPhoto';
+
+let _glowSeq = 0;
 
 export default function PolygroveCard({ card }: { card: Card }) {
   const tc = TROPHIC_COLOR[card.trophic] || '#81C784';
@@ -26,6 +29,7 @@ export default function PolygroveCard({ card }: { card: Card }) {
   const flip = useSharedValue(0);
   const [flipped, setFlipped] = useState(false);
   const [photoFull, setPhotoFull] = useState(false);
+  const [glowId] = useState(() => `glow${++_glowSeq}`);
   const doFlip = () => {
     const to = flipped ? 0 : 1;
     setFlipped(!flipped);
@@ -56,31 +60,44 @@ export default function PolygroveCard({ card }: { card: Card }) {
           <Text style={s.siteMid}>polygrove.io</Text>
           <Text style={s.siteGlyph}>☆</Text>
         </View>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        {/* the demo's photo field (user, 2026-09-26): full-bleed near-black with
+            a radial accent glow behind the hex */}
+        <View style={s.hexGlow}>
+          <Svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <Defs>
+              <RadialGradient id={glowId} cx="50%" cy="50%" rx="62%" ry="56%">
+                <Stop offset="0" stopColor={tc} stopOpacity={0.14} />
+                <Stop offset="0.7" stopColor={tc} stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
+          </Svg>
           <HexPhoto uri={photo} width={148} height={167} borderColor={tc} borderWidth={6} />
           {/* corners of the photo area (user, 2026-09-25): ⤢ full photo
               bottom-left, ⓘ Commons attribution bottom-right, both above the
               accent divider. Nested Pressables so the card flip doesn't fire. */}
           {!!photo && (
-            <Pressable hitSlop={8} style={[s.photoBtn, { left: 0 }]}
+            <Pressable hitSlop={8} style={[s.photoBtn, { left: 10 }]}
               onPress={() => setPhotoFull(true)}>
               <Text style={s.photoBtnTxt}>⤢</Text>
             </Pressable>
           )}
           {!!commons && (
-            <Pressable hitSlop={8} style={[s.photoBtn, { right: 0 }]}
+            <Pressable hitSlop={8} style={[s.photoBtn, { right: 10 }]}
               onPress={() => WebBrowser.openBrowserAsync(commons)}>
               <Text style={[s.photoBtnTxt, { fontStyle: 'italic', fontFamily: F.sansBold }]}>i</Text>
             </Pressable>
           )}
         </View>
-        <View style={{ borderTopWidth: 2, borderTopColor: tc, marginTop: 10, marginBottom: 7 }} />
+        <View style={{ borderTopWidth: 2, borderTopColor: tc, marginHorizontal: -16, marginBottom: 7 }} />
         <Text style={[s.name, { fontSize: 18 }]} numberOfLines={1}>{card.name}</Text>
         <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
         <Text style={{ fontSize: 12.5, marginTop: 6, marginBottom: 10, fontFamily: F.sans }}>
           <Text style={{ color: tc, fontFamily: F.sansBold }}>{card.trophic || '?'}</Text>
           <Text style={{ color: '#888888' }}> · {card.group}</Text>
         </Text>
+        {/* the demo's faint section line above the field note (user, 2026-09-26) */}
+        <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', marginHorizontal: -16, marginBottom: 10 }} />
         <FieldNote tc={tc} note={note} />
         <View style={{ flex: 0, marginTop: 'auto' }} />
         <View style={s.pillRow}><View style={s.pill}><Text style={s.pillTxt}>Tap for details</Text></View></View>
@@ -221,6 +238,12 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   photoBtnTxt: { color: '#777777', fontSize: 12, lineHeight: 14 },
+  // the demo's photo field: EXACT #111 black base (radial accent glow on top),
+  // full-bleed past the card padding (user, 2026-09-26)
+  hexGlow: {
+    flex: 1, minHeight: 190, marginHorizontal: -16, backgroundColor: '#111111',
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+  },
   // full-photo overlay: fills the card's rounded rect
   photoFull: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10,
