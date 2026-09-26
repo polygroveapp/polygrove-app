@@ -99,10 +99,23 @@ async function persistQueue(eid: number) {
 export function popPack(eid: number): Stashed[] | null {
   const q = _queues[eid];
   if (!q || q.length < PACK_SIZE) return null;
-  const pack = q.splice(0, PACK_SIZE);
+  return popCards(eid, PACK_SIZE);
+}
+// up to n more cards off the front (the pack's skip spares) — fewer if the
+// queue is short
+export function popCards(eid: number, n: number): Stashed[] {
+  const q = _queues[eid];
+  if (!q || !n) return [];
+  const out = q.splice(0, n);
+  if (out.length) { persistQueue(eid); topUp(); }   // refill the tail — lands before the swipes finish
+  return out;
+}
+// spares that were never shown go back to the front, still offline-ready
+export function returnCards(eid: number, cards: Stashed[]) {
+  const back = cards.filter(c => c.photoFile);   // live-drawn ones aren't prepped
+  if (!back.length) return;
+  (_queues[eid] ||= []).unshift(...back);
   persistQueue(eid);
-  topUp();   // refill the tail — ~300KB, lands before the swipes finish
-  return pack;
 }
 
 function drawFresh(eid: number, n: number): Card[] {

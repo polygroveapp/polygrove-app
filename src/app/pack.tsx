@@ -18,25 +18,29 @@ import { discoveryReady, loadDaily, markDiscoveryOpened } from '../lib/daily';
 import { SOLAR_PACK_COST, canAffordSolar, loadSol, spendSol } from '../lib/sol';
 import { currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
 import {
-  PACK_SIZE, Stashed, offlineReady, popPack, releaseStashed, snapshotStashed, topUp,
+  PACK_SIZE, Stashed, offlineReady, popCards, popPack, releaseStashed, returnCards, snapshotStashed, topUp,
 } from '../lib/offline';
+
+// a pack always ends with 5 journaled cards; you may skip (swipe left) up to
+// 3, each skip dealing a replacement (user, 2026-09-26)
+const SKIPS = 3;
 
 // live draw from the ecoregion's deck — the fallback when its queue can't
 // serve (a fresh ecoregion before the first top-up lands, or a 20-pack
 // offline binge that found signal again)
-function drawPack(eid: number): Card[] {
+function drawLive(eid: number, n: number, exclude: Set<number>): Card[] {
   const all = ecoMembers(eid);
-  const pool = all.filter(c => !owns(eid, c.species_id));
-  const src = pool.length >= PACK_SIZE ? pool : all;
-  const pack: Card[] = [];
+  const pool = all.filter(c => !owns(eid, c.species_id) && !exclude.has(c.species_id));
+  const src = pool.length >= n ? pool : all.filter(c => !exclude.has(c.species_id));
+  const out: Card[] = [];
   const seen = new Set<number>();
-  while (pack.length < PACK_SIZE && seen.size < src.length) {
+  while (out.length < n && seen.size < src.length) {
     const c = src[Math.floor(Math.random() * src.length)];
     if (seen.has(c.species_id)) continue;
     seen.add(c.species_id);
-    pack.push(c);
+    out.push(c);
   }
-  return pack;
+  return out;
 }
 
 const liveStash = (card: Card): Stashed =>
@@ -60,24 +64,43 @@ export default function PackOpening() {
       await Promise.all([loadDaily(), loadSol()]);
       if (solar ? !canAffordSolar() : !discoveryReady()) { router.replace('/'); return; }
       setEid(eco.eid);
+      // 5 keeps + up to 3 skip spares, queue first, live draw for the rest
       let p = popPack(eco.eid);
       if (!p) {
         try {
           await loadCatalog();
-          p = drawPack(eco.eid).map(liveStash);
+          p = drawLive(eco.eid, PACK_SIZE, new Set()).map(liveStash);
           topUp();
         } catch { setNoNet(true); return; }
       }
       if (!p.length) { setNoNet(true); return; }
+      const spares = popCards(eco.eid, SKIPS);
+      if (spares.length < SKIPS) {
+        try {
+          await loadCatalog();
+          const have = new Set([...p, ...spares].map(st => st.card.species_id));
+          spares.push(...drawLive(eco.eid, SKIPS - spares.length, have).map(liveStash));
+        } catch { /* offline — fewer skips this pack */ }
+      }
       // the pack is paid for the moment it's dealt
       if (solar) spendSol(SOLAR_PACK_COST); else markDiscoveryOpened();
-      setPack(p);
+      setPack([...p, ...spares]);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [idx, setIdx] = useState(0);
   const [kept, setKept] = useState(0);
+  const [skipped, setSkipped] = useState(0);
   const [flinging, setFlinging] = useState(false);
+  // skips available = spares actually dealt (offline may have fewer)
+  const maxSkips = pack ? Math.max(0, pack.length - PACK_SIZE) : 0;
+  const canSkip = skipped < maxSkips;
+  const done = kept >= PACK_SIZE;
+  // unshown spares go back to the front of the queue
+  useEffect(() => {
+    if (done && pack && eid != null && idx < pack.length) returnCards(eid, pack.slice(idx));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done]);
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
   // 100dvh-130px), width min(430,screen)*0.88): window-based, no onLayout —
   // measured-flex sizing kept collapsing on the phone (2026-09-25)
@@ -103,11 +126,11 @@ export default function PackOpening() {
   );
   if (!pack) return <View style={s.root} />;
 
-  if (idx >= pack.length) return (
+  if (done || idx >= pack.length) return (
     <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 20 }]}>
       <View style={s.center}>
         <Text style={s.doneTitle}>Pack complete</Text>
-        <Text style={s.doneSub}>{kept} journaled · {pack.length - kept} released</Text>
+        <Text style={s.doneSub}>{kept} journaled · {skipped} skipped</Text>
         <Pressable onPress={() => router.replace('/collection')} style={s.primary}>
           <Text style={s.primaryTxt}>View Journal</Text>
         </Pressable>
@@ -125,7 +148,8 @@ export default function PackOpening() {
       snapshotStashed(pack[idx]);   // journal = offline forever
       setKept(k => k + 1);
     } else {
-      releaseStashed(pack[idx]);    // released → photo file dropped
+      releaseStashed(pack[idx]);    // skipped → photo file dropped
+      setSkipped(n => n + 1);
     }
     setIdx(i => i + 1);
   };
@@ -143,8 +167,8 @@ export default function PackOpening() {
           <Text style={s.back}>‹ Home</Text>
         </Pressable>
         <View style={s.dots}>
-          {pack.map((_, i) => (
-            <View key={i} style={[s.dot, i === idx && s.dotOn, i < idx && s.dotDone]} />
+          {Array.from({ length: PACK_SIZE }, (_, i) => (
+            <View key={i} style={[s.dot, i === kept && s.dotOn, i < kept && s.dotDone]} />
           ))}
         </View>
       </View>
@@ -156,7 +180,7 @@ export default function PackOpening() {
             the top card flies off (user, 2026-09-26). Behind renders first so
             it sits underneath. */}
         {pack.slice(idx, idx + 2).reverse().map(st => (
-          <SwipeSlot key={st.card.id} top={st === pack[idx]} bringForward={flinging} onFling={onFling}>
+          <SwipeSlot key={st.card.id} top={st === pack[idx]} bringForward={flinging} onFling={onFling} canSkip={canSkip}>
             <View style={cardSize}>
               <PolygroveCard card={st.card} />
             </View>
@@ -165,8 +189,10 @@ export default function PackOpening() {
       </View>
 
       <View style={s.hintRow}>
-        <Text style={s.hintL}>◂ release</Text>
-        <Text style={s.hintC}>{idx + 1} of {pack.length} · tap card for details</Text>
+        <Text style={[s.hintL, !canSkip && { color: '#3a3a3a' }]}>
+          {canSkip ? `◂ skip · ${maxSkips - skipped} left` : 'no skips left'}
+        </Text>
+        <Text style={s.hintC}>{kept + 1} of {PACK_SIZE} · tap card for details</Text>
         <Text style={s.hintR}>journal ▸</Text>
       </View>
     </View>
@@ -178,11 +204,12 @@ export default function PackOpening() {
 const FORWARD_MS = 520;
 const FORWARD_EASE = Easing.out(Easing.cubic);
 
-function SwipeSlot({ children, top, bringForward, onFling }: {
+function SwipeSlot({ children, top, bringForward, onFling, canSkip }: {
   children: React.ReactNode;
   top: boolean;            // the swipeable card (false = waiting behind)
   bringForward: boolean;   // the card above is flying off — come forward now
   onFling: (d: 1 | -1) => void;
+  canSkip: boolean;        // skips spent → a left fling just springs back
 }) {
   const tx = useSharedValue(0);
   const op = useSharedValue(1);
@@ -196,7 +223,7 @@ function SwipeSlot({ children, top, bringForward, onFling }: {
     .activeOffsetX([-12, 12])   // let taps through to the card flip
     .onChange(e => { tx.value = e.translationX; })
     .onEnd(() => {
-      if (Math.abs(tx.value) > 100) {
+      if (Math.abs(tx.value) > 100 && (tx.value > 0 || canSkip)) {
         const d = tx.value > 0 ? 1 : -1;
         // start both animations HERE, once — a withTiming born inside
         // useAnimatedStyle restarts every frame and never progresses
