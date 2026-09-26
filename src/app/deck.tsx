@@ -7,10 +7,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav from '../components/BottomNav';
-import { C, F, MASTERY, getLevel, getTier } from '../constants/polygrove';
+import { C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
 import { Card, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
 import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
@@ -34,6 +34,54 @@ export default function FieldNotes() {
     [ready, eco],
   );
 
+  // three filters (user, 2026-09-26): card level · taxonomy · trophic role
+  const [level, setLevel] = useState<string | null>(null);     // 'undiscovered' | tier key
+  const [group, setGroup] = useState<string | null>(null);
+  const [trophic, setTrophic] = useState<string | null>(null);
+  const [open, setOpen] = useState<'level' | 'group' | 'trophic' | null>(null);
+  const groups = useMemo(() => [...new Set(cards.map(c => c.group))].sort(), [cards]);
+  const trophics = useMemo(() => TROPHIC_ORDER.filter(t => cards.some(c => c.trophic === t)), [cards]);
+  const levelOpts = [{ key: 'undiscovered', label: 'Undiscovered' }, ...MASTERY.map(m => ({ key: m.key, label: m.label }))];
+  const rows = useMemo(() => cards.filter(c => {
+    if (group && c.group !== group) return false;
+    if (trophic && c.trophic !== trophic) return false;
+    if (level) {
+      const journaled = eco ? owns(eco.eid, c.species_id) : false;
+      if (level === 'undiscovered') return !journaled;
+      return journaled && getTier(0).key === level;   // every journaled card is Clay until the quiz
+    }
+    return true;
+  }), [cards, group, trophic, level, eco, owned]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filterBar = (
+    <View style={s.filters}>
+      <View style={s.filterRow}>
+        <FilterBtn label="Level" value={level ? levelOpts.find(o => o.key === level)?.label : undefined}
+          open={open === 'level'} onPress={() => setOpen(open === 'level' ? null : 'level')} />
+        <FilterBtn label="Taxonomy" value={group ?? undefined}
+          open={open === 'group'} onPress={() => setOpen(open === 'group' ? null : 'group')} />
+        <FilterBtn label="Role" value={trophic ?? undefined} color={trophic ? TROPHIC_COLOR[trophic] : undefined}
+          open={open === 'trophic'} onPress={() => setOpen(open === 'trophic' ? null : 'trophic')} />
+      </View>
+      {open && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+          {open === 'level' && <>
+            <Chip label="All" on={!level} onPress={() => setLevel(null)} />
+            {levelOpts.map(o => <Chip key={o.key} label={o.label} on={level === o.key} onPress={() => setLevel(level === o.key ? null : o.key)} />)}
+          </>}
+          {open === 'group' && <>
+            <Chip label="All" on={!group} onPress={() => setGroup(null)} />
+            {groups.map(g => <Chip key={g} label={g} on={group === g} onPress={() => setGroup(group === g ? null : g)} />)}
+          </>}
+          {open === 'trophic' && <>
+            <Chip label="All" on={!trophic} onPress={() => setTrophic(null)} />
+            {trophics.map(t => <Chip key={t} label={t} on={trophic === t} color={TROPHIC_COLOR[t]} onPress={() => setTrophic(trophic === t ? null : t)} />)}
+          </>}
+        </ScrollView>
+      )}
+    </View>
+  );
+
   const header = (
     <>
       <View style={s.header}>
@@ -45,8 +93,11 @@ export default function FieldNotes() {
       </View>
       <View style={s.titleWrap}>
         <Text style={s.title}>Field Notes</Text>
-        <Text style={s.sub}>{owned.length}/{cards.length} Journaled</Text>
+        <Text style={s.sub}>
+          {owned.length}/{cards.length} Journaled{rows.length !== cards.length ? ` · ${rows.length} shown` : ''}
+        </Text>
       </View>
+      {filterBar}
     </>
   );
 
@@ -66,7 +117,7 @@ export default function FieldNotes() {
   );
   else body = (
     <FlatList
-      data={cards}
+      data={rows}
       keyExtractor={c => c.id}
       numColumns={3}
       initialNumToRender={18}
@@ -87,6 +138,27 @@ export default function FieldNotes() {
       {ready && eco && !error ? body : <>{header}{body}</>}
       <BottomNav active="species" />
     </View>
+  );
+}
+
+function FilterBtn({ label, value, open, color, onPress }: {
+  label: string; value?: string; open: boolean; color?: string; onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={[s.filterBtn, (open || value) && s.filterBtnOn]}>
+      <Text style={s.filterLabel}>{label}</Text>
+      <Text style={[s.filterValue, color ? { color } : null, value ? { color: color ?? C.greenSoft } : null]} numberOfLines={1}>
+        {value ?? 'All'} {open ? '▴' : '▾'}
+      </Text>
+    </Pressable>
+  );
+}
+
+function Chip({ label, on, color, onPress }: { label: string; on: boolean; color?: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[s.chip, on && s.chipOn, on && color ? { borderColor: `${color}80`, backgroundColor: `${color}22` } : null]}>
+      <Text style={[s.chipTxt, on && s.chipTxtOn, on && color ? { color } : null]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -142,9 +214,24 @@ const s = StyleSheet.create({
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
   ecoLabel: { fontFamily: F.sansBold, fontSize: 11, color: '#8B5035', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2, maxWidth: 320 },
   tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5 },
-  titleWrap: { alignItems: 'center', paddingTop: 16, marginBottom: 16 },
+  titleWrap: { alignItems: 'center', paddingTop: 16, marginBottom: 12 },
   title: { fontFamily: F.display, fontSize: 20, color: C.text, marginBottom: 2 },
   sub: { fontFamily: F.sans, fontSize: 12, color: '#555' },
+  // filters: three dropdown buttons, the open one's options as chips below
+  filters: { marginBottom: 14 },
+  filterRow: { flexDirection: 'row', gap: 8 },
+  filterBtn: {
+    flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,
+    borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  filterBtnOn: { borderColor: 'rgba(76,175,80,0.45)', backgroundColor: 'rgba(76,175,80,0.1)' },
+  filterLabel: { fontFamily: F.sansBold, fontSize: 8.5, color: '#666', textTransform: 'uppercase', letterSpacing: 1 },
+  filterValue: { fontFamily: F.sansMed, fontSize: 12.5, color: C.text, marginTop: 1 },
+  chips: { gap: 7, paddingTop: 10, paddingRight: 8 },
+  chip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)' },
+  chipOn: { borderColor: 'rgba(76,175,80,0.5)', backgroundColor: 'rgba(76,175,80,0.15)' },
+  chipTxt: { fontFamily: F.sansMed, fontSize: 12, color: C.dim },
+  chipTxtOn: { color: C.greenSoft },
   // grid card
   cell: {
     flex: 1 / 3, aspectRatio: 3 / 4, marginBottom: 10, borderRadius: 12, borderWidth: 2, overflow: 'hidden',
