@@ -56,9 +56,9 @@ export default function PolygroveCard({ card }: { card: Card }) {
       {/* FRONT — .face.front */}
       <Animated.View style={[s.phone, frontStyle]}>
         <View style={s.site}>
-          <View style={s.headerBtn}><Text style={s.siteGlyph}>⚑</Text></View>
+          <Text style={s.siteGlyph}>⚑</Text>
           <Text style={s.siteMid}>polygrove.io</Text>
-          <View style={s.headerBtn}><Text style={s.siteGlyph}>☆</Text></View>
+          <Text style={s.siteGlyph}>☆</Text>
         </View>
         {/* the demo's photo field (user, 2026-09-26): full-bleed near-black with
             a radial accent glow behind the hex */}
@@ -206,7 +206,7 @@ const s = StyleSheet.create({
   },
   // .dc-site
   site: { flexDirection: 'row', alignItems: 'center', paddingTop: 2, paddingBottom: 7 },
-  siteGlyph: { color: '#666666', fontSize: 12.5, fontFamily: F.sans, lineHeight: 15 },
+  siteGlyph: { color: '#666666', fontSize: 14, fontFamily: F.sans, lineHeight: 17, width: 23, textAlign: 'center' },
   siteMid: { flex: 1, textAlign: 'center', color: '#555555', fontSize: 11, letterSpacing: 1.1, fontFamily: F.sans },
   // .dc-name / .dc-sci / .dc-ico
   name: { fontFamily: F.display, fontSize: 15, color: C.text },
@@ -238,11 +238,6 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   photoBtnTxt: { color: '#888888', fontSize: 12, lineHeight: 14 },
-  headerBtn: {
-    width: 23, height: 23, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center', justifyContent: 'center',
-  },
   // the demo's photo field: EXACT #111 black base (radial accent glow on top),
   // full-bleed past the card padding (user, 2026-09-26)
   hexGlow: {
