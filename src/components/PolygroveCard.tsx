@@ -29,6 +29,7 @@ export default function PolygroveCard({ card }: { card: Card }) {
   const flip = useSharedValue(0);
   const [flipped, setFlipped] = useState(false);
   const [photoFull, setPhotoFull] = useState(false);
+  const [srcPop, setSrcPop] = useState<{ label: string; source: string; confidence: string } | null>(null);
   const [glowId] = useState(() => `glow${++_glowSeq}`);
   const doFlip = () => {
     const to = flipped ? 0 : 1;
@@ -46,6 +47,12 @@ export default function PolygroveCard({ card }: { card: Card }) {
     zIndex: flip.value < 0.5 ? 1 : 2,
   }));
 
+  // per-fact source popup (the plan's provenance design, user 2026-09-26):
+  // catalog provenance = {source, confidence} per slot
+  const showSource = (label: string, key: string) => {
+    const pv = card.provenance?.[key];
+    if (pv) setSrcPop({ label, source: pv.source, confidence: pv.confidence });
+  };
   const slot5label = card.habitat ? 'Habitat' : card.origin ? 'Native origin' : 'Biome';
   const slot5val = card.habitat || card.origin || card.biome || '—';
 
@@ -114,12 +121,16 @@ export default function PolygroveCard({ card }: { card: Card }) {
           <Text style={s.ico}>☆</Text>
         </View>
         <View style={s.row}>
-          <Box k="Trophic level" v={card.trophic || '?'} vColor={tc} />
-          <Box k="Group" v={card.group} />
+          <Box k="Trophic level" v={card.trophic || '?'} vColor={tc}
+            onPress={() => showSource('Trophic level', 'feeding')} />
+          <Box k="Group" v={card.group}
+            onPress={() => showSource('Group', 'taxonomy')} />
         </View>
         <View style={s.row}>
-          <Box k="Size" v={card.size || '—'} />
-          <Box k={slot5label} v={slot5val} />
+          <Box k="Size" v={card.size || '—'}
+            onPress={() => showSource('Size', 'size')} />
+          <Box k={slot5label} v={slot5val}
+            onPress={() => showSource(slot5label, 'slot5')} />
         </View>
         <FieldNote tc={tc} note={note} sci={card.sci} />
         <View style={s.fwLabelRow}>
@@ -130,6 +141,20 @@ export default function PolygroveCard({ card }: { card: Card }) {
         <MiniWeb card={card} onExpand={() => router.push(`/web/${card.id}`)} />
         <View style={s.pillRow}><View style={s.pill}><Text style={s.pillTxt}>Tap card to flip</Text></View></View>
       </Animated.View>
+
+      {/* SOURCE POPUP — in-card, tap to dismiss */}
+      {srcPop && (
+        <Pressable style={s.srcPopWrap} onPress={() => setSrcPop(null)}>
+          <View style={s.srcPop}>
+            <Text style={s.srcPopLabel}>{srcPop.label.toUpperCase()}</Text>
+            <Text style={s.srcPopSource}>{srcPop.source}</Text>
+            <View style={[s.srcPopChip, srcPop.confidence === 'measured' ? s.chipMeasured : srcPop.confidence === 'inferred' ? s.chipInferred : s.chipDerived]}>
+              <Text style={s.srcPopChipTxt}>{srcPop.confidence}</Text>
+            </View>
+            <Text style={s.srcPopHint}>tap to close</Text>
+          </View>
+        </Pressable>
+      )}
 
       {/* FULL PHOTO — fullscreen WITHIN the card (user, 2026-09-25): the photo
           fills the card's rounded rect, tap to close */}
@@ -170,12 +195,12 @@ function FieldNote({ tc, note, sci }: { tc: string; note: string | null; sci: st
   );
 }
 
-function Box({ k, v, vColor }: { k: string; v: string; vColor?: string }) {
+function Box({ k, v, vColor, onPress }: { k: string; v: string; vColor?: string; onPress?: () => void }) {
   return (
-    <View style={s.box}>
+    <Pressable style={s.box} onPress={onPress} disabled={!onPress}>
       <Text style={s.boxK}>{k}</Text>
       <Text style={[s.boxV, vColor ? { color: vColor } : null]} numberOfLines={2}>{v}</Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -251,6 +276,24 @@ const s = StyleSheet.create({
     flex: 1, minHeight: 190, marginHorizontal: -16, backgroundColor: '#111111',
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
+  // per-fact source popup
+  srcPopWrap: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 20,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center', padding: 24,
+  },
+  srcPop: {
+    backgroundColor: '#222222', borderRadius: 14, borderWidth: 1, borderColor: '#3a3a3a',
+    paddingVertical: 14, paddingHorizontal: 18, alignItems: 'center', maxWidth: 260,
+  },
+  srcPopLabel: { fontFamily: F.sansBold, fontSize: 9.5, letterSpacing: 1.4, color: '#888888' },
+  srcPopSource: { fontFamily: F.sansMed, fontSize: 13.5, color: C.text, textAlign: 'center', marginTop: 6, lineHeight: 19 },
+  srcPopChip: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3, marginTop: 9, borderWidth: 1 },
+  chipMeasured: { backgroundColor: 'rgba(76,175,80,0.15)', borderColor: 'rgba(76,175,80,0.4)' },
+  chipInferred: { backgroundColor: 'rgba(245,166,35,0.15)', borderColor: 'rgba(245,166,35,0.4)' },
+  chipDerived: { backgroundColor: 'rgba(100,181,246,0.15)', borderColor: 'rgba(100,181,246,0.4)' },
+  srcPopChipTxt: { fontFamily: F.sansBold, fontSize: 10.5, color: C.text },
+  srcPopHint: { fontFamily: F.sans, fontSize: 9.5, color: '#555555', marginTop: 8 },
   // full-photo overlay: fills the card's rounded rect
   photoFull: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10,

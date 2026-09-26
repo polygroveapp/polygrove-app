@@ -21,6 +21,7 @@ export type Card = {
   slot5type?: string | null;
   foodweb?: { eats: FoodwebLink[]; eatenBy: FoodwebLink[] };
   lookAlikes?: string[];
+  provenance?: Record<string, { source: string; confidence: string }>;
   [k: string]: unknown;    // quiz payloads (q3/q4/...) ride along untyped for now
 };
 
