@@ -242,12 +242,12 @@ const s = StyleSheet.create({
   fwChipTxt: { color: '#999999', fontSize: 10.5, fontFamily: F.sans },
   fwName: { color: '#999999', fontSize: 7.5, fontFamily: F.sans, maxWidth: 64, marginTop: 1 },
   // photo-area corner buttons (demo's attribution-i styling)
-  // right-angle corner mark (user, 2026-09-26): only the bottom + left edges
-  // drawn, square corner, the i tucked in its top-right
+  // the gap to the left border and to the divider below is EQUAL (a square
+  // corner of space, user 2026-09-26) — keep bottom in sync with the left:12
   photoBtn: {
-    position: 'absolute', bottom: 10, width: 20, height: 20,
-    borderLeftWidth: 1, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.14)',
-    alignItems: 'flex-end', justifyContent: 'flex-start', paddingRight: 3, paddingTop: 1,
+    position: 'absolute', bottom: 12, width: 20, height: 20, borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center', justifyContent: 'center',
   },
   photoBtnTxt: { color: '#6e6e6e', fontSize: 11, lineHeight: 13 },
   // the demo's photo field: EXACT #111 black base (radial accent glow on top),
