@@ -176,7 +176,7 @@ function Cell({ card, journaled, onPress }: { card: Card; journaled: boolean; on
   const [glowId] = useState(() => `fn${++_glowSeq}`);
   return (
     <Pressable onPress={onPress} disabled={!journaled}
-      style={[s.cell, journaled ? { borderColor: t.border } : { borderColor: '#262626', opacity: 0.45 }]}>
+      style={[s.cell, !journaled && { opacity: 0.45 }]}>
       <View style={s.photoWrap}>
         {journaled && (
           <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
@@ -241,9 +241,11 @@ const s = StyleSheet.create({
   chipTxt: { fontFamily: F.sansMed, fontSize: 12, color: C.dim },
   chipTxtOn: { color: C.greenSoft },
   // grid tile — the pack card in miniature
+  // the regular card's border (PolygroveCard s.phone: 1px #333) — the level
+  // shows only in the footer, the role in the hexagon + divider
   cell: {
-    flex: 1 / 3, aspectRatio: 3 / 4, marginBottom: 10, borderRadius: 12, borderWidth: 1.5,
-    backgroundColor: '#1a1a1a', overflow: 'hidden',
+    flex: 1 / 3, aspectRatio: 3 / 4, marginBottom: 10, borderRadius: 12, borderWidth: 1,
+    borderColor: '#333333', backgroundColor: '#1a1a1a', overflow: 'hidden',
   },
   photoWrap: { flex: 1, backgroundColor: '#111111', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   divider: { height: 1.5 },
