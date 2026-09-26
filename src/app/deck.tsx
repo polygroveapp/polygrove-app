@@ -69,7 +69,7 @@ export default function FieldNotes() {
           open={open === 'level'} onPress={() => setOpen(open === 'level' ? null : 'level')} />
         <FilterBtn label="Role" value={trophic ?? undefined} color={trophic ? TROPHIC_COLOR[trophic] : undefined} count={rows.length}
           open={open === 'trophic'} onPress={() => setOpen(open === 'trophic' ? null : 'trophic')} />
-        <FilterBtn label="Taxonomy" value={group ?? undefined} count={rows.length}
+        <FilterBtn label="Taxonomy" value={group ?? undefined} color={group ? C.greenSoft : undefined} count={rows.length}
           open={open === 'group'} onPress={() => setOpen(open === 'group' ? null : 'group')} />
       </View>
       {open && (
@@ -80,7 +80,7 @@ export default function FieldNotes() {
           </>}
           {open === 'group' && <>
             <Chip label="All" count={countIf({ group: null })} on={!group} onPress={() => setGroup(null)} />
-            {groups.map(g => <Chip key={g} label={g} count={countIf({ group: g })} on={group === g} onPress={() => setGroup(group === g ? null : g)} />)}
+            {groups.map(g => <Chip key={g} label={g} count={countIf({ group: g })} on={group === g} color={C.greenSoft} onPress={() => setGroup(group === g ? null : g)} />)}
           </>}
           {open === 'trophic' && <>
             <Chip label="All" count={countIf({ trophic: null })} on={!trophic} onPress={() => setTrophic(null)} />
@@ -137,7 +137,11 @@ export default function FieldNotes() {
       contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
       renderItem={({ item }) => (
         <Cell card={item} journaled={owns(eco.eid, item.species_id)}
-          onPress={() => router.push(`/species/${item.id}`)} />
+          onPress={() => {
+            // the demo's card gallery over the journaled cards, starting here
+            const j = rows.filter(c => owns(eco.eid, c.species_id));
+            router.push({ pathname: '/gallery', params: { ids: j.map(c => c.id).join(','), start: String(j.findIndex(c => c.id === item.id)) } });
+          }} />
       )}
     />
   );
