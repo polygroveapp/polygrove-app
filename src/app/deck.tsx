@@ -58,6 +58,7 @@ export default function FieldNotes() {
     <View style={s.filters}>
       <View style={s.filterRow}>
         <FilterBtn label="Level" value={level ? levelOpts.find(o => o.key === level)?.label : undefined}
+          color={level ? MASTERY.find(m => m.key === level)?.border : undefined}
           open={open === 'level'} onPress={() => setOpen(open === 'level' ? null : 'level')} />
         <FilterBtn label="Role" value={trophic ?? undefined} color={trophic ? TROPHIC_COLOR[trophic] : undefined}
           open={open === 'trophic'} onPress={() => setOpen(open === 'trophic' ? null : 'trophic')} />
@@ -68,7 +69,7 @@ export default function FieldNotes() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
           {open === 'level' && <>
             <Chip label="All" on={!level} onPress={() => setLevel(null)} />
-            {levelOpts.map(o => <Chip key={o.key} label={o.label} on={level === o.key} onPress={() => setLevel(level === o.key ? null : o.key)} />)}
+            {MASTERY.map(m => <Chip key={m.key} label={m.label} on={level === m.key} color={m.border} onPress={() => setLevel(level === m.key ? null : m.key)} />)}
           </>}
           {open === 'group' && <>
             <Chip label="All" on={!group} onPress={() => setGroup(null)} />
@@ -145,8 +146,10 @@ export default function FieldNotes() {
 function FilterBtn({ label, value, open, color, onPress }: {
   label: string; value?: string; open: boolean; color?: string; onPress: () => void;
 }) {
+  // a chosen value tints the whole button its color (tier for Level, trophic for Role)
+  const tint = value && color ? { borderColor: `${color}80`, backgroundColor: `${color}1f` } : null;
   return (
-    <Pressable onPress={onPress} style={[s.filterBtn, (open || value) && s.filterBtnOn]}>
+    <Pressable onPress={onPress} style={[s.filterBtn, (open || value) && s.filterBtnOn, tint]}>
       <Text style={s.filterLabel}>{label}</Text>
       <Text style={[s.filterValue, color ? { color } : null, value ? { color: color ?? C.greenSoft } : null]} numberOfLines={1}>
         {value ?? 'All'} {open ? '▴' : '▾'}
