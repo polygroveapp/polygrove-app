@@ -7,8 +7,7 @@ export type FoodwebLink = { name: string; evidence: number; card: boolean; inSet
 export type Card = {
   id: string;              // slug — display + routing only
   species_id: number;      // THE stable key for user state
-  name: string;            // the English default — or the ecoregion's local name once localized
-  nameEn?: string;         // set by localize(): the English name behind a local one
+  name: string;
   sci: string;
   levels: number;
   group: string;
