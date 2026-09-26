@@ -81,7 +81,8 @@ export default function PolygroveCard({ card }: { card: Card }) {
             </Defs>
             <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
           </Svg>
-          <HexPhoto uri={photo} width={148} height={167} borderColor={tc} borderWidth={6} />
+          {/* 1/3 bigger than the explorer's 148x167 (user, 2026-09-26), same ratio */}
+          <HexPhoto uri={photo} width={197} height={223} borderColor={tc} borderWidth={8} />
           {/* ⓘ bottom-right → the Commons file page (user, 2026-09-26): the ONLY
               full-photo view — our hex crop is an edit, so the uncropped
               original is shown at its source, credited. Nested Pressable so
