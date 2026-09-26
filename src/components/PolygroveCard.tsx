@@ -19,7 +19,10 @@ import HexPhoto from './HexPhoto';
 let _glowSeq = 0;
 
 export default function PolygroveCard({ card }: { card: Card }) {
-  const tc = TROPHIC_COLOR[card.trophic] || '#81C784';
+  // explorer's troColor: purple = trophic role is INFERRED (GloBI prey records),
+  // not measured — the accent itself flags the uncertainty.
+  const tc = card.provenance?.feeding?.confidence === 'inferred'
+    ? '#c084fc' : TROPHIC_COLOR[card.trophic] || '#81C784';
   const photo = photoFor(card.id, 500);
   const commons = photoCommonsPage(card.id);
   const [note, setNote] = useState<string | null>(null);
@@ -84,13 +87,13 @@ export default function PolygroveCard({ card }: { card: Card }) {
               bottom-left, ⓘ Commons attribution bottom-right, both above the
               accent divider. Nested Pressables so the card flip doesn't fire. */}
           {!!commons && (
-            <Pressable hitSlop={10} style={[s.photoBtn, { left: 12 }]}
+            <Pressable hitSlop={10} style={[s.photoBtn, { right: 12 }]}
               onPress={() => WebBrowser.openBrowserAsync(commons)}>
               <Text style={[s.photoBtnTxt, { fontStyle: 'italic', fontFamily: F.sansBold }]}>i</Text>
             </Pressable>
           )}
           {!!photo && (
-            <Pressable hitSlop={10} style={[s.photoBtn, { right: 12 }]}
+            <Pressable hitSlop={10} style={[s.photoBtn, { left: 12 }]}
               onPress={() => setPhotoFull(true)}>
               <Text style={s.photoBtnTxt}>⤢</Text>
             </Pressable>
