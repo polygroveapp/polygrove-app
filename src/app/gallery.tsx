@@ -58,7 +58,9 @@ export default function Gallery() {
   const accent = cur ? TROPHIC_COLOR[cur.trophic] || C.greenSoft : C.greenSoft;
 
   return (
-    <View style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
+    // the whole backdrop closes: any tap outside the card (the dark area, the
+    // gaps, a peeking neighbor) dismisses the gallery (user, 2026-09-26)
+    <Pressable onPress={close} style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
       {/* top-LEFT, as a labeled pill: the faint ✕ top-right hid under Expo's dev
           gear on the simulator and was easy to miss (user, 2026-09-26) */}
       <Pressable onPress={close} hitSlop={12} style={[s.x, { top: insets.top + 8 }]}>
@@ -89,7 +91,7 @@ export default function Gallery() {
           </Animated.View>
         </GestureDetector>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
