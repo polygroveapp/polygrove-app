@@ -30,9 +30,14 @@ export default function FieldNotes() {
   useEffect(() => { load(); }, []);
   const retry = () => { setError(null); load(); };
 
+  // only what the user actually has (user, 2026-09-26): journaled cards, by
+  // name; the deck's full size stays in the subtitle so progress still reads
+  const deckSize = ready && eco ? ecoMembers(eco.eid).length : 0;
   const cards = useMemo(
-    () => (ready && eco ? [...ecoMembers(eco.eid)].sort((a, b) => a.name.localeCompare(b.name)) : []),
-    [ready, eco],
+    () => (ready && eco
+      ? ecoMembers(eco.eid).filter(c => owns(eco.eid, c.species_id)).sort((a, b) => a.name.localeCompare(b.name))
+      : []),
+    [ready, eco, owned],   // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // three filters (user, 2026-09-26): card level · taxonomy · trophic role
@@ -48,10 +53,7 @@ export default function FieldNotes() {
   const matches = (c: Card, sel: Sel) => {
     if (sel.group && c.group !== sel.group) return false;
     if (sel.trophic && c.trophic !== sel.trophic) return false;
-    if (sel.level) {
-      const journaled = eco ? owns(eco.eid, c.species_id) : false;
-      return journaled && getTier(0).key === sel.level;   // every journaled card is Clay until the quiz
-    }
+    if (sel.level) return getTier(0).key === sel.level;   // every journaled card is Clay until the quiz
     return true;
   };
   const cur: Sel = { level, group, trophic };
@@ -103,7 +105,7 @@ export default function FieldNotes() {
       <View style={s.titleWrap}>
         <Text style={s.title}>Field Notes</Text>
         <Text style={s.sub}>
-          {owned.length}/{cards.length} Journaled{rows.length !== cards.length ? ` · ${rows.length} shown` : ''}
+          {cards.length}/{deckSize} Journaled{rows.length !== cards.length ? ` · ${rows.length} shown` : ''}
         </Text>
       </View>
       {filterBar}
@@ -135,8 +137,13 @@ export default function FieldNotes() {
       ListHeaderComponent={header}
       columnWrapperStyle={{ gap: 10 }}
       contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+      ListEmptyComponent={
+        <View style={[s.center, { paddingTop: 40 }]}>
+          <Text style={s.msg}>{cards.length === 0 ? 'Nothing journaled here yet — open a pack.' : 'No journaled cards match these filters.'}</Text>
+        </View>
+      }
       renderItem={({ item }) => (
-        <Cell card={item} journaled={owns(eco.eid, item.species_id)}
+        <Cell card={item}
           onPress={() => {
             // the demo's card gallery over the journaled cards, starting here
             const j = rows.filter(c => owns(eco.eid, c.species_id));
@@ -188,7 +195,8 @@ function Chip({ label, count, on, color, onPress }: { label: string; count: numb
 // mastery level. Undiscovered = an empty hexagon with a ?. Mastery score is
 // 0 for everyone until the quiz lands.
 let _glowSeq = 0;
-function Cell({ card, journaled, onPress }: { card: Card; journaled: boolean; onPress: () => void }) {
+function Cell({ card, onPress }: { card: Card; onPress: () => void }) {
+  const journaled = true;   // only journaled cards are listed (user, 2026-09-26: no ? tiles)
   const score = 0;
   const t = getTier(score);
   // the whole tile is themed by LEVEL (user, 2026-09-26): hexagon, glow, divider
