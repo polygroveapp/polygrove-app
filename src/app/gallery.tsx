@@ -33,9 +33,11 @@ export default function Gallery() {
   const [idx, setIdx] = useState(() => Math.max(0, Math.min(Number(start) || 0, 9999)));
   const tx = useSharedValue(0);
 
+  // narrower than the pack's card so the neighbors peek in at both edges
+  // like the demo (card 0.8 of the screen, the rest is the two peeks)
   const cardSize = {
-    width: Math.min(win.width - 44, 370),
-    height: Math.min(600, win.height - 130 - insets.top - insets.bottom),
+    width: Math.min(Math.round(win.width * 0.8), 340),
+    height: Math.min(600, win.height - 150 - insets.top - insets.bottom),
   };
   const step = cardSize.width + GAP;
   const n = cards.length;
@@ -57,7 +59,7 @@ export default function Gallery() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
-      <Pressable onPress={close} hitSlop={12} style={s.x}><Text style={s.xTxt}>✕</Text></Pressable>
+      <Pressable onPress={close} hitSlop={12} style={[s.x, { top: insets.top + 8 }]}><Text style={s.xTxt}>✕</Text></Pressable>
       <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 20 }}>
         <View style={s.head}>
           <Text style={s.label}>☀️ Cards</Text>
@@ -89,7 +91,7 @@ export default function Gallery() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0a0f0a' },
-  x: { position: 'absolute', top: 16, right: 16, zIndex: 10, padding: 6 },
+  x: { position: 'absolute', right: 16, zIndex: 10, padding: 6 },
   xTxt: { color: 'rgba(255,255,255,0.4)', fontSize: 24, lineHeight: 26 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 },
   label: { fontFamily: F.sansBold, fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1 },
