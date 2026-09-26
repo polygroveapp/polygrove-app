@@ -171,7 +171,8 @@ let _glowSeq = 0;
 function Cell({ card, journaled, onPress }: { card: Card; journaled: boolean; onPress: () => void }) {
   const score = 0;
   const t = getTier(score);
-  const tc = TROPHIC_COLOR[card.trophic] || C.dim;
+  // the whole tile is themed by LEVEL (user, 2026-09-26): hexagon, glow, divider
+  const tc = t.border;
   const photo = journaled ? photoFor(card.id, 250) : undefined;
   const [glowId] = useState(() => `fn${++_glowSeq}`);
   return (
@@ -192,7 +193,6 @@ function Cell({ card, journaled, onPress }: { card: Card; journaled: boolean; on
         <HexPhoto uri={photo} width={58} height={66} borderColor={journaled ? tc : '#2a2a2a'} borderWidth={3} />
         {!journaled && <Text style={s.unknown}>?</Text>}
       </View>
-      {/* the divider carries the LEVEL (mastery tier); the hexagon carries the role */}
       <View style={[s.divider, { backgroundColor: journaled ? t.border : '#262626' }]} />
       <Text style={s.name} numberOfLines={2}>{journaled ? card.name : '???'}</Text>
       <View style={s.foot}>
