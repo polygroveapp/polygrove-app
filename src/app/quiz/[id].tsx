@@ -269,11 +269,12 @@ function PickCards({ q, done, onAnswer }: { q: Extract<Q, { type: 'pick' }>; don
 function PickButton({ onPick }: { onPick: () => boolean }) {
   const [wrong, setWrong] = useState(false);
   const t = useSharedValue(0);
+  useEffect(() => { if (wrong) t.value = withTiming(1, { duration: 350 }); }, [wrong, t]);
   const style = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(t.value, [0, 1], ['#FFC107', '#E53935']),
   }));
   return (
-    <Pressable disabled={wrong} onPress={() => { if (!onPick()) { setWrong(true); t.value = withTiming(1, { duration: 350 }); } }}>
+    <Pressable disabled={wrong} onPress={() => { if (!onPick()) setWrong(true); }}>
       <Animated.View style={[s.confirm, style]}>
         <Text style={[s.confirmTxt, { color: wrong ? C.text : '#1a1a1a' }]}>{wrong ? 'Incorrect' : 'This is my card'}</Text>
       </Animated.View>
