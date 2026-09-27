@@ -34,8 +34,10 @@ export default function SolarCelebration({ card, sol = 5, onDone }: { card: Card
   }));
   const titleStyle = useAnimatedStyle(() => ({ opacity: txt.value }));
 
-  const cardW = Math.min(260, win.width - 80);
-  const cardH = Math.round(cardW * 1.5);
+  // the card's type doesn't scale with width, so it needs its natural height
+  // (~520) or the field note clips
+  const cardW = Math.min(280, win.width - 80);
+  const cardH = Math.min(540, win.height - insets.top - insets.bottom - 200);
   return (
     <Pressable onPress={onDone} style={[s.root, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
       <Animated.View style={[s.raysWrap, rays]} pointerEvents="none">
