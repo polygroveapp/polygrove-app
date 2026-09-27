@@ -158,7 +158,7 @@ export default function FieldNotes() {
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
       {ready && eco && !error ? body : <>{header}{body}</>}
-      <BottomNav active="species" />
+      <BottomNav active="none" />
     </View>
   );
 }

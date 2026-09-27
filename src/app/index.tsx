@@ -161,7 +161,7 @@ export default function Home() {
 
             {/* journal · solar quiz (a random journaled card that isn't fully mastered) */}
             <View style={s.row2}>
-              <Pressable onPress={() => router.push('/collection')} style={s.reviewBtn}>
+              <Pressable onPress={() => router.push('/deck')} style={s.reviewBtn}>
                 <Text style={s.reviewTxt}>📖 Journal</Text>
               </Pressable>
               <Pressable disabled={!owned.length} style={[s.quizBtn, !owned.length && { opacity: 0.45 }]}

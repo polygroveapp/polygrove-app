@@ -9,11 +9,13 @@ import { C, F } from '../constants/polygrove';
 
 const TABS = [
   { id: 'home', icon: '⛺', label: 'Home', href: '/' },
-  { id: 'species', icon: '🌲', label: 'Species', href: '/deck' },
+  // the middle tab is the MAP (user, 2026-09-26); Field Notes is reached from
+  // home's Journal button instead
+  { id: 'map', icon: '🧭', label: 'Map', href: '/map' },
   { id: 'about', icon: '❓', label: 'About', href: '/about' },
 ] as const;
 
-export type Tab = typeof TABS[number]['id'];
+export type Tab = typeof TABS[number]['id'] | 'none';   // 'none' = no tab lit (Field Notes)
 
 export default function BottomNav({ active }: { active: Tab }) {
   const router = useRouter();

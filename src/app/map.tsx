@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Geojson, MapPressEvent, Polygon, Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import { C, F } from '../constants/polygrove';
 import { loadCatalog } from '../lib/catalog';
 import { ECO_GEOMETRY_URL, ecoDeckSize, loadCurrentEco, setCurrentEco, useCurrentEco } from '../lib/ecoregions';
@@ -162,7 +163,8 @@ export default function EcoMap() {
         </Pressable>
       </View>
 
-      <View style={[s.sheet, { paddingBottom: insets.bottom + 14 }]}>
+      {/* the sheet sits above the tab bar (the map is a tab now, user 2026-09-26) */}
+      <View style={[s.sheet, { bottom: NAV_HEIGHT + insets.bottom, paddingBottom: 14 }]}>
         {err && !pick ? (
           <Text style={s.msg}>{err}</Text>
         ) : pick ? (
@@ -182,6 +184,7 @@ export default function EcoMap() {
           </Text>
         )}
       </View>
+      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}><BottomNav active="map" /></View>
     </View>
   );
 }

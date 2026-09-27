@@ -131,7 +131,7 @@ export default function PackOpening() {
       <View style={s.center}>
         <Text style={s.doneTitle}>Pack complete</Text>
         <Text style={s.doneSub}>{kept} journaled · {skipped} skipped</Text>
-        <Pressable onPress={() => router.replace('/collection')} style={s.primary}>
+        <Pressable onPress={() => router.replace('/deck')} style={s.primary}>
           <Text style={s.primaryTxt}>View Journal</Text>
         </Pressable>
         <Text style={s.doneSub}>{solar ? 'Solar Pack · 100 Sol 🔆' : 'Next Discovery Pack in 24 hours'}</Text>
