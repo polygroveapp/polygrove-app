@@ -10,7 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SolarCelebration from '../../components/SolarCelebration';
@@ -95,7 +95,10 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
     // a wrong pick on "Is this your card?" never shows the red border or the
     // reveal — it just restarts the ladder (user, 2026-09-26)
     // (the pick button itself fades to red "Incorrect" for a beat first)
-    if (!right) { if (q?.type === 'pick') setTimeout(retry, 900); else setResult({ right: false, sol: 0 }); return; }
+    // For the pick, PickCards runs the shuffle itself (cards drop off the
+    // bottom, reorder, rise back) — the parent only re-rolls the seed once
+    // they're out of sight; it never remounts the component mid-animation.
+    if (!right) { if (q?.type !== 'pick') setResult({ right: false, sol: 0 }); return; }
     if (locked) { if (!isLast) setResult({ right: true, sol: 0 }); advance(); return; }   // practice — no level change
     const adv = recordCorrect(sid, level);
     if (adv.sol > 0) { earnSol(adv.sol); setSolFlash({ amount: adv.sol, id: Date.now() }); }
@@ -175,7 +178,8 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
         </View>
 
         {q ? (
-          <Question key={`${level}-${attempt}-${round}`} q={q} card={card} done={result !== null} onAnswer={onAnswer} />
+          <Question key={q.type === 'pick' ? `${level}-${round}` : `${level}-${attempt}-${round}`} q={q} card={card} done={result !== null} onAnswer={onAnswer}
+            onReshuffle={() => setAttempt(a => a + 1)} />
         ) : (
           <Text style={s.msg}>This card has no more questions.</Text>
         )}
@@ -216,16 +220,39 @@ function explainFor(q: Q, card: Card): string {
 
 // Q6 — the capstone swipe: three real cards, anonymized, side by side; drag
 // between them, "This is my card" picks the one in front. Names show after.
-function PickCards({ q, done, onAnswer }: { q: Extract<Q, { type: 'pick' }>; done: boolean; onAnswer: (r: boolean) => void }) {
+function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: 'pick' }>; done: boolean; onAnswer: (r: boolean) => void; onReshuffle: () => void }) {
   const win = useWindowDimensions();
-  const [idx, setIdx] = useState(0);
+  const [idx, setIdx] = useState(1);   // always open on the middle card
   const [picked, setPicked] = useState<string | null>(null);
+  const [shuffling, setShuffling] = useState(false);
+  const [wrongTick, setWrongTick] = useState(0);   // resets the button after a shuffle
   const tx = useSharedValue(0);
+  const ty = useSharedValue(0);        // the whole hand of cards, dropping off the bottom
   const n = q.cards.length;
   const cardSize = { width: Math.min(Math.round(win.width * 0.78), 320), height: Math.min(520, Math.round(win.height * 0.56)) };
   const step = cardSize.width + 18;
   const go = (i: number) => setIdx(Math.max(0, Math.min(n - 1, i)));
+  // a wrong pick (user, 2026-09-26): the three drop off the bottom of the
+  // screen together as if into your hands, the order re-rolls while they're
+  // out of sight, then they rise back and land on the middle card
+  const DROP = win.height;
+  const reshuffle = () => {
+    setShuffling(true);
+    ty.value = withTiming(DROP, { duration: 420, easing: Easing.in(Easing.cubic) }, done => {
+      if (done) runOnJS(afterDrop)();
+    });
+  };
+  const afterDrop = () => {
+    onReshuffle();          // new seed → new order, while hidden
+    setIdx(1);
+    setPicked(null);
+    setWrongTick(t => t + 1);
+    ty.value = withDelay(120, withTiming(0, { duration: 460, easing: Easing.out(Easing.cubic) }, d => {
+      if (d) runOnJS(setShuffling)(false);
+    }));
+  };
   const pan = Gesture.Pan()
+    .enabled(!shuffling && !done)
     .activeOffsetX([-12, 12])
     .onChange(e => { tx.value = e.translationX; })
     .onEnd(() => {
@@ -233,7 +260,7 @@ function PickCards({ q, done, onAnswer }: { q: Extract<Q, { type: 'pick' }>; don
       if (d !== 0) runOnJS(go)(idx + d);
       tx.value = withSpring(0, { damping: 18, stiffness: 170 });
     });
-  const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
+  const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }, { translateY: ty.value }] }));
   const cur = q.cards[idx];
   const verdict = (k: string) => (!done ? null : k === q.a ? '#4CAF50' : k === picked ? '#E53935' : null);
   const pickedCard = q.cards.find(c => c.key === picked);
@@ -266,7 +293,8 @@ function PickCards({ q, done, onAnswer }: { q: Extract<Q, { type: 'pick' }>; don
         </Animated.View>
       </GestureDetector>
       {!done ? (
-        <PickButton onPick={() => { const ok = cur.key === q.a; setPicked(cur.key); onAnswer(ok); return ok; }} />
+        <PickButton key={wrongTick} disabled={shuffling}
+          onPick={() => { const ok = cur.key === q.a; setPicked(cur.key); onAnswer(ok); if (!ok) setTimeout(reshuffle, 700); return ok; }} />
       ) : (
         <Text style={s.pickReveal}>{reveal}</Text>
       )}
@@ -277,7 +305,7 @@ function PickCards({ q, done, onAnswer }: { q: Extract<Q, { type: 'pick' }>; don
 // the gold "This is my card" button: on a wrong pick it fades to red and
 // reads "Incorrect" (user, 2026-09-26) while the ladder restarts behind it —
 // the cards themselves never get a red border or a reveal
-function PickButton({ onPick }: { onPick: () => boolean }) {
+function PickButton({ onPick, disabled }: { onPick: () => boolean; disabled?: boolean }) {
   const [wrong, setWrong] = useState(false);
   const t = useSharedValue(0);
   useEffect(() => { if (wrong) t.value = withTiming(1, { duration: 350 }); }, [wrong, t]);
@@ -285,7 +313,7 @@ function PickButton({ onPick }: { onPick: () => boolean }) {
     backgroundColor: interpolateColor(t.value, [0, 1], ['#FFC107', '#E53935']),
   }));
   return (
-    <Pressable disabled={wrong} onPress={() => { if (!onPick()) setWrong(true); }}>
+    <Pressable disabled={wrong || disabled} onPress={() => { if (!onPick()) setWrong(true); }}>
       <Animated.View style={[s.confirm, style]}>
         <Text style={[s.confirmTxt, { color: wrong ? C.text : '#1a1a1a' }]}>{wrong ? 'Incorrect' : 'This is my card'}</Text>
       </Animated.View>
@@ -295,8 +323,8 @@ function PickButton({ onPick }: { onPick: () => boolean }) {
 
 // one question — mc / tf / dual / pick, with the demo's option-state colors:
 // dark → gold selected → green right / red wrong
-function Question({ q, card, done, onAnswer }: { q: Q; card: Card; done: boolean; onAnswer: (r: boolean) => void }) {
-  if (q.type === 'pick') return <PickCards q={q} done={done} onAnswer={onAnswer} />;
+function Question({ q, card, done, onAnswer, onReshuffle }: { q: Q; card: Card; done: boolean; onAnswer: (r: boolean) => void; onReshuffle: () => void }) {
+  if (q.type === 'pick') return <PickCards q={q} done={done} onAnswer={onAnswer} onReshuffle={onReshuffle} />;
   return <QuestionBody q={q} card={card} done={done} onAnswer={onAnswer} />;
 }
 
