@@ -19,7 +19,8 @@ import { Card, cardById, getCards, loadCatalog } from '../../lib/catalog';
 import {
   LOCK_THRESHOLD, NUM_Q, countsOf, isFullyLocked, loadMastery, nextUnlocked, recordCorrect, scoreOf, useMastery,
 } from '../../lib/mastery';
-import { useCurrentEco } from '../../lib/ecoregions';
+import { owns } from '../../lib/collection';
+import { ecoMembers, useCurrentEco } from '../../lib/ecoregions';
 import { offlineReady } from '../../lib/offline';
 import { Q, buildQuiz } from '../../lib/quiz';
 import { earnSol } from '../../lib/sol';
@@ -46,6 +47,7 @@ export default function Quiz() {
 }
 
 function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets: { top: number; bottom: number } }) {
+  const router = useRouter();
   const eco = useCurrentEco();
   useMastery();   // re-render on progress
   const sid = card.species_id;
@@ -103,7 +105,16 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
     advance();
   };
 
-  if (celebrate) return <SolarCelebration card={card} sol={5} onDone={() => { setCelebrate(false); next(); }} />;
+  // after Solar: back to the Species screen with THIS card showing (user,
+  // 2026-09-26) — the gallery over the ecoregion's journaled cards, opened on
+  // it, replacing the quiz so Back lands on Field Notes
+  const showSolarCard = () => {
+    setCelebrate(false);
+    const j = eco ? ecoMembers(eco.eid).filter(c => owns(eco.eid, c.species_id)).sort((a, b) => a.name.localeCompare(b.name)) : [card];
+    const start = Math.max(0, j.findIndex(c => c.id === card.id));
+    router.replace({ pathname: '/gallery', params: { ids: j.map(c => c.id).join(','), start: String(start), glow: card.id } });
+  };
+  if (celebrate) return <SolarCelebration card={card} sol={5} onDone={showSolarCard} />;
 
   return (
     <View style={s.root}>

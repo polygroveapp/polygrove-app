@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PolygroveCard from '../components/PolygroveCard';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
@@ -22,7 +22,23 @@ export default function Gallery() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const win = useWindowDimensions();
-  const { ids, start } = useLocalSearchParams<{ ids?: string; start?: string }>();
+  // glow = a card that just went Solar: it arrives with the demo's gold pulse
+  // (highlightCard) for a couple of seconds (user, 2026-09-26)
+  const { ids, start, glow } = useLocalSearchParams<{ ids?: string; start?: string; glow?: string }>();
+  const [glowing, setGlowing] = useState<string | null>(glow ?? null);
+  const pulse = useSharedValue(0);
+  useEffect(() => {
+    if (!glow) return;
+    pulse.value = withRepeat(withSequence(withTiming(1, { duration: 1000 }), withTiming(0, { duration: 1000 })), -1, false);
+    const t = setTimeout(() => { setGlowing(null); }, 2600);
+    return () => clearTimeout(t);
+  }, [glow, pulse]);
+  const glowStyle = useAnimatedStyle(() => ({
+    shadowColor: '#FFD700',
+    shadowOpacity: 0.7 + 0.3 * pulse.value,
+    shadowRadius: 30 + 25 * pulse.value,
+    shadowOffset: { width: 0, height: 0 },
+  }));
   const [ready, setReady] = useState(getCards().length > 0);
   useEffect(() => {
     if (!ready) Promise.allSettled([offlineReady(), loadCatalog()]).then(() => setReady(true));
@@ -89,7 +105,9 @@ export default function Gallery() {
               return (
                 <View key={c.id} pointerEvents={diff === 0 ? 'auto' : 'none'}
                   style={[cardSize, { position: 'absolute', top: 0, transform: [{ translateX: diff * step }] }]}>
-                  <PolygroveCard card={c} />
+                  {glowing === c.id ? (
+                    <Animated.View style={[{ flex: 1, borderRadius: 22 }, glowStyle]}><PolygroveCard card={c} /></Animated.View>
+                  ) : <PolygroveCard card={c} />}
                 </View>
               );
             })}
