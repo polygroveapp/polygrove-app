@@ -13,10 +13,9 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import HexPhoto from '../../components/HexPhoto';
 import SolarCelebration from '../../components/SolarCelebration';
 import { C, F, MASTERY, getLevel, getTier } from '../../constants/polygrove';
-import { Card, cardById, getCards, loadCatalog, photoFor } from '../../lib/catalog';
+import { Card, cardById, getCards, loadCatalog } from '../../lib/catalog';
 import {
   LOCK_THRESHOLD, NUM_Q, countsOf, isFullyLocked, loadMastery, nextUnlocked, recordCorrect, scoreOf, useMastery,
 } from '../../lib/mastery';
@@ -122,10 +121,9 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
 
         {/* header: photo, name, tier chip, six dots (ring on the current level) */}
         <View style={s.head}>
-          {/* during "Is this your card?" the header can't show the photo or the
-              name — it would hand over the answer (user, 2026-09-26) */}
-          <HexPhoto uri={q?.type === 'pick' ? undefined : photoFor(card.id, 120)} width={52} height={58} borderColor={tier.border} borderWidth={3} />
-          <View style={{ flex: 1, marginLeft: 12 }}>
+          {/* no hexagon up here (user, 2026-09-26) — just the name and the
+              tier; during "Is this your card?" the name is hidden too */}
+          <View style={{ flex: 1 }}>
             <Text style={s.name} numberOfLines={1}>{q?.type === 'pick' ? 'Which card is yours?' : card.name}</Text>
             <View style={s.tierRow}>
               <View style={[s.tierChip, { backgroundColor: tier.colors[1] }]}>
