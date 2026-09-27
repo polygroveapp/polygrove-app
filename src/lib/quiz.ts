@@ -101,8 +101,17 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
         { key: 'other', card: other },
         { key: 'chimera', card, noteFrom: other },   // your photo, its field note
       ];
+      // a wrong pick re-rolls the attempt → a NEW order, never the one just seen
+      // (a 3-item shuffle repeats 1 time in 6 by chance — force a change)
+      let cards = shuf(trio);
+      if (attempt > 0) {
+        const prev = buildQuiz(card, attempt - 1)[5];
+        const same = (a: PickCard[], b: PickCard[]) => a.every((x, i) => x.key === b[i].key);
+        let guard = 0;
+        while (prev?.type === 'pick' && same(cards, prev.cards) && guard++ < 6) cards = shuf(trio);
+      }
       qs.push({ type: 'pick', label: 'Q6 · Is this your card?', short: 'Your card',
-        q: `Which of these three cards is the ${c.name}?`, cards: shuf(trio), a: 'correct' });
+        q: `Which of these three cards is the ${c.name}?`, cards, a: 'correct' });
     } else {
       // decoys not resolvable (offline, unregistered) — the name version
       qs.push({ type: 'mc', label: 'Q6 · Is this your card?', short: 'Your card',
