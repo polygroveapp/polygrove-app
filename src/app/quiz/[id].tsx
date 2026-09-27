@@ -10,7 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SolarCelebration from '../../components/SolarCelebration';
@@ -92,7 +92,8 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
   const onAnswer = (right: boolean) => {
     // a wrong pick on "Is this your card?" never shows the red border or the
     // reveal — it just restarts the ladder (user, 2026-09-26)
-    if (!right) { if (q?.type === 'pick') retry(); else setResult({ right: false, sol: 0 }); return; }
+    // (the pick button itself fades to red "Incorrect" for a beat first)
+    if (!right) { if (q?.type === 'pick') setTimeout(retry, 900); else setResult({ right: false, sol: 0 }); return; }
     if (locked) { if (!isLast) setResult({ right: true, sol: 0 }); advance(); return; }   // practice — no level change
     const adv = recordCorrect(sid, level);
     if (adv.sol > 0) { earnSol(adv.sol); setSolFlash({ amount: adv.sol, id: Date.now() }); }
@@ -254,13 +255,29 @@ function PickCards({ q, done, onAnswer }: { q: Extract<Q, { type: 'pick' }>; don
         </Animated.View>
       </GestureDetector>
       {!done ? (
-        <Pressable onPress={() => { setPicked(cur.key); onAnswer(cur.key === q.a); }} style={s.confirm}>
-          <Text style={[s.confirmTxt, { color: '#1a1a1a' }]}>This is my card</Text>
-        </Pressable>
+        <PickButton onPick={() => { const ok = cur.key === q.a; setPicked(cur.key); onAnswer(ok); return ok; }} />
       ) : (
         <Text style={s.pickReveal}>{reveal}</Text>
       )}
     </View>
+  );
+}
+
+// the gold "This is my card" button: on a wrong pick it fades to red and
+// reads "Incorrect" (user, 2026-09-26) while the ladder restarts behind it —
+// the cards themselves never get a red border or a reveal
+function PickButton({ onPick }: { onPick: () => boolean }) {
+  const [wrong, setWrong] = useState(false);
+  const t = useSharedValue(0);
+  const style = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(t.value, [0, 1], ['#FFC107', '#E53935']),
+  }));
+  return (
+    <Pressable disabled={wrong} onPress={() => { if (!onPick()) { setWrong(true); t.value = withTiming(1, { duration: 350 }); } }}>
+      <Animated.View style={[s.confirm, style]}>
+        <Text style={[s.confirmTxt, { color: wrong ? C.text : '#1a1a1a' }]}>{wrong ? 'Incorrect' : 'This is my card'}</Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
