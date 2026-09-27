@@ -59,6 +59,9 @@ export const owns = (eid: number, speciesId: number) => !!_decks[eid]?.[speciesI
 export const ownsAnywhere = (speciesId: number) =>
   Object.values(_decks).some(deck => !!deck[speciesId]);
 export const collectionCount = (eid: number) => Object.keys(_decks[eid] || {}).length;
+// every ecoregion with at least one card — the map outlines them in gold
+export const collectedEcoregions = (): number[] =>
+  Object.keys(_decks).map(Number).filter(eid => Object.keys(_decks[eid]).length > 0);
 // every owned entry across all decks (offline heal pass)
 export const allOwned = (): Owned[] => Object.values(_decks).flatMap(d => Object.values(d));
 

@@ -5,13 +5,14 @@
 
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Geojson, MapPressEvent, Polygon, Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import { C, F } from '../constants/polygrove';
 import { loadCatalog } from '../lib/catalog';
+import { collectedEcoregions, loadCollection } from '../lib/collection';
 import { ECO_GEOMETRY_URL, ecoDeckSize, loadCurrentEco, setCurrentEco, useCurrentEco } from '../lib/ecoregions';
 
 type LatLng = { latitude: number; longitude: number };
@@ -98,8 +99,21 @@ export default function EcoMap() {
   const [locating, setLocating] = useState(false);
   const [catalogReady, setCatalogReady] = useState(false);
 
+  // ecoregions you hold cards in get a gold outline (user, 2026-09-26)
+  const [collected, setCollected] = useState<number[]>([]);
+  const goldRings = useMemo(() => {
+    if (!geo || !collected.length) return [] as { key: string; ring: LatLng[] }[];
+    const want = new Set(collected);
+    const out: { key: string; ring: LatLng[] }[] = [];
+    for (const f of geo.features) {
+      if (!want.has(f.properties.eco)) continue;
+      outerRings(f).forEach((r, i) => out.push({ key: `${f.properties.eco}-${i}`, ring: r.map(([x, y]) => ({ latitude: y, longitude: x })) }));
+    }
+    return out;
+  }, [geo, collected]);
   useEffect(() => {
     loadCurrentEco();
+    loadCollection().then(() => setCollected(collectedEcoregions()));
     loadGeo().then(setGeo).catch(() => setErr('The map needs an internet connection the first time.'));
     loadCatalog().then(() => setCatalogReady(true)).catch(() => { /* deck sizes just stay unknown */ });
   }, []);
@@ -145,6 +159,9 @@ export default function EcoMap() {
         {geo && (
           <Geojson geojson={geo as never} strokeColor="rgba(129,199,132,0.55)" fillColor="rgba(76,175,80,0.04)" strokeWidth={1} />
         )}
+        {goldRings.map(g => (
+          <Polygon key={`gold-${g.key}`} coordinates={g.ring} fillColor="rgba(255,215,0,0.08)" strokeColor="#FFD700" strokeWidth={2} />
+        ))}
         {pick && pick.rings.map((r, i) => (
           <Polygon key={`${pick.eid}-${i}`} coordinates={r} fillColor="rgba(76,175,80,0.35)" strokeColor="#4CAF50" strokeWidth={2} />
         ))}
