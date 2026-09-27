@@ -82,19 +82,22 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
     const n = nextUnlocked(fresh, level + 1);
     setProgress(n !== -1 ? n : nextUnlocked(fresh, 0));
   };
-  // a right answer just moves on (user, 2026-09-26): the option goes green,
-  // a slim ✓ line shows what it earned, and the next question comes up on
-  // its own — no button. Solar still gets its celebration first.
+  // a right answer just moves on (user, 2026-09-26): the option goes green
+  // for a beat, then the next question comes up on its own — no button.
+  // On the LAST question the wrap back to the start is immediate, with no
+  // reveal (user). Solar still gets its celebration first.
   const AUTO_NEXT_MS = 700;
+  const isLast = level === NUM_Q - 1 || !available.slice(level + 1).some(Boolean);
+  const advance = () => { if (isLast) next(); else setTimeout(next, AUTO_NEXT_MS); };
   const onAnswer = (right: boolean) => {
     if (!right) { setResult({ right: false, sol: 0 }); return; }
-    if (locked) { setResult({ right: true, sol: 0 }); setTimeout(next, AUTO_NEXT_MS); return; }   // practice — no level change
+    if (locked) { if (!isLast) setResult({ right: true, sol: 0 }); advance(); return; }   // practice — no level change
     const adv = recordCorrect(sid, level);
     if (adv.sol > 0) { earnSol(adv.sol); setSolFlash({ amount: adv.sol, id: Date.now() }); }
     const leveledTo = adv.newScore > adv.prevScore ? getTier(adv.newScore).label : undefined;
-    setResult({ right: true, sol: adv.sol, leveledTo, solar: adv.firstSolar });
-    if (adv.firstSolar) setCelebrate(true);
-    else setTimeout(next, AUTO_NEXT_MS);
+    if (adv.firstSolar) { setResult({ right: true, sol: adv.sol, leveledTo, solar: true }); setCelebrate(true); return; }
+    if (!isLast) setResult({ right: true, sol: adv.sol, leveledTo });
+    advance();
   };
   const retry = () => { setResult(null); setAttempt(a => a + 1); setProgress(nextUnlocked(effCounts, 0)); };
 
