@@ -221,7 +221,8 @@ function PickCards({ q, done, onAnswer }: { q: Extract<Q, { type: 'pick' }>; don
   const verdict = (id: string) => (!done ? null : id === q.a ? '#4CAF50' : id === picked ? '#E53935' : null);
   return (
     <View>
-      <View style={s.qBox}><Text style={s.qTxt}>{q.q}</Text></View>
+      {/* no question box (user, 2026-09-26): the header names the card, the
+          three cards and the button say the rest */}
       <View style={s.pickDots}>
         {q.cards.map((c, i) => (
           <Pressable key={c.id} onPress={() => go(i)} hitSlop={4}
