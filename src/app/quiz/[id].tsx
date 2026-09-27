@@ -122,9 +122,11 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
 
         {/* header: photo, name, tier chip, six dots (ring on the current level) */}
         <View style={s.head}>
-          <HexPhoto uri={photoFor(card.id, 120)} width={52} height={58} borderColor={tier.border} borderWidth={3} />
+          {/* during "Is this your card?" the header can't show the photo or the
+              name — it would hand over the answer (user, 2026-09-26) */}
+          <HexPhoto uri={q?.type === 'pick' ? undefined : photoFor(card.id, 120)} width={52} height={58} borderColor={tier.border} borderWidth={3} />
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={s.name} numberOfLines={1}>{card.name}</Text>
+            <Text style={s.name} numberOfLines={1}>{q?.type === 'pick' ? 'Which card is yours?' : card.name}</Text>
             <View style={s.tierRow}>
               <View style={[s.tierChip, { backgroundColor: tier.colors[1] }]}>
                 <Text style={[s.tierTxt, { color: tier.key === 'basalt' ? '#ccc' : '#1a1a1a' }]}>{tier.label}</Text>

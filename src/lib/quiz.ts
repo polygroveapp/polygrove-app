@@ -5,7 +5,7 @@
 // habitat|origin|biome T/F · Q6 "is this your card?" among look-alikes.
 // Deterministic per (card, attempt) so a retry re-rolls the T/F variants.
 
-import { Card, cardByName, getCards } from './catalog';
+import { Card, cardByName, getCards, photoFor } from './catalog';
 
 export type Q =
   | { type: 'mc'; label: string; short: string; q: string; opts: string[]; a: string; explain?: string }
@@ -92,7 +92,8 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
   // Q6 is this your card? — the decoys are deck cards (generate_catalog's
   // look-alike tiers), so when they resolve we deal all three as real cards
   if (c.lookAlikes && c.lookAlikes.length >= 2) {
-    const decoys = c.lookAlikes.map(n => cardByName(n)).filter((d): d is Card => !!d && d.id !== card.id);
+    // a decoy must have a photo — an empty hexagon is a giveaway
+    const decoys = c.lookAlikes.map(n => cardByName(n)).filter((d): d is Card => !!d && d.id !== card.id && !!photoFor(d.id));
     const other = decoys.length ? decoys[Math.floor(rng() * decoys.length)] : undefined;
     if (other) {
       const trio: PickCard[] = [
