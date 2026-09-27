@@ -15,17 +15,19 @@ import { C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '
 import { Card, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
 import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
 
 export default function FieldNotes() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const eco = useCurrentEco();
   const owned = useCollection(eco?.eid);
+  const masteryVersion = useMastery();   // tiers re-render as quizzes are won
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = () =>
-    Promise.all([loadCatalog(), loadCollection(), loadCurrentEco()])
+    Promise.all([loadCatalog(), loadCollection(), loadCurrentEco(), loadMastery()])
       .then(() => setReady(true)).catch(e => setError(String(e)));
   useEffect(() => { load(); }, []);
   const retry = () => { setError(null); load(); };
@@ -53,12 +55,12 @@ export default function FieldNotes() {
   const matches = (c: Card, sel: Sel) => {
     if (sel.group && c.group !== sel.group) return false;
     if (sel.trophic && c.trophic !== sel.trophic) return false;
-    if (sel.level) return getTier(0).key === sel.level;   // every journaled card is Clay until the quiz
+    if (sel.level) return getTier(scoreOf(c.species_id)).key === sel.level;
     return true;
   };
   const cur: Sel = { level, group, trophic };
   const rows = useMemo(() => cards.filter(c => matches(c, cur)),
-    [cards, group, trophic, level, eco, owned]);   // eslint-disable-line react-hooks/exhaustive-deps
+    [cards, group, trophic, level, eco, owned, masteryVersion]);   // eslint-disable-line react-hooks/exhaustive-deps
   // how many cards each option would leave, given the other two filters —
   // the count sits at the right of every chip and button (user, 2026-09-26)
   const countIf = (patch: Partial<Sel>) => cards.reduce((n, c) => n + (matches(c, { ...cur, ...patch }) ? 1 : 0), 0);
@@ -197,7 +199,7 @@ function Chip({ label, count, on, color, onPress }: { label: string; count: numb
 let _glowSeq = 0;
 function Cell({ card, onPress }: { card: Card; onPress: () => void }) {
   const journaled = true;   // only journaled cards are listed (user, 2026-09-26: no ? tiles)
-  const score = 0;
+  const score = scoreOf(card.species_id);
   const t = getTier(score);
   // the whole tile is themed by LEVEL (user, 2026-09-26): hexagon, glow, divider
   const tc = t.border;

@@ -18,6 +18,7 @@ import { cardById, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, useCollection } from '../lib/collection';
 import { loadDaily, useDiscoveryCountdown } from '../lib/daily';
 import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { countsOf, isFullyLocked, loadMastery, masteryPct, useMastery } from '../lib/mastery';
 import { offlineReady, packsReady, topUp } from '../lib/offline';
 import { SOLAR_PACK_COST, loadSol, useSol } from '../lib/sol';
 
@@ -30,6 +31,7 @@ export default function Home() {
   const owned = useCollection(eco?.eid);
   const daily = useDiscoveryCountdown();
   const solBal = useSol();
+  useMastery();   // Mastery % re-renders as quizzes are won
   const solOk = solBal >= SOLAR_PACK_COST;
 
   // the hub gates on LOCAL stores only — offline launch still reaches the
@@ -37,7 +39,7 @@ export default function Home() {
   const fetchCatalog = () =>
     loadCatalog().then(() => topUp()).catch(() => setOffline(true));
   useEffect(() => {
-    Promise.all([loadCollection(), loadCurrentEco(), loadDaily(), loadSol(), offlineReady()])
+    Promise.all([loadCollection(), loadCurrentEco(), loadDaily(), loadSol(), loadMastery(), offlineReady()])
       .then(() => setReady(true));
     fetchCatalog();
   }, []);
@@ -108,7 +110,7 @@ export default function Home() {
             <View style={s.stats}>
               <Stat n={journaledPct} pct label="Journaled" />
               <Stat n={owned.length} label="Species" />
-              <Stat n={0} pct label="Mastery" />
+              <Stat n={masteryPct(owned.map(o => o.speciesId))} pct label="Mastery" />
             </View>
 
             {/* discovery pack */}
@@ -157,17 +159,22 @@ export default function Home() {
               <Text style={{ color: C.gold }}>Sol Points 🔆</Text>
             </Text>
 
-            {/* review · solar quiz */}
+            {/* journal · solar quiz (a random journaled card that isn't fully mastered) */}
             <View style={s.row2}>
               <Pressable onPress={() => router.push('/collection')} style={s.reviewBtn}>
                 <Text style={s.reviewTxt}>📖 Journal</Text>
               </Pressable>
-              <View style={[s.quizBtn, { opacity: 0.45 }]}>
+              <Pressable disabled={!owned.length} style={[s.quizBtn, !owned.length && { opacity: 0.45 }]}
+                onPress={() => {
+                  const pool = owned.filter(o => !isFullyLocked(countsOf(o.speciesId)));
+                  const pick = (pool.length ? pool : owned)[Math.floor(Math.random() * (pool.length ? pool : owned).length)];
+                  if (pick) router.push(`/quiz/${pick.id}`);
+                }}>
                 <LinearGradient colors={['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={s.quizGrad}>
                   <Text style={s.quizTxt}>☀️ Solar Quiz</Text>
                 </LinearGradient>
-              </View>
+              </Pressable>
             </View>
 
             {/* recent cards */}

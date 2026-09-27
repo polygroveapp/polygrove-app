@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PolygroveCard from '../components/PolygroveCard';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, cardById, getCards, loadCatalog } from '../lib/catalog';
+import { countsOf, isFullyLocked, loadMastery, useMastery } from '../lib/mastery';
 import { offlineReady } from '../lib/offline';
 
 const GAP = 22;   // space between cards (demo: ~none)
@@ -25,7 +26,9 @@ export default function Gallery() {
   const [ready, setReady] = useState(getCards().length > 0);
   useEffect(() => {
     if (!ready) Promise.allSettled([offlineReady(), loadCatalog()]).then(() => setReady(true));
+    loadMastery();
   }, [ready]);
+  useMastery();   // the Quiz/Practice pill follows progress
 
   const cards: Card[] = ready
     ? String(ids ?? '').split(',').filter(Boolean).map(id => cardById(id)).filter((c): c is Card => !!c)
@@ -92,13 +95,17 @@ export default function Gallery() {
             })}
           </Animated.View>
         </GestureDetector>
-        {cur && (
-          <View style={s.quizRow}>
-            <Pressable onPress={() => router.push(`/quiz/${cur.id}`)} style={s.quizBtn}>
-              <Text style={s.quizTxt}>Quiz</Text>
-            </Pressable>
-          </View>
-        )}
+        {cur && (() => {
+          const mastered = isFullyLocked(countsOf(cur.species_id));
+          return (
+            <View style={s.quizRow}>
+              <Pressable onPress={() => router.push(`/quiz/${cur.id}`)}
+                style={[s.quizBtn, mastered && { backgroundColor: 'rgba(245,166,35,0.15)', borderColor: 'rgba(245,166,35,0.4)' }]}>
+                <Text style={[s.quizTxt, mastered && { color: C.gold }]}>{mastered ? 'Practice' : 'Quiz'}</Text>
+              </Pressable>
+            </View>
+          );
+        })()}
       </View>
     </Pressable>
   );
