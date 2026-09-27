@@ -86,11 +86,14 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
   // for a beat, then the next question comes up on its own — no button.
   // On the LAST question the wrap back to the start is immediate, with no
   // reveal (user). Solar still gets its celebration first.
+  const retry = () => { setResult(null); setAttempt(a => a + 1); setProgress(nextUnlocked(effCounts, 0)); };
   const AUTO_NEXT_MS = 700;
   const isLast = level === NUM_Q - 1 || !available.slice(level + 1).some(Boolean);
   const advance = () => { if (isLast) next(); else setTimeout(next, AUTO_NEXT_MS); };
   const onAnswer = (right: boolean) => {
-    if (!right) { setResult({ right: false, sol: 0 }); return; }
+    // a wrong pick on "Is this your card?" never shows the red border or the
+    // reveal — it just restarts the ladder (user, 2026-09-26)
+    if (!right) { if (q?.type === 'pick') retry(); else setResult({ right: false, sol: 0 }); return; }
     if (locked) { if (!isLast) setResult({ right: true, sol: 0 }); advance(); return; }   // practice — no level change
     const adv = recordCorrect(sid, level);
     if (adv.sol > 0) { earnSol(adv.sol); setSolFlash({ amount: adv.sol, id: Date.now() }); }
@@ -99,7 +102,6 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
     if (!isLast) setResult({ right: true, sol: adv.sol, leveledTo });
     advance();
   };
-  const retry = () => { setResult(null); setAttempt(a => a + 1); setProgress(nextUnlocked(effCounts, 0)); };
 
   if (celebrate) return <SolarCelebration card={card} sol={5} onDone={() => { setCelebrate(false); next(); }} />;
 
