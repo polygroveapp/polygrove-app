@@ -5,13 +5,17 @@
 // habitat|origin|biome T/F · Q6 "is this your card?" among look-alikes.
 // Deterministic per (card, attempt) so a retry re-rolls the T/F variants.
 
-import { Card, getCards } from './catalog';
+import { Card, cardByName, getCards } from './catalog';
 
 export type Q =
   | { type: 'mc'; label: string; short: string; q: string; opts: string[]; a: string; explain?: string }
   | { type: 'tf'; label: string; short: string; q: string; a: boolean; explain?: string }
   | { type: 'dual'; label: string; short: string;
-      s1: { title: string; opts: string[]; a: string }; s2: { title: string; opts: string[]; a: string } };
+      s1: { title: string; opts: string[]; a: string }; s2: { title: string; opts: string[]; a: string } }
+  // Q6, the capstone swipe (question-viability scorecard): three REAL deck
+  // cards — yours + two look-alike decoys that are themselves cards — shown
+  // full-size and anonymized; swipe through, pick yours. `a` = the card id.
+  | { type: 'pick'; label: string; short: string; q: string; cards: Card[]; a: string };
 
 function hash32(s: string) { let h = 5381; for (const ch of s) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0; return h >>> 0; }
 function mulberry(a: number) {
@@ -81,11 +85,19 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
     qs.push({ type: 'tf', label: `Q5 · ${short}`, short, q: `The ${c.name} — ${phr}.`, a: truth, explain: truth ? undefined : `It's ${c.slot5}.` });
   } else qs.push(null);
 
-  // Q6 is this your card?
+  // Q6 is this your card? — the decoys are deck cards (generate_catalog's
+  // look-alike tiers), so when they resolve we deal all three as real cards
   if (c.lookAlikes && c.lookAlikes.length >= 2) {
-    qs.push({ type: 'mc', label: 'Q6 · Is this your card?', short: 'Your card',
-      q: `You drew the ${c.name}. Which of these three look-alike cards is yours?`,
-      opts: shuf([c.name, ...c.lookAlikes.slice(0, 2)]), a: c.name });
+    const decoys = c.lookAlikes.map(n => cardByName(n)).filter((d): d is Card => !!d && d.id !== card.id).slice(0, 2);
+    if (decoys.length === 2) {
+      qs.push({ type: 'pick', label: 'Q6 · Is this your card?', short: 'Your card',
+        q: `Which of these three cards is the ${c.name}?`, cards: shuf([card, ...decoys]), a: card.id });
+    } else {
+      // decoys not resolvable (offline, unregistered) — the name version
+      qs.push({ type: 'mc', label: 'Q6 · Is this your card?', short: 'Your card',
+        q: `You drew the ${c.name}. Which of these three look-alike cards is yours?`,
+        opts: shuf([c.name, ...c.lookAlikes.slice(0, 2)]), a: c.name });
+    }
   } else qs.push(null);
 
   return qs;

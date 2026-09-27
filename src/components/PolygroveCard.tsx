@@ -18,7 +18,11 @@ import HexPhoto from './HexPhoto';
 
 let _glowSeq = 0;
 
-export default function PolygroveCard({ card }: { card: Card }) {
+// anonymous (Q6 "is this your card?"): the name and scientific name are hidden
+// and the species' name is masked inside the field note, so the card tests
+// recognition — photo, role, group, and the note's diagnostic fact
+export default function PolygroveCard({ card: raw, anonymous = false }: { card: Card; anonymous?: boolean }) {
+  const card = anonymous ? { ...raw, name: '???', sci: '· · ·' } : raw;
   // explorer's troColor: purple = trophic role is INFERRED (GloBI prey records),
   // not measured — the accent itself flags the uncertainty.
   const tc = card.provenance?.feeding?.confidence === 'inferred'
@@ -26,7 +30,11 @@ export default function PolygroveCard({ card }: { card: Card }) {
   const photo = photoFor(card.id, 500);
   const commons = photoCommonsPage(card.id);
   const [note, setNote] = useState<string | null>(null);
-  useEffect(() => { let on = true; fieldNote(card.sci).then(n => on && setNote(n)); return () => { on = false; }; }, [card.sci]);
+  useEffect(() => {
+    let on = true;
+    fieldNote(raw.sci).then(n => on && setNote(anonymous && n ? maskName(n, raw) : n));
+    return () => { on = false; };
+  }, [raw, anonymous]);
 
   const router = useRouter();
   const flip = useSharedValue(0);
@@ -232,6 +240,24 @@ export default function PolygroveCard({ card }: { card: Card }) {
 
     </Pressable>
   );
+}
+
+// blank the common name, the binomial, the genus and the name's last "kind"
+// word (hog, duck, warbler) in a field note — NOT every word of the name, or
+// a Red River Hog's "near rivers" would vanish too
+function maskName(note: string, c: Card): string {
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let out = note;
+  const genus = c.sci.split(' ')[0];
+  const words = c.name.split(/[\s-]+/);
+  const kind = words[words.length - 1];
+  const phrases = [c.name, c.sci, genus, ...(kind && kind.length > 2 ? [kind] : [])];
+  for (const p of phrases) {
+    if (!p) continue;
+    out = out.replace(new RegExp(`\\b(?:the\\s+)?${esc(p)}s?\\b`, 'gi'), 'this species');
+  }
+  return out.replace(/\bthis species\b(\s+this species\b)+/g, 'this species')
+    .replace(/^this species/, 'This species');
 }
 
 function FieldNote({ tc, note, sci }: { tc: string; note: string | null; sci: string }) {

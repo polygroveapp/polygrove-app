@@ -8,8 +8,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HexPhoto from '../../components/HexPhoto';
 import SolarCelebration from '../../components/SolarCelebration';
@@ -189,14 +191,77 @@ function SolFlash({ amount }: { amount: number }) {
 }
 
 function explainFor(q: Q, card: Card): string {
+  if (q.type === 'pick') return `Your card is the one outlined in green — the ${card.name}.`;
   if (q.type === 'dual') return `The ${card.name} consumes ${q.s1.a} and is consumed by ${q.s2.a}.`;
   if (q.type === 'tf') return q.explain ?? `The statement is ${q.a ? 'true' : 'false'}.`;
   return q.explain ?? `${q.q.replace('?', '')}: ${q.a}`;
 }
 
-// one question — mc / tf / dual, with the demo's option-state colors:
+// Q6 — the capstone swipe: three real cards, anonymized, side by side; drag
+// between them, "This is my card" picks the one in front. Names show after.
+function PickCards({ q, done, onAnswer }: { q: Extract<Q, { type: 'pick' }>; done: boolean; onAnswer: (r: boolean) => void }) {
+  const win = useWindowDimensions();
+  const [idx, setIdx] = useState(0);
+  const [picked, setPicked] = useState<string | null>(null);
+  const tx = useSharedValue(0);
+  const n = q.cards.length;
+  const cardSize = { width: Math.min(Math.round(win.width * 0.78), 320), height: Math.min(520, Math.round(win.height * 0.56)) };
+  const step = cardSize.width + 18;
+  const go = (i: number) => setIdx(Math.max(0, Math.min(n - 1, i)));
+  const pan = Gesture.Pan()
+    .activeOffsetX([-12, 12])
+    .onChange(e => { tx.value = e.translationX; })
+    .onEnd(() => {
+      const d = tx.value < -50 ? 1 : tx.value > 50 ? -1 : 0;
+      if (d !== 0) runOnJS(go)(idx + d);
+      tx.value = withSpring(0, { damping: 18, stiffness: 170 });
+    });
+  const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
+  const cur = q.cards[idx];
+  const verdict = (id: string) => (!done ? null : id === q.a ? '#4CAF50' : id === picked ? '#E53935' : null);
+  return (
+    <View>
+      <View style={s.qBox}><Text style={s.qTxt}>{q.q}</Text></View>
+      <View style={s.pickDots}>
+        {q.cards.map((c, i) => (
+          <Pressable key={c.id} onPress={() => go(i)} hitSlop={4}
+            style={[s.pickDot, i === idx && { width: 16, backgroundColor: verdict(c.id) ?? '#FFD700' }]} />
+        ))}
+      </View>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[{ height: cardSize.height, alignItems: 'center' }, dragStyle]}>
+          {q.cards.map((c, i) => {
+            const diff = i - idx;
+            const v = verdict(c.id);
+            return (
+              <View key={c.id} pointerEvents={diff === 0 ? 'auto' : 'none'}
+                style={[cardSize, { position: 'absolute', top: 0, transform: [{ translateX: diff * step }] },
+                  v ? { borderRadius: 22, borderWidth: 3, borderColor: v } : null]}>
+                <PolygroveCard card={c} anonymous={!done} />
+              </View>
+            );
+          })}
+        </Animated.View>
+      </GestureDetector>
+      {!done ? (
+        <Pressable onPress={() => { setPicked(cur.id); onAnswer(cur.id === q.a); }} style={s.confirm}>
+          <Text style={[s.confirmTxt, { color: '#1a1a1a' }]}>This is my card</Text>
+        </Pressable>
+      ) : (
+        <Text style={s.pickReveal}>{picked === q.a ? `Yes — the ${cur.name}.` : `That's the ${q.cards.find(c => c.id === picked)?.name}.`}</Text>
+      )}
+    </View>
+  );
+}
+
+// one question — mc / tf / dual / pick, with the demo's option-state colors:
 // dark → gold selected → green right / red wrong
 function Question({ q, card, done, onAnswer }: { q: Q; card: Card; done: boolean; onAnswer: (r: boolean) => void }) {
+  if (q.type === 'pick') return <PickCards q={q} done={done} onAnswer={onAnswer} />;
+  return <QuestionBody q={q} card={card} done={done} onAnswer={onAnswer} />;
+}
+
+function QuestionBody({ q, card, done, onAnswer }: { q: Exclude<Q, { type: 'pick' }>; card: Card; done: boolean; onAnswer: (r: boolean) => void }) {
   const [sel, setSel] = useState<string | boolean | null>(null);
   const [s1, setS1] = useState<string | null>(null);
   const [s2, setS2] = useState<string | null>(null);
@@ -301,7 +366,10 @@ const s = StyleSheet.create({
   optTxt: { fontFamily: F.sans, fontSize: 14, lineHeight: 18 },
   tfOpt: { paddingVertical: 16, alignItems: 'center' },
   tfTxt: { fontFamily: F.display, fontSize: 18 },
-  confirm: { padding: 13, borderRadius: 14, alignItems: 'center' },
+  confirm: { padding: 13, borderRadius: 14, alignItems: 'center', backgroundColor: '#FFC107', marginTop: 12 },
+  pickDots: { flexDirection: 'row', gap: 4, justifyContent: 'center', marginBottom: 10 },
+  pickDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#333' },
+  pickReveal: { fontFamily: F.sansBold, fontSize: 13, color: C.text, textAlign: 'center', marginTop: 12 },
   confirmTxt: { fontFamily: F.display, fontSize: 14 },
   wrong: { marginTop: 14, padding: 14, borderRadius: 11, backgroundColor: 'rgba(229,57,53,0.08)', borderWidth: 1, borderColor: 'rgba(229,57,53,0.13)', alignItems: 'center', gap: 8 },
   wrongTitle: { fontFamily: F.display, fontSize: 13, color: C.text },
