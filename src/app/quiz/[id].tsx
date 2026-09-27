@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HexPhoto from '../../components/HexPhoto';
 import SolarCelebration from '../../components/SolarCelebration';
@@ -69,8 +69,8 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
   const tier = getTier(score);
   const [result, setResult] = useState<{ right: boolean; sol: number; leveledTo?: string; solar?: boolean } | null>(null);
   const [celebrate, setCelebrate] = useState(false);
-  const flash = useSharedValue(0);
-  const flashStyle = useAnimatedStyle(() => ({ backgroundColor: `rgba(76,175,80,${0.12 * flash.value})` }));
+  // the demo's solFlash: "+N Sol 🔆" top-right of the card header, 1.5s
+  const [solFlash, setSolFlash] = useState<{ amount: number; id: number } | null>(null);
 
   const next = () => {
     setResult(null);
@@ -86,10 +86,9 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
   const AUTO_NEXT_MS = 700;
   const onAnswer = (right: boolean) => {
     if (!right) { setResult({ right: false, sol: 0 }); return; }
-    flash.value = withSequence(withTiming(1, { duration: 150 }), withTiming(0, { duration: 650 }));
     if (locked) { setResult({ right: true, sol: 0 }); setTimeout(next, AUTO_NEXT_MS); return; }   // practice — no level change
     const adv = recordCorrect(sid, level);
-    if (adv.sol > 0) earnSol(adv.sol);
+    if (adv.sol > 0) { earnSol(adv.sol); setSolFlash({ amount: adv.sol, id: Date.now() }); }
     const leveledTo = adv.newScore > adv.prevScore ? getTier(adv.newScore).label : undefined;
     setResult({ right: true, sol: adv.sol, leveledTo, solar: adv.firstSolar });
     if (adv.firstSolar) setCelebrate(true);
@@ -104,7 +103,7 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
       {/* the demo's green ground + header, same as home (user, 2026-09-26) */}
       <LinearGradient colors={['#0a0f0a', '#1a2e1a', '#0f1a0f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
-      <Animated.View style={[{ flex: 1 }, flashStyle]}>
+      <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 24 }}>
         <View style={s.header}>
           <Pressable onPress={back} hitSlop={12} style={s.back}><Text style={s.backTxt}>‹ Back</Text></Pressable>
@@ -134,6 +133,7 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
             </View>
           </View>
           {locked && <Text style={s.practice}>Practice</Text>}
+          {solFlash && <SolFlash key={solFlash.id} amount={solFlash.amount} />}
         </View>
 
         {/* level tabs: locked = gold, passed = its tier, active = white */}
@@ -172,9 +172,20 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
             header's tier chip/dots say it all, then it moves on */}
         </View>
       </ScrollView>
-      </Animated.View>
+      </View>
     </View>
   );
+}
+
+// "+N Sol 🔆" — gold, rises and fades over 1.5s (demo keyframe solFlash)
+function SolFlash({ amount }: { amount: number }) {
+  const t = useSharedValue(0);
+  useEffect(() => { t.value = withTiming(1, { duration: 1500 }); }, [t]);
+  const style = useAnimatedStyle(() => ({
+    opacity: 1 - t.value,
+    transform: [{ translateY: -14 * t.value }],
+  }));
+  return <Animated.Text style={[s.solFlash, style]}>+{amount} Sol 🔆</Animated.Text>;
 }
 
 function explainFor(q: Q, card: Card): string {
@@ -278,6 +289,7 @@ const s = StyleSheet.create({
   tierTxt: { fontFamily: F.sansBold, fontSize: 9, textTransform: 'uppercase', letterSpacing: 1 },
   dot: { width: 8, height: 8, borderRadius: 4, borderWidth: 1 },
   practice: { fontFamily: F.sansBold, fontSize: 11, color: '#F5A623' },
+  solFlash: { fontFamily: F.display, fontSize: 14, color: '#FFD700', marginLeft: 8 },
   tabs: { flexDirection: 'row', gap: 4, marginBottom: 14 },
   tab: { flex: 1, paddingVertical: 4, borderRadius: 6, borderWidth: 1, alignItems: 'center' },
   tabTxt: { fontFamily: F.sansBold, fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 0.4 },
