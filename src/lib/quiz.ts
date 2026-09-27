@@ -12,10 +12,14 @@ export type Q =
   | { type: 'tf'; label: string; short: string; q: string; a: boolean; explain?: string }
   | { type: 'dual'; label: string; short: string;
       s1: { title: string; opts: string[]; a: string }; s2: { title: string; opts: string[]; a: string } }
-  // Q6, the capstone swipe (question-viability scorecard): three REAL deck
-  // cards — yours + two look-alike decoys that are themselves cards — shown
-  // full-size and anonymized; swipe through, pick yours. `a` = the card id.
-  | { type: 'pick'; label: string; short: string; q: string; cards: Card[]; a: string };
+  // Q6, the capstone swipe (user, 2026-09-26): built from TWO species' data —
+  // the correct card, a different (look-alike) species' card, and a CHIMERA:
+  // your photo/audio wearing the other species' field note. Anonymized; swipe
+  // through, pick yours. Only reading the note separates 'correct' from
+  // 'chimera'.
+  | { type: 'pick'; label: string; short: string; q: string; cards: PickCard[]; a: PickKey };
+export type PickKey = 'correct' | 'other' | 'chimera';
+export type PickCard = { key: PickKey; card: Card; noteFrom?: Card };
 
 function hash32(s: string) { let h = 5381; for (const ch of s) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0; return h >>> 0; }
 function mulberry(a: number) {
@@ -88,10 +92,16 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
   // Q6 is this your card? — the decoys are deck cards (generate_catalog's
   // look-alike tiers), so when they resolve we deal all three as real cards
   if (c.lookAlikes && c.lookAlikes.length >= 2) {
-    const decoys = c.lookAlikes.map(n => cardByName(n)).filter((d): d is Card => !!d && d.id !== card.id).slice(0, 2);
-    if (decoys.length === 2) {
+    const decoys = c.lookAlikes.map(n => cardByName(n)).filter((d): d is Card => !!d && d.id !== card.id);
+    const other = decoys.length ? decoys[Math.floor(rng() * decoys.length)] : undefined;
+    if (other) {
+      const trio: PickCard[] = [
+        { key: 'correct', card },
+        { key: 'other', card: other },
+        { key: 'chimera', card, noteFrom: other },   // your photo, its field note
+      ];
       qs.push({ type: 'pick', label: 'Q6 · Is this your card?', short: 'Your card',
-        q: `Which of these three cards is the ${c.name}?`, cards: shuf([card, ...decoys]), a: card.id });
+        q: `Which of these three cards is the ${c.name}?`, cards: shuf(trio), a: 'correct' });
     } else {
       // decoys not resolvable (offline, unregistered) — the name version
       qs.push({ type: 'mc', label: 'Q6 · Is this your card?', short: 'Your card',

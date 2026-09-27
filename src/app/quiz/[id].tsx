@@ -191,7 +191,7 @@ function SolFlash({ amount }: { amount: number }) {
 }
 
 function explainFor(q: Q, card: Card): string {
-  if (q.type === 'pick') return `Your card is the one outlined in green — the ${card.name}.`;
+  if (q.type === 'pick') return `Your card is the one outlined in green — the ${card.name}'s photo with its own field note.`;
   if (q.type === 'dual') return `The ${card.name} consumes ${q.s1.a} and is consumed by ${q.s2.a}.`;
   if (q.type === 'tf') return q.explain ?? `The statement is ${q.a ? 'true' : 'false'}.`;
   return q.explain ?? `${q.q.replace('?', '')}: ${q.a}`;
@@ -218,38 +218,42 @@ function PickCards({ q, done, onAnswer }: { q: Extract<Q, { type: 'pick' }>; don
     });
   const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
   const cur = q.cards[idx];
-  const verdict = (id: string) => (!done ? null : id === q.a ? '#4CAF50' : id === picked ? '#E53935' : null);
+  const verdict = (k: string) => (!done ? null : k === q.a ? '#4CAF50' : k === picked ? '#E53935' : null);
+  const pickedCard = q.cards.find(c => c.key === picked);
+  const reveal = !pickedCard ? '' : pickedCard.key === 'correct' ? `Yes — the ${pickedCard.card.name}.`
+    : pickedCard.key === 'other' ? `That's the ${pickedCard.card.name}.`
+    : `That's the ${pickedCard.card.name}'s photo — with the ${pickedCard.noteFrom?.name}'s field note.`;
   return (
     <View>
       {/* no question box (user, 2026-09-26): the header names the card, the
           three cards and the button say the rest */}
       <View style={s.pickDots}>
         {q.cards.map((c, i) => (
-          <Pressable key={c.id} onPress={() => go(i)} hitSlop={4}
-            style={[s.pickDot, i === idx && { width: 16, backgroundColor: verdict(c.id) ?? '#FFD700' }]} />
+          <Pressable key={c.key} onPress={() => go(i)} hitSlop={4}
+            style={[s.pickDot, i === idx && { width: 16, backgroundColor: verdict(c.key) ?? '#FFD700' }]} />
         ))}
       </View>
       <GestureDetector gesture={pan}>
         <Animated.View style={[{ height: cardSize.height, alignItems: 'center' }, dragStyle]}>
           {q.cards.map((c, i) => {
             const diff = i - idx;
-            const v = verdict(c.id);
+            const v = verdict(c.key);
             return (
-              <View key={c.id} pointerEvents={diff === 0 ? 'auto' : 'none'}
+              <View key={c.key} pointerEvents={diff === 0 ? 'auto' : 'none'}
                 style={[cardSize, { position: 'absolute', top: 0, transform: [{ translateX: diff * step }] },
                   v ? { borderRadius: 22, borderWidth: 3, borderColor: v } : null]}>
-                <PolygroveCard card={c} anonymous={!done} />
+                <PolygroveCard card={c.card} noteFrom={c.noteFrom} anonymous={!done} />
               </View>
             );
           })}
         </Animated.View>
       </GestureDetector>
       {!done ? (
-        <Pressable onPress={() => { setPicked(cur.id); onAnswer(cur.id === q.a); }} style={s.confirm}>
+        <Pressable onPress={() => { setPicked(cur.key); onAnswer(cur.key === q.a); }} style={s.confirm}>
           <Text style={[s.confirmTxt, { color: '#1a1a1a' }]}>This is my card</Text>
         </Pressable>
       ) : (
-        <Text style={s.pickReveal}>{picked === q.a ? `Yes — the ${cur.name}.` : `That's the ${q.cards.find(c => c.id === picked)?.name}.`}</Text>
+        <Text style={s.pickReveal}>{reveal}</Text>
       )}
     </View>
   );
