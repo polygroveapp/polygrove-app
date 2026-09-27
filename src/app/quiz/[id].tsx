@@ -5,6 +5,7 @@
 // locked non-Solar question, +5 the first time a card goes Solar (with the
 // celebration). Once every question is locked the quiz runs as Practice.
 
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -17,6 +18,7 @@ import { Card, cardById, getCards, loadCatalog, photoFor } from '../../lib/catal
 import {
   LOCK_THRESHOLD, NUM_Q, countsOf, isFullyLocked, loadMastery, nextUnlocked, recordCorrect, scoreOf, useMastery,
 } from '../../lib/mastery';
+import { useCurrentEco } from '../../lib/ecoregions';
 import { offlineReady } from '../../lib/offline';
 import { Q, buildQuiz } from '../../lib/quiz';
 import { earnSol } from '../../lib/sol';
@@ -44,6 +46,7 @@ export default function Quiz() {
 
 function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets: { top: number; bottom: number } }) {
   const router = useRouter();
+  const eco = useCurrentEco();
   useMastery();   // re-render on progress
   const sid = card.species_id;
   const [attempt, setAttempt] = useState(0);
@@ -54,7 +57,13 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
   const effCounts = counts.map((c, i) => (available[i] ? c : LOCK_THRESHOLD));
   const locked = isFullyLocked(effCounts);
   const [practiceLevel, setPracticeLevel] = useState(0);
-  const officialLevel = nextUnlocked(effCounts, 0);
+  // the demo's quizProgress: a correct answer moves FORWARD from the current
+  // level (wrapping to the first unlocked one), a retry snaps back to the first
+  // unlocked one — never just "first below the lock", which would re-ask Q1
+  // while it sits at 1 of 2
+  const [progress, setProgress] = useState<number | null>(null);
+  const [round, setRound] = useState(0);
+  const officialLevel = progress !== null && (effCounts[progress] || 0) < LOCK_THRESHOLD ? progress : nextUnlocked(effCounts, 0);
   const level = locked ? practiceLevel : officialLevel;
   const q = qs[level];
   const score = scoreOf(sid);
@@ -76,17 +85,30 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
   };
   const next = () => {
     setResult(null);
-    if (locked) { setPracticeLevel(l => { let n = l; do { n = (n + 1) % NUM_Q; } while (!available[n] && n !== l); return n; }); }
-    // official: `level` recomputes from the new counts on re-render
+    setRound(r => r + 1);
+    if (locked) { setPracticeLevel(l => { let n = l; do { n = (n + 1) % NUM_Q; } while (!available[n] && n !== l); return n; }); return; }
+    const fresh = countsOf(sid).map((c, i) => (available[i] ? c : LOCK_THRESHOLD));
+    const n = nextUnlocked(fresh, level + 1);
+    setProgress(n !== -1 ? n : nextUnlocked(fresh, 0));
   };
-  const retry = () => { setResult(null); setAttempt(a => a + 1); };
+  const retry = () => { setResult(null); setAttempt(a => a + 1); setProgress(nextUnlocked(effCounts, 0)); };
 
   if (celebrate) return <SolarCelebration card={card} sol={5} onDone={() => { setCelebrate(false); }} />;
 
   return (
-    <Animated.View style={[s.root, flashStyle]}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24, paddingHorizontal: 20 }}>
-        <Pressable onPress={back} hitSlop={12} style={s.back}><Text style={s.backTxt}>‹ Back</Text></Pressable>
+    <View style={s.root}>
+      {/* the demo's green ground + header, same as home (user, 2026-09-26) */}
+      <LinearGradient colors={['#0a0f0a', '#1a2e1a', '#0f1a0f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+      <Animated.View style={[{ flex: 1 }, flashStyle]}>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 24 }}>
+        <View style={s.header}>
+          <Pressable onPress={back} hitSlop={12} style={s.back}><Text style={s.backTxt}>‹ Back</Text></Pressable>
+          <Text style={s.logo}>Polygrove</Text>
+          <Text style={s.ecoLabel} numberOfLines={1}>{eco ? eco.name : 'Solar Quiz'}</Text>
+          <Text style={s.tagline}>An educational ecology trading card game</Text>
+        </View>
+        <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
 
         {/* header: photo, name, tier chip, six dots (ring on the current level) */}
         <View style={s.head}>
@@ -130,7 +152,7 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
         </View>
 
         {q ? (
-          <Question key={`${level}-${attempt}`} q={q} card={card} done={result !== null} onAnswer={onAnswer} />
+          <Question key={`${level}-${attempt}-${round}`} q={q} card={card} done={result !== null} onAnswer={onAnswer} />
         ) : (
           <Text style={s.msg}>This card has no more questions.</Text>
         )}
@@ -155,8 +177,10 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
             </Pressable>
           </View>
         )}
+        </View>
       </ScrollView>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -241,10 +265,18 @@ function Question({ q, card, done, onAnswer }: { q: Q; card: Card; done: boolean
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0a0f0a' },
+  root: { flex: 1, backgroundColor: '#0d140d' },
   center: { alignItems: 'center', justifyContent: 'center', gap: 10 },
   msg: { fontFamily: F.sans, fontSize: 13, color: '#888', textAlign: 'center', marginTop: 20 },
-  back: { alignSelf: 'flex-start', paddingVertical: 6, marginBottom: 6 },
+  // the demo's header
+  header: {
+    padding: 20, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
+  ecoLabel: { fontFamily: F.sansBold, fontSize: 11, color: '#8B5035', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2, maxWidth: 320 },
+  tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5 },
+  back: { position: 'absolute', left: 16, top: 12, paddingVertical: 6, zIndex: 2 },
   backTxt: { fontFamily: F.sansBold, fontSize: 14, color: C.greenSoft },
   head: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   name: { fontFamily: F.display, fontSize: 14, color: C.text },
