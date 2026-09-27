@@ -45,7 +45,6 @@ export default function Quiz() {
 }
 
 function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets: { top: number; bottom: number } }) {
-  const router = useRouter();
   const eco = useCurrentEco();
   useMastery();   // re-render on progress
   const sid = card.species_id;
@@ -73,16 +72,6 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
   const flash = useSharedValue(0);
   const flashStyle = useAnimatedStyle(() => ({ backgroundColor: `rgba(76,175,80,${0.12 * flash.value})` }));
 
-  const onAnswer = (right: boolean) => {
-    if (!right) { setResult({ right: false, sol: 0 }); return; }
-    flash.value = withSequence(withTiming(1, { duration: 150 }), withTiming(0, { duration: 650 }));
-    if (locked) { setResult({ right: true, sol: 0 }); return; }   // practice — no level change
-    const adv = recordCorrect(sid, level);
-    if (adv.sol > 0) earnSol(adv.sol);
-    const leveledTo = adv.newScore > adv.prevScore ? getTier(adv.newScore).label : undefined;
-    setResult({ right: true, sol: adv.sol, leveledTo, solar: adv.firstSolar });
-    if (adv.firstSolar) setCelebrate(true);
-  };
   const next = () => {
     setResult(null);
     setRound(r => r + 1);
@@ -91,9 +80,24 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
     const n = nextUnlocked(fresh, level + 1);
     setProgress(n !== -1 ? n : nextUnlocked(fresh, 0));
   };
+  // a right answer just moves on (user, 2026-09-26): the option goes green,
+  // a slim ✓ line shows what it earned, and the next question comes up on
+  // its own — no button. Solar still gets its celebration first.
+  const AUTO_NEXT_MS = 700;
+  const onAnswer = (right: boolean) => {
+    if (!right) { setResult({ right: false, sol: 0 }); return; }
+    flash.value = withSequence(withTiming(1, { duration: 150 }), withTiming(0, { duration: 650 }));
+    if (locked) { setResult({ right: true, sol: 0 }); setTimeout(next, AUTO_NEXT_MS); return; }   // practice — no level change
+    const adv = recordCorrect(sid, level);
+    if (adv.sol > 0) earnSol(adv.sol);
+    const leveledTo = adv.newScore > adv.prevScore ? getTier(adv.newScore).label : undefined;
+    setResult({ right: true, sol: adv.sol, leveledTo, solar: adv.firstSolar });
+    if (adv.firstSolar) setCelebrate(true);
+    else setTimeout(next, AUTO_NEXT_MS);
+  };
   const retry = () => { setResult(null); setAttempt(a => a + 1); setProgress(nextUnlocked(effCounts, 0)); };
 
-  if (celebrate) return <SolarCelebration card={card} sol={5} onDone={() => { setCelebrate(false); }} />;
+  if (celebrate) return <SolarCelebration card={card} sol={5} onDone={() => { setCelebrate(false); next(); }} />;
 
   return (
     <View style={s.root}>
@@ -166,15 +170,14 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
         )}
         {result?.right && (
           <View style={s.correct}>
-            <Text style={s.correctTitle}>✓ Correct!</Text>
-            {locked ? <Text style={s.correctSub}>Practice — no level change</Text>
-              : result.solar ? <Text style={[s.correctSub, { color: C.text }]}>⭐ Solar — fully mastered! <Text style={s.bold}>+{result.sol} 🔆</Text></Text>
-              : result.leveledTo ? <Text style={s.correctSub}>🎉 Leveled up to {result.leveledTo}!{result.sol ? <Text style={s.bold}> +{result.sol} 🔆</Text> : null}</Text>
-              : result.sol ? <Text style={s.correctSub}>Question locked <Text style={s.bold}>+{result.sol} 🔆</Text></Text>
-              : <Text style={s.correctSub}>One more right answer locks this question</Text>}
-            <Pressable onPress={locked || nextUnlocked(effCounts, 0) !== -1 ? next : () => router.replace(`/quiz/${card.id}`)} style={s.nextBtn}>
-              <Text style={s.nextTxt}>{locked ? 'Next question' : nextUnlocked(effCounts, 0) === -1 ? 'Practice' : 'Next question'}</Text>
-            </Pressable>
+            <Text style={s.correctTitle}>
+              ✓ Correct!{'  '}
+              <Text style={s.correctSub}>
+                {locked ? 'practice'
+                  : result.leveledTo ? `${result.leveledTo}!` : result.sol ? 'locked' : ''}
+                {result.sol ? <Text style={s.bold}>  +{result.sol} 🔆</Text> : null}
+              </Text>
+            </Text>
           </View>
         )}
         </View>
