@@ -168,18 +168,8 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
             <Pressable onPress={retry} style={s.retry}><Text style={s.retryTxt}>Try Again</Text></Pressable>
           </View>
         )}
-        {result?.right && (
-          <View style={s.correct}>
-            <Text style={s.correctTitle}>
-              ✓ Correct!{'  '}
-              <Text style={s.correctSub}>
-                {locked ? 'practice'
-                  : result.leveledTo ? `${result.leveledTo}!` : result.sol ? 'locked' : ''}
-                {result.sol ? <Text style={s.bold}>  +{result.sol} 🔆</Text> : null}
-              </Text>
-            </Text>
-          </View>
-        )}
+        {/* no congratulations line (user, 2026-09-26): the green option + the
+            header's tier chip/dots say it all, then it moves on */}
         </View>
       </ScrollView>
       </Animated.View>
@@ -306,10 +296,4 @@ const s = StyleSheet.create({
   wrongTxt: { fontFamily: F.sans, fontSize: 12, color: '#aaa', textAlign: 'center', lineHeight: 17 },
   retry: { paddingHorizontal: 24, paddingVertical: 8, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: '#444', marginTop: 4 },
   retryTxt: { fontFamily: F.display, fontSize: 12, color: '#ccc' },
-  correct: { marginTop: 14, padding: 14, borderRadius: 11, backgroundColor: 'rgba(76,175,80,0.1)', borderWidth: 1, borderColor: 'rgba(76,175,80,0.27)', alignItems: 'center', gap: 6 },
-  correctTitle: { fontFamily: F.display, fontSize: 14, color: C.text },
-  correctSub: { fontFamily: F.sans, fontSize: 11, color: '#888', textAlign: 'center' },
-  bold: { color: C.text, fontFamily: F.sansBold },
-  nextBtn: { marginTop: 6, paddingHorizontal: 24, paddingVertical: 9, borderRadius: 12, backgroundColor: '#2E7D32' },
-  nextTxt: { fontFamily: F.display, fontSize: 12, color: C.text },
 });
