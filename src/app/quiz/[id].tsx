@@ -263,6 +263,8 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
     });
   const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }, { translateY: ty.value }] }));
   const cur = q.cards[idx];
+  const targetCard = q.cards.find(c => c.key === 'correct')?.card;
+  const target = targetCard ? { name: targetCard.name, sci: targetCard.sci } : undefined;
   const verdict = (k: string) => (!done ? null : k === q.a ? '#4CAF50' : k === picked ? '#E53935' : null);
   const pickedCard = q.cards.find(c => c.key === picked);
   const reveal = !pickedCard ? '' : pickedCard.key === 'correct' ? `Yes — the ${pickedCard.card.name}.`
@@ -287,9 +289,10 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
               <View key={c.key} pointerEvents={diff === 0 ? 'auto' : 'none'}
                 style={[cardSize, { position: 'absolute', top: 0, transform: [{ translateX: diff * step }] },
                   v ? { borderRadius: 22, borderWidth: 3, borderColor: v } : null]}>
-                {/* names + scientific names SHOWN (user, 2026-09-28; was ??? / · · ·
-                    until answered): the tell is the field note, not the name */}
-                <PolygroveCard card={c.card} noteFrom={c.noteFrom} />
+                {/* all three claim the card in question's name + scientific name,
+                    each with a "?" (user, 2026-09-28; was ??? / · · ·) — the tell
+                    is the photo and the field note, never the name */}
+                <PolygroveCard card={c.card} noteFrom={c.noteFrom} nameAs={done ? undefined : target} />
               </View>
             );
           })}

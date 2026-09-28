@@ -23,8 +23,13 @@ let _glowSeq = 0;
 // recognition — photo, role, group, and the note's diagnostic fact.
 // noteFrom: take the field note from ANOTHER card (Q6's chimera — your photo
 // wearing the wrong note).
-export default function PolygroveCard({ card: raw, anonymous = false, noteFrom }: { card: Card; anonymous?: boolean; noteFrom?: Card }) {
-  const card = anonymous ? { ...raw, name: '???', sci: '· · ·' } : raw;
+// nameAs (user, 2026-09-28): every Q6 card CLAIMS to be the card in question —
+// its name and scientific name, each with a "?" — so the names don't tell
+// them apart; the note is still masked like an anonymous card.
+export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, nameAs }:
+  { card: Card; anonymous?: boolean; noteFrom?: Card; nameAs?: { name: string; sci: string } }) {
+  const card = nameAs ? { ...raw, name: `${nameAs.name}?`, sci: `${nameAs.sci}?` } : anonymous ? { ...raw, name: '???', sci: '· · ·' } : raw;
+  const hideNames = anonymous || !!nameAs;
   const noteCard = noteFrom ?? raw;
   // explorer's troColor: purple = trophic role is INFERRED (GloBI prey records),
   // not measured — the accent itself flags the uncertainty.
@@ -35,9 +40,9 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom }
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => {
     let on = true;
-    fieldNote(noteCard.sci).then(n => on && setNote(anonymous && n ? maskName(n, noteCard) : n));
+    fieldNote(noteCard.sci).then(n => on && setNote(hideNames && n ? maskName(n, noteCard) : n));
     return () => { on = false; };
-  }, [noteCard, anonymous]);
+  }, [noteCard, hideNames]);
 
   const router = useRouter();
   const flip = useSharedValue(0);
