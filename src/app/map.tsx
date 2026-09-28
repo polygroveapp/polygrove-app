@@ -89,7 +89,7 @@ export default function EcoMap() {
   const enter = async () => {
     if (!pick) return;
     const m = ecoMeta(pick.eid);
-    await setCurrentEco({ eid: pick.eid, name: pick.name, bbox: pick.bbox, size: ecoDeckSize(pick.eid), lead: m?.lead, photo: m?.photo });
+    await setCurrentEco({ eid: pick.eid, name: pick.name, bbox: pick.bbox, size: ecoDeckSize(pick.eid), lead: m?.lead, photo: m?.photo, wiki: m?.wiki });
     if (router.canGoBack()) router.back(); else router.replace('/');
   };
 
@@ -137,7 +137,7 @@ export default function EcoMap() {
 
       <View style={[s.top, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} hitSlop={12} style={s.backBtn}>
-          <Text style={s.back}>‹ Home</Text>
+          <Text style={s.back}>‹ Camp</Text>
         </Pressable>
         <View style={s.titleWrap}>
           <Text style={s.title}>Where are you?</Text>

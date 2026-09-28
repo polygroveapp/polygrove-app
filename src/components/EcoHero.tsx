@@ -3,34 +3,41 @@
 // ecoregion-page header on the phone — the region's place on the globe (the
 // picker page in ?mini mode, non-interactive) left, Wikipedia lead photo
 // right, the first sentence, and the credit. Sits under the stats row.
-// Tapping it opens the map.
+// Tapping the card opens the ecoregion's WIKIPEDIA article (user, 2026-09-28);
+// "open the map ›" is its own small link.
 
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import * as WebBrowser from 'expo-web-browser';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { F } from '../constants/polygrove';
-import { cleanLead, CurrentEco, ecoMeta, loadEcoMeta } from '../lib/ecoregions';
+import { cleanLead, CurrentEco, ecoMeta, loadEcoMeta, wikiUrl } from '../lib/ecoregions';
 
 const MINI_URL = 'https://polygrovedb.pages.dev/map?mini=';
 
 export default function EcoHero({ eco }: { eco: CurrentEco }) {
   const router = useRouter();
-  // regions chosen before lead/photo were stored with the choice: fetch them
-  const stored = !!(eco.lead || eco.photo);
-  const [fetched, setFetched] = useState<{ eid: number; lead?: string; photo?: CurrentEco['photo'] } | null>(null);
+  // regions chosen before lead/photo/wiki were stored with the choice: fetch
+  // whatever's missing from eco_meta (stored values win)
+  const complete = !!(eco.lead && eco.photo && eco.wiki);
+  const [fetched, setFetched] = useState<{ eid: number; lead?: string; photo?: CurrentEco['photo']; wiki?: string } | null>(null);
   const [mapOk, setMapOk] = useState(true);
   useEffect(() => {
-    if (stored) return;
+    if (complete) return;
     let live = true;
-    loadEcoMeta().then(() => { const m = ecoMeta(eco.eid); if (live && m) setFetched({ eid: eco.eid, lead: m.lead, photo: m.photo }); }).catch(() => {});
+    loadEcoMeta().then(() => { const m = ecoMeta(eco.eid); if (live && m) setFetched({ eid: eco.eid, lead: m.lead, photo: m.photo, wiki: m.wiki }); }).catch(() => {});
     return () => { live = false; };
-  }, [eco.eid, stored]);
-  const meta = stored ? { lead: eco.lead, photo: eco.photo } : fetched?.eid === eco.eid ? fetched : {};
+  }, [eco.eid, complete]);
+  const f = fetched?.eid === eco.eid ? fetched : undefined;
+  const meta = { lead: eco.lead ?? f?.lead, photo: eco.photo ?? f?.photo, wiki: eco.wiki ?? f?.wiki };
+  // no article title known → Wikipedia's own search on the ecoregion name
+  const openWiki = () => WebBrowser.openBrowserAsync(meta.wiki ? wikiUrl(meta.wiki) : wikiUrl(eco.name),
+    { presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN });
 
   return (
-    <Pressable onPress={() => router.push('/map')} style={s.card}>
+    <Pressable onPress={openWiki} style={s.card}>
       {/* map on the LEFT, photo on the right (user, 2026-09-28) */}
       <View style={s.row}>
         {mapOk && (
@@ -46,10 +53,12 @@ export default function EcoHero({ eco }: { eco: CurrentEco }) {
         )}
       </View>
       {meta.lead ? <Text style={s.lead} numberOfLines={3}>{cleanLead(meta.lead)}</Text> : null}
-      <Text style={s.credit} numberOfLines={1}>
-        {meta.photo?.by ? `Wikipedia · photo ${meta.photo.by} (${meta.photo.lic})` : meta.lead ? 'Wikipedia' : 'No Wikipedia article for this ecoregion yet'}
-        <Text style={{ color: '#4f7a52' }}>  ·  open the map ›</Text>
-      </Text>
+      <View style={s.foot}>
+        <Text style={s.credit} numberOfLines={1}>
+          {meta.photo?.by ? `Wikipedia · photo ${meta.photo.by} (${meta.photo.lic})` : meta.lead ? 'Read on Wikipedia ›' : 'No Wikipedia article for this ecoregion yet'}
+        </Text>
+        <Pressable onPress={() => router.push('/map')} hitSlop={8}><Text style={s.mapLink}>open the map ›</Text></Pressable>
+      </View>
     </Pressable>
   );
 }
@@ -67,5 +76,7 @@ const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   noPhoto: { fontSize: 30 },
   lead: { fontFamily: F.sans, fontSize: 12.5, color: '#c9c4b8', lineHeight: 17.5, paddingHorizontal: 2 },
-  credit: { fontFamily: F.sans, fontSize: 9.5, color: '#666', paddingHorizontal: 2 },
+  foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 2 },
+  credit: { fontFamily: F.sans, fontSize: 9.5, color: '#666', flexShrink: 1 },
+  mapLink: { fontFamily: F.sansBold, fontSize: 10, color: '#4f7a52' },
 });

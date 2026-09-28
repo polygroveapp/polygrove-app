@@ -1,7 +1,8 @@
 // HOME — the demo's home screen (App.jsx "home", mock 2026-09-26) with the
 // biome label replaced by the ECOREGION you chose on the map: stats row,
 // Discovery Pack (24h reset), Solar Pack + Solar Quiz (dormant until the quiz
-// milestone), Recent cards, bottom nav.
+// milestone), bottom nav. Recent cards REMOVED (user, 2026-09-28) — the
+// Journal is where cards live. The tab is called CAMP (user, same day).
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -13,9 +14,8 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import EcoHero from '../components/EcoHero';
-import HexPhoto from '../components/HexPhoto';
-import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
-import { cardById, loadCatalog, photoFor } from '../lib/catalog';
+import { C, F } from '../constants/polygrove';
+import { loadCatalog } from '../lib/catalog';
 import { loadCollection, useCollection } from '../lib/collection';
 import { loadDaily, useDiscoveryCountdown } from '../lib/daily';
 import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
@@ -70,7 +70,6 @@ export default function Home() {
   }));
 
   const journaledPct = eco && eco.size > 0 ? Math.round((owned.length / eco.size) * 100) : 0;
-  const recent = owned.slice(0, 6).map(o => cardById(o.id)).filter(Boolean);
 
   return (
     <View style={s.root}>
@@ -180,28 +179,6 @@ export default function Home() {
               </Pressable>
             </View>
 
-            {/* recent cards */}
-            {recent.length > 0 && (
-              <View style={{ marginTop: 6 }}>
-                <Text style={s.section}>Recent Cards</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
-                  {recent.map(c => {
-                    const tc = TROPHIC_COLOR[c!.trophic] || C.dim;
-                    return (
-                      <Pressable key={c!.id} onPress={() => router.push(`/species/${c!.id}`)}
-                        style={[s.mini, { borderColor: `${tc}33`, shadowColor: tc }]}>
-                        <HexPhoto uri={photoFor(c!.id, 120)} width={48} height={54} borderColor={tc} borderWidth={2} />
-                        <Text style={s.miniGroup} numberOfLines={1}>{c!.group}</Text>
-                        <Text style={s.miniName} numberOfLines={3}>{c!.name}</Text>
-                        <View style={[s.miniPill, { backgroundColor: `${tc}22`, borderColor: `${tc}44` }]}>
-                          <Text style={[s.miniPillTxt, { color: tc }]}>{c!.trophic}</Text>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
           </View>
         )}
       </ScrollView>
@@ -263,17 +240,6 @@ const s = StyleSheet.create({
   quizBtn: { flex: 1, borderRadius: 16, overflow: 'hidden' },
   quizGrad: { paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center' },
   quizTxt: { fontFamily: F.display, fontSize: 13, color: C.text },
-  // recent cards
-  section: { fontFamily: F.sansBold, fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-  mini: {
-    width: 78, backgroundColor: '#1a1a1a', borderWidth: 2, borderRadius: 10,
-    paddingTop: 14, paddingBottom: 6, paddingHorizontal: 6, alignItems: 'center', overflow: 'hidden',
-    shadowOpacity: 0.13, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
-  },
-  miniGroup: { fontFamily: F.sansBold, fontSize: 7, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 12, marginBottom: 1 },
-  miniName: { fontFamily: F.sansBold, fontSize: 8.5, color: C.text, textAlign: 'center', lineHeight: 10, marginBottom: 3 },
-  miniPill: { borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1, borderWidth: 1 },
-  miniPillTxt: { fontFamily: F.sansBold, fontSize: 7, textTransform: 'uppercase' },
   // first-launch picker
   pickCard: {
     alignItems: 'center', padding: 24, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(76,175,80,0.3)',

@@ -12,12 +12,13 @@ import { Card, getCards, photoFor } from './catalog';
 export type EcoMeta = {
   name: string; bbox: [number, number, number, number]; obs?: number;
   lead?: string; photo?: { thumb: string; by: string; lic: string };
+  wiki?: string;   // the Wikipedia article title
 };
 // size = deck size at the time of choosing, so the home stats work offline;
 // lead + photo are copied in too so the home hero works offline (2026-09-28)
 export type CurrentEco = {
   eid: number; name: string; bbox: [number, number, number, number]; size: number;
-  lead?: string; photo?: EcoMeta['photo'];
+  lead?: string; photo?: EcoMeta['photo']; wiki?: string;
 };
 
 const META_URL = 'https://polygrovedb.pages.dev/data/eco_meta.json';
@@ -41,6 +42,7 @@ export function loadEcoMeta() {
 }
 export const ecoMeta = (eid: number): EcoMeta | undefined => _meta?.[String(eid)];
 // the dump-extracted leads carry pronunciation stubs like "( ; coast, shore)"
+export const wikiUrl = (title: string) => `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`;
 export const cleanLead = (t: string) => t.replace(/\s*\(\s*;[^)]*\)/g, '').replace(/\s*\(\s*\)/g, '').replace(/\s{2,}/g, ' ').trim();
 
 // the chosen ecoregion is persisted WITH its name + bbox so home works offline

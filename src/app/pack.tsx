@@ -119,7 +119,7 @@ export default function PackOpening() {
           Reconnect and packs restock on their own.
         </Text>
         <Pressable onPress={() => router.replace('/')} style={s.primary}>
-          <Text style={s.primaryTxt}>Home</Text>
+          <Text style={s.primaryTxt}>Camp</Text>
         </Pressable>
       </View>
     </View>
@@ -136,7 +136,7 @@ export default function PackOpening() {
         </Pressable>
         <Text style={s.doneSub}>{solar ? 'Solar Pack · 100 Sol 🔆' : 'Next Discovery Pack in 24 hours'}</Text>
         <Pressable onPress={() => router.replace('/')} style={s.ghost}>
-          <Text style={s.ghostTxt}>Home</Text>
+          <Text style={s.ghostTxt}>Camp</Text>
         </Pressable>
       </View>
     </View>
@@ -164,7 +164,7 @@ export default function PackOpening() {
     <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 14 }]}>
       <View style={s.topRow}>
         <Pressable onPress={() => router.replace('/')} hitSlop={12}>
-          <Text style={s.back}>‹ Home</Text>
+          <Text style={s.back}>‹ Camp</Text>
         </Pressable>
         <View style={s.dots}>
           {Array.from({ length: PACK_SIZE }, (_, i) => (

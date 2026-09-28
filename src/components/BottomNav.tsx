@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from '../constants/polygrove';
 
 const TABS = [
-  { id: 'home', icon: '⛺', label: 'Home', href: '/' },
+  { id: 'home', icon: '⛺', label: 'Camp', href: '/' },   // "Camp" (user, 2026-09-28)
   { id: 'map', icon: '🧭', label: 'Map', href: '/map' },
   { id: 'about', icon: '❓', label: 'About', href: '/about' },
 ] as const;
