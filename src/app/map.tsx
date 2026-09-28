@@ -26,7 +26,7 @@ import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import { C, F } from '../constants/polygrove';
 import { loadCatalog } from '../lib/catalog';
 import { collectedEcoregions, loadCollection } from '../lib/collection';
-import { ecoDeckSize, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { cleanLead, ecoDeckSize, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco } from '../lib/ecoregions';
 
 const PICKER_URL = 'https://polygrovedb.pages.dev/map';   // Pages serves map.html here
 const HEADER_H = 62;   // the "Where are you?" bar, below the safe area
@@ -37,8 +37,6 @@ const SHEET_H = 206;
 
 type Pick = { eid: number; name: string; bbox: [number, number, number, number] };
 
-// the dump-extracted leads carry pronunciation stubs like "( ; coast, shore)"
-const cleanLead = (t: string) => t.replace(/\s*\(\s*;[^)]*\)/g, '').replace(/\s*\(\s*\)/g, '').replace(/\s{2,}/g, ' ').trim();
 
 export default function EcoMap() {
   const router = useRouter();
@@ -90,7 +88,8 @@ export default function EcoMap() {
 
   const enter = async () => {
     if (!pick) return;
-    await setCurrentEco({ eid: pick.eid, name: pick.name, bbox: pick.bbox, size: ecoDeckSize(pick.eid) });
+    const m = ecoMeta(pick.eid);
+    await setCurrentEco({ eid: pick.eid, name: pick.name, bbox: pick.bbox, size: ecoDeckSize(pick.eid), lead: m?.lead, photo: m?.photo });
     if (router.canGoBack()) router.back(); else router.replace('/');
   };
 

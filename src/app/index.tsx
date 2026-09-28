@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
+import EcoHero from '../components/EcoHero';
 import HexPhoto from '../components/HexPhoto';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { cardById, loadCatalog, photoFor } from '../lib/catalog';
@@ -106,6 +107,8 @@ export default function Home() {
           </View>
         ) : (
           <View style={s.body}>
+            {/* the ecoregion: photo · place on the map · first sentence */}
+            <EcoHero eco={eco} />
             {/* stats */}
             <View style={s.stats}>
               <Stat n={journaledPct} pct label="Journaled" />

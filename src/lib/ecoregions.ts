@@ -13,8 +13,12 @@ export type EcoMeta = {
   name: string; bbox: [number, number, number, number]; obs?: number;
   lead?: string; photo?: { thumb: string; by: string; lic: string };
 };
-// size = deck size at the time of choosing, so the home stats work offline
-export type CurrentEco = { eid: number; name: string; bbox: [number, number, number, number]; size: number };
+// size = deck size at the time of choosing, so the home stats work offline;
+// lead + photo are copied in too so the home hero works offline (2026-09-28)
+export type CurrentEco = {
+  eid: number; name: string; bbox: [number, number, number, number]; size: number;
+  lead?: string; photo?: EcoMeta['photo'];
+};
 
 const META_URL = 'https://polygrovedb.pages.dev/data/eco_meta.json';
 export const ECO_GEOMETRY_URL = 'https://polygrovedb.pages.dev/data/eco_simple.geojson';
@@ -36,6 +40,8 @@ export function loadEcoMeta() {
   return _metaInflight;
 }
 export const ecoMeta = (eid: number): EcoMeta | undefined => _meta?.[String(eid)];
+// the dump-extracted leads carry pronunciation stubs like "( ; coast, shore)"
+export const cleanLead = (t: string) => t.replace(/\s*\(\s*;[^)]*\)/g, '').replace(/\s*\(\s*\)/g, '').replace(/\s{2,}/g, ' ').trim();
 
 // the chosen ecoregion is persisted WITH its name + bbox so home works offline
 // without eco_meta
