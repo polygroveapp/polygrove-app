@@ -14,12 +14,13 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import EcoHero from '../components/EcoHero';
+import SolarPicker from '../components/SolarPicker';
 import { C, F } from '../constants/polygrove';
 import { loadCatalog } from '../lib/catalog';
 import { loadCollection, useCollection } from '../lib/collection';
 import { loadDaily, useDiscoveryCountdown } from '../lib/daily';
 import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
-import { countsOf, isFullyLocked, loadMastery, masteryPct, useMastery } from '../lib/mastery';
+import { loadMastery, masteryPct, useMastery } from '../lib/mastery';
 import { offlineReady, packsReady, topUp } from '../lib/offline';
 import { SOLAR_PACK_COST, loadSol, useSol } from '../lib/sol';
 
@@ -28,6 +29,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const [ready, setReady] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [picker, setPicker] = useState(false);
   const eco = useCurrentEco();
   const owned = useCollection(eco?.eid);
   const daily = useDiscoveryCountdown();
@@ -166,12 +168,9 @@ export default function Home() {
               <Pressable onPress={() => router.push('/deck')} style={s.reviewBtn}>
                 <Text style={s.reviewTxt}>📖 Journal</Text>
               </Pressable>
+              {/* pops the three-card picker (user, 2026-09-28) */}
               <Pressable disabled={!owned.length} style={[s.quizBtn, !owned.length && { opacity: 0.45 }]}
-                onPress={() => {
-                  const pool = owned.filter(o => !isFullyLocked(countsOf(o.speciesId)));
-                  const pick = (pool.length ? pool : owned)[Math.floor(Math.random() * (pool.length ? pool : owned).length)];
-                  if (pick) router.push(`/quiz/${pick.id}`);
-                }}>
+                onPress={() => setPicker(true)}>
                 <LinearGradient colors={['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={s.quizGrad}>
                   <Text style={s.quizTxt}>☀️ Solar Quiz</Text>
@@ -183,6 +182,7 @@ export default function Home() {
         )}
       </ScrollView>
       <BottomNav active="home" />
+      <SolarPicker visible={picker} owned={owned} onClose={() => setPicker(false)} />
     </View>
   );
 }

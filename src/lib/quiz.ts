@@ -1,6 +1,6 @@
 // The card's six questions, asked the way the explorer's mock quiz asks them
 // (index.html buildQuiz, itself ported from the demo's getQuestion). All the
-// facts come from the catalog card: Q1 group · Q2 feeding guild T/F · Q3 size
+// facts come from the catalog card: Q1 group · Q2 feeding guild T/F · Q3 size (3 values, 1 correct)
 // vs a same-measure opponent · Q4 food web (consumes / consumed by) · Q5
 // habitat|origin|biome T/F · Q6 "is this your card?" among look-alikes.
 // Deterministic per (card, attempt) so a retry re-rolls the T/F variants.
@@ -37,7 +37,34 @@ const GROUPS = ['Mammal', 'Bird', 'Reptile', 'Amphibian', 'Fish', 'Insect', 'Ara
 
 type Q4Side = { question: string; answer: string; options: string[] };
 type Q4 = { eats?: Q4Side; eatenBy?: Q4Side };
-type Q3 = { bigger: string; smaller: string; opponents: { name: string; size: string; answer: string }[] };
+type Q3 = { measure?: string; bigger: string; smaller: string; opponents: { name: string; size: string; answer: string }[] };
+
+// "0.9 g" → {v: 0.9, unit: 'g'}; "12 mm wingspan" → {v: 12, unit: 'mm wingspan'}
+function parseSize(s: unknown): { v: number; unit: string } | null {
+  const m = /^\s*(\d+(?:\.\d+)?)\s*(.*)$/.exec(String(s ?? ''));
+  return m ? { v: parseFloat(m[1]), unit: m[2].trim() } : null;
+}
+// two significant figures, written the way the catalog writes sizes
+// (whole numbers plain, otherwise the fewest decimals that show the figure)
+function sig2(v: number): string {
+  const mag = Math.floor(Math.log10(v)), r = Math.round(v / 10 ** (mag - 1)) * 10 ** (mag - 1);
+  return r >= 10 ? String(Math.round(r)) : String(parseFloat(r.toFixed(Math.max(0, 1 - mag))));
+}
+const fmtSize = (v: number, unit: string) => `${sig2(v)} ${unit}`.trim();
+// "45 cm" → "45 cm (18 in)" — metric first, imperial in parentheses (user,
+// 2026-09-28: "show both imperial and metric"); the unit word (wingspan)
+// stays with the metric figure
+export function withImperial(size: string): string {
+  const p = parseSize(size);
+  if (!p || !(p.v > 0)) return size;
+  const u = p.unit.split(' ')[0];
+  const imp = u === 'g' ? (p.v >= 453.6 ? `${sig2(p.v / 453.6)} lb` : `${sig2(p.v / 28.35)} oz`)
+    : u === 'kg' ? `${sig2(p.v * 2.2046)} lb`
+    : u === 'cm' ? (p.v >= 30.48 ? `${sig2(p.v / 30.48)} ft` : `${sig2(p.v / 2.54)} in`)
+    : u === 'mm' ? `${sig2(p.v / 25.4)} in`
+    : u === 'm' ? `${sig2(p.v * 3.2808)} ft` : null;
+  return imp ? `${size} (${imp})` : size;
+}
 
 // six slots, null where the card can't ask that question (no look-alikes, say)
 export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
@@ -58,12 +85,24 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
     qs.push({ type: 'tf', label: 'Q2 · Feeding guild', short: 'Guild', q: `The ${c.name} is ${t2 ? c.role : c.falseRole}.`, a: t2, explain: t2 ? undefined : `The ${c.name} is ${c.role}.` });
   } else qs.push(null);
 
-  // Q3 size
-  if (c.q3?.opponents?.length) {
-    const o = c.q3.opponents[Math.floor(rng() * c.q3.opponents.length)];
-    qs.push({ type: 'mc', label: 'Q3 · Size', short: 'Size',
-      q: `On average, is the ${c.name} ${c.q3.bigger}, ${c.q3.smaller}, or about the same as the ${o.name}?`,
-      opts: [c.q3.bigger, 'about the same', c.q3.smaller], a: o.answer, explain: `${c.name}: ${c.size} · ${o.name}: ${o.size}` });
+  // Q3 size: THREE VALUES, one correct (user, 2026-09-28: "just do like 3
+  // weights and one should be correct, instead of comparisons"). Decoys sit
+  // 2–4× below and above the real figure on a log scale, formatted like the
+  // catalog's own size string. The old bigger/smaller opponents stay in the
+  // catalog unused.
+  const sv = parseSize(c.size);
+  if (sv && sv.v > 0) {
+    const measure = c.q3?.measure ?? (sv.unit.includes('wingspan') ? 'wingspan' : sv.unit === 'g' ? 'mass' : 'length');
+    const ask = measure === 'mass' ? `How much does the ${c.name} weigh, on average?`
+      : measure === 'height' ? `How tall does the ${c.name} grow?`
+      : measure === 'wingspan' ? `How wide is the ${c.name}'s wingspan?`
+      : `How long is the ${c.name}, on average?`;
+    const decoy = (f: number) => { let d = fmtSize(sv.v * f, sv.unit), tries = 0;
+      while (d === c.size && tries++ < 4) d = fmtSize(sv.v * (f > 1 ? f * 1.5 : f / 1.5), sv.unit); return d; };
+    const lo = decoy(1 / (2 + rng() * 2)), hi = decoy(2 + rng() * 2);
+    const right = withImperial(c.size as string);
+    qs.push({ type: 'mc', label: 'Q3 · Size', short: 'Size', q: ask,
+      opts: shuf([right, withImperial(lo), withImperial(hi)]), a: right, explain: `${c.name}: ${right}` });
   } else qs.push(null);
 
   // Q4 food web
