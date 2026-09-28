@@ -117,19 +117,21 @@ export default function EcoMap() {
       {/* the pin — a classic red map pin (user, 2026-09-28); its tip is the point the page reads */}
       {pageReady && (
         <View style={[s.pin, { top: pinY - PIN_H }]} pointerEvents="none">
-          {/* the round pushpin: glossy red ball on a thin steel needle, like 📍 */}
-          <Svg width={PIN_W} height={PIN_H + 4} viewBox="0 0 32 48">
+          {/* the round pushpin: a small glossy GOLD ball on a thin steel needle
+              (user, 2026-09-28: gold — after grey, black, yellow — smaller ball,
+              smaller overall) */}
+          <Svg width={PIN_W} height={PIN_H + 3} viewBox="0 0 20 33">
             <Defs>
               <RadialGradient id="ball" cx="38%" cy="32%" r="65%">
-                <Stop offset="0" stopColor="#ff8a80" />
-                <Stop offset="0.45" stopColor="#e53935" />
-                <Stop offset="1" stopColor="#8e1b1b" />
+                <Stop offset="0" stopColor="#ffe9a8" />
+                <Stop offset="0.45" stopColor="#F5A623" />
+                <Stop offset="1" stopColor="#8a5a08" />
               </RadialGradient>
             </Defs>
-            <Ellipse cx="16" cy="45.5" rx="5" ry="2" fill="rgba(0,0,0,0.45)" />
-            <Path d="M15.2 22 L16.8 22 L16.4 44 L15.6 44 Z" fill="#cfd4d8" stroke="#6b7278" strokeWidth="0.6" />
-            <Circle cx="16" cy="12" r="11" fill="url(#ball)" stroke="#7a1414" strokeWidth="0.8" />
-            <Ellipse cx="11.5" cy="7.5" rx="3.2" ry="2" fill="rgba(255,255,255,0.7)" />
+            <Ellipse cx="10" cy="31" rx="3.5" ry="1.4" fill="rgba(0,0,0,0.45)" />
+            <Path d="M9.4 13 L10.6 13 L10.3 30 L9.7 30 Z" fill="#d7dbde" stroke="#5f666c" strokeWidth="0.5" />
+            <Circle cx="10" cy="7" r="6.5" fill="url(#ball)" stroke="#6e4706" strokeWidth="0.7" />
+            <Ellipse cx="7.4" cy="4.4" rx="1.9" ry="1.2" fill="rgba(255,255,255,0.75)" />
           </Svg>
         </View>
       )}
@@ -189,7 +191,7 @@ export default function EcoMap() {
   );
 }
 
-const PIN_W = 32, PIN_H = 44;   // the pin body; the needle's tip (y=44 of the 48 viewBox) sits at pinY
+const PIN_W = 20, PIN_H = 30;   // the pin body; the needle's tip (y=30 of the 33 viewBox) sits at pinY
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0b1a29' },
@@ -201,7 +203,7 @@ const s = StyleSheet.create({
   title: { fontFamily: F.display, fontSize: 15, color: C.text },
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#888' },
   spacer: { width: 42 },   // balances the Home button so the title stays centred
-  pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 4 },
+  pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
   zoom: { position: 'absolute', right: 14, gap: 8 },
   zoomBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(10,15,10,0.85)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
