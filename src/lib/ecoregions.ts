@@ -8,7 +8,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 import { Card, getCards, photoFor } from './catalog';
 
-export type EcoMeta = { name: string; bbox: [number, number, number, number]; obs?: number };
+// lead = the Wikipedia article's first sentence; photo = its lead image (CC/PD, credited)
+export type EcoMeta = {
+  name: string; bbox: [number, number, number, number]; obs?: number;
+  lead?: string; photo?: { thumb: string; by: string; lic: string };
+};
 // size = deck size at the time of choosing, so the home stats work offline
 export type CurrentEco = { eid: number; name: string; bbox: [number, number, number, number]; size: number };
 

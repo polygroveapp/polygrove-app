@@ -4,100 +4,81 @@
 // green ecoregion borders, glowing green selection, green names) and the app
 // embeds it in a WebView, same on iOS and Android. MapLibre Native would need
 // a development build; this runs in Expo Go today and can be swapped later.
-// Bridge: page → {ready | pick{eid,name,bbox}}; app → {state{current,collected}}.
-// 📍 uses the real location, resolved against the site's geometry here.
+// PIN PICKING (user, 2026-09-28): a fixed pin sits in the middle of the
+// visible map; you pan the world under it (or tap to slide a spot under it)
+// and the sheet previews the ecoregion under the pin — its Wikipedia photo
+// and first sentence (eco_meta.json) — with the Enter button.
+// Bridge: page → {ready | center{eid|null,name,bbox}}; app → {state{current,collected,fly,pad}}.
+// NO LOCATION (user, 2026-09-28): the app never reads the device's location
+// and nothing about where the pin goes leaves the phone — the page is ours,
+// static, and only ever talks to this WebView.
 
-import * as Location from 'expo-location';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Circle, Defs, Ellipse, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import { C, F } from '../constants/polygrove';
 import { loadCatalog } from '../lib/catalog';
 import { collectedEcoregions, loadCollection } from '../lib/collection';
-import { ECO_GEOMETRY_URL, ecoDeckSize, loadCurrentEco, setCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { ecoDeckSize, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco } from '../lib/ecoregions';
 
 const PICKER_URL = 'https://polygrovedb.pages.dev/map';   // Pages serves map.html here
+const HEADER_H = 62;   // the "Where are you?" bar, below the safe area
+// the sheet is a FIXED height whatever it shows: the pin sits in the middle
+// of the map above it, so a sheet that grew with its content would move the
+// pin, change what's under it, and chase itself
+const SHEET_H = 206;
 
-type Feature = { properties: { eco: number; name: string }; geometry: { type: 'MultiPolygon' | 'Polygon'; coordinates: number[][][] | number[][][][] } };
-type FC = { type: 'FeatureCollection'; features: Feature[] };
 type Pick = { eid: number; name: string; bbox: [number, number, number, number] };
 
-// geometry is only needed on the phone for 📍 (point-in-polygon); the map
-// itself lives in the page
-let _geo: FC | null = null;
-const loadGeo = () => _geo ? Promise.resolve(_geo) : fetch(ECO_GEOMETRY_URL).then(r => r.json()).then((g: FC) => (_geo = g));
-const outerRings = (f: Feature): number[][][] =>
-  f.geometry.type === 'Polygon' ? [(f.geometry.coordinates as number[][][])[0]] : (f.geometry.coordinates as number[][][][]).map(p => p[0]);
-function rayCast(lon: number, lat: number, ring: number[][]) {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i], [xj, yj] = ring[j];
-    if ((yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-function pickAt(geo: FC, lon: number, lat: number): Pick | null {
-  for (const f of geo.features) {
-    const rings = outerRings(f);
-    if (!rings.some(r => rayCast(lon, lat, r))) continue;
-    let w = 180, s = 90, e = -180, n = -90;
-    for (const r of rings) for (const [x, y] of r) { if (x < w) w = x; if (x > e) e = x; if (y < s) s = y; if (y > n) n = y; }
-    return { eid: f.properties.eco, name: f.properties.name, bbox: [w, s, e, n] };
-  }
-  return null;
-}
+// the dump-extracted leads carry pronunciation stubs like "( ; coast, shore)"
+const cleanLead = (t: string) => t.replace(/\s*\(\s*;[^)]*\)/g, '').replace(/\s*\(\s*\)/g, '').replace(/\s{2,}/g, ' ').trim();
 
 export default function EcoMap() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   const current = useCurrentEco();
   const web = useRef<WebView>(null);
   const [pageReady, setPageReady] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [pick, setPick] = useState<Pick | null>(null);
-  const [locating, setLocating] = useState(false);
+  const [pick, setPick] = useState<Pick | null>(null);      // what's under the pin
   const [catalogReady, setCatalogReady] = useState(false);
+  const [metaReady, setMetaReady] = useState(false);
   const [collected, setCollected] = useState<number[]>([]);
 
   useEffect(() => {
     loadCurrentEco();
     loadCollection().then(() => setCollected(collectedEcoregions()));
     loadCatalog().then(() => setCatalogReady(true)).catch(() => { /* deck sizes just stay unknown */ });
+    loadEcoMeta().then(() => setMetaReady(true)).catch(() => { /* preview shows name only */ });
   }, []);
 
-  // push the app's state into the page: current ecoregion (glow, fly-to on
-  // first show) + collected ecoregions (gold)
+  // the app's chrome, so the page centres the pin (and fly-to) in the visible map
+  const padTop = insets.top + 8 + HEADER_H;
+  const padBottom = NAV_HEIGHT + insets.bottom + SHEET_H;
+  const pinY = (padTop + (winH - padBottom)) / 2;
+
+  // push the app's state into the page: current ecoregion (fly-to on first
+  // show) + collected ecoregions (gold) + chrome padding
   const pushState = (fly: boolean) => {
-    const state = JSON.stringify({ current: (pick ?? current)?.eid ?? null, collected, fly });
+    const state = JSON.stringify({ current: current?.eid ?? null, collected, fly, pad: { top: padTop, bottom: padBottom } });
     web.current?.injectJavaScript(`window.polygroveSetState && window.polygroveSetState(${state}); true;`);
   };
-  useEffect(() => { if (pageReady) pushState(false); }, [collected, pick]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (pageReady) pushState(false); }, [collected, padTop, padBottom]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const onMessage = (e: WebViewMessageEvent) => {
-    let m: { type: string; eid?: number; name?: string; bbox?: Pick['bbox'] };
+    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox'] };
     try { m = JSON.parse(e.nativeEvent.data); } catch { return; }
     if (m.type === 'ready') { setPageReady(true); setTimeout(() => pushState(true), 50); }
-    if (m.type === 'pick' && m.eid != null && m.name && m.bbox) setPick({ eid: m.eid, name: m.name, bbox: m.bbox });
+    if (m.type === 'center') setPick(m.eid != null && m.name && m.bbox ? { eid: m.eid, name: m.name, bbox: m.bbox } : null);
   };
 
-  const locate = async () => {
-    setLocating(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { setErr('Location permission was declined — tap the map instead.'); return; }
-      const [geo, pos] = await Promise.all([loadGeo(), Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })]);
-      const p = pickAt(geo, pos.coords.longitude, pos.coords.latitude);
-      if (p) {
-        setPick(p);
-        const state = JSON.stringify({ current: p.eid, fly: true });
-        web.current?.injectJavaScript(`window.polygroveSetState && window.polygroveSetState(${state}); true;`);
-      } else setErr('No ecoregion found at your location — tap the map instead.');
-    } catch { setErr('Couldn’t get your location — tap the map instead.'); }
-    finally { setLocating(false); }
-  };
+  const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom && window.polygroveZoom(${d}); true;`);
 
   const enter = async () => {
     if (!pick) return;
@@ -109,6 +90,8 @@ export default function EcoMap() {
     <View style={[s.root, s.center]}><Text style={s.msg}>Open the map on the phone.</Text></View>
   );
   const size = pick && catalogReady ? ecoDeckSize(pick.eid) : null;
+  const meta = pick && metaReady ? ecoMeta(pick.eid) : undefined;
+  const here = !!pick && current?.eid === pick.eid;
 
   return (
     <View style={s.root}>
@@ -122,37 +105,73 @@ export default function EcoMap() {
         </View>
       )}
 
+      {/* the pin — a classic red map pin (user, 2026-09-28); its tip is the point the page reads */}
+      {pageReady && (
+        <View style={[s.pin, { top: pinY - PIN_H }]} pointerEvents="none">
+          {/* the round pushpin: glossy red ball on a thin steel needle, like 📍 */}
+          <Svg width={PIN_W} height={PIN_H + 4} viewBox="0 0 32 48">
+            <Defs>
+              <RadialGradient id="ball" cx="38%" cy="32%" r="65%">
+                <Stop offset="0" stopColor="#ff8a80" />
+                <Stop offset="0.45" stopColor="#e53935" />
+                <Stop offset="1" stopColor="#8e1b1b" />
+              </RadialGradient>
+            </Defs>
+            <Ellipse cx="16" cy="45.5" rx="5" ry="2" fill="rgba(0,0,0,0.45)" />
+            <Path d="M15.2 22 L16.8 22 L16.4 44 L15.6 44 Z" fill="#cfd4d8" stroke="#6b7278" strokeWidth="0.6" />
+            <Circle cx="16" cy="12" r="11" fill="url(#ball)" stroke="#7a1414" strokeWidth="0.8" />
+            <Ellipse cx="11.5" cy="7.5" rx="3.2" ry="2" fill="rgba(255,255,255,0.7)" />
+          </Svg>
+        </View>
+      )}
+
       <View style={[s.top, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} hitSlop={12} style={s.backBtn}>
           <Text style={s.back}>‹ Home</Text>
         </Pressable>
         <View style={s.titleWrap}>
           <Text style={s.title}>Where are you?</Text>
-          <Text style={s.sub}>{pageReady ? 'tap the map to pick your ecoregion' : err ? 'map unavailable' : 'loading ecoregions…'}</Text>
+          <Text style={s.sub}>{pageReady ? 'move the map under the pin' : err ? 'map unavailable' : 'loading ecoregions…'}</Text>
         </View>
-        <Pressable onPress={locate} disabled={!pageReady || locating} hitSlop={8} style={s.locBtn}>
-          {locating ? <ActivityIndicator color={C.green} /> : <Text style={s.locTxt}>📍</Text>}
-        </Pressable>
+        <View style={s.spacer} />
       </View>
 
-      {/* the sheet sits above the tab bar */}
-      <View style={[s.sheet, { bottom: NAV_HEIGHT + insets.bottom, paddingBottom: 14 }]}>
+      {/* zoom in / out (user, 2026-09-28) — zooms around the pin */}
+      {pageReady && (
+        <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]}>
+          <Pressable onPress={() => zoom(1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>+</Text></Pressable>
+          <Pressable onPress={() => zoom(-1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>−</Text></Pressable>
+        </View>
+      )}
+
+      {/* the preview sheet sits above the tab bar */}
+      <View style={[s.sheet, { bottom: NAV_HEIGHT + insets.bottom, height: SHEET_H }]}>
         {err && !pick ? (
           <Text style={s.msg}>{err}</Text>
         ) : pick ? (
           <>
-            <Text style={s.ecoName}>{pick.name}</Text>
-            <Text style={s.ecoMeta}>
-              {size != null ? `${size.toLocaleString()} species in this deck` : 'ecoregion'}
-              {current?.eid === pick.eid ? ' · you’re here now' : ''}
-            </Text>
-            <Pressable onPress={enter} style={s.enter}>
-              <Text style={s.enterTxt}>{current?.eid === pick.eid ? 'Stay here' : 'Enter this ecoregion'}</Text>
+            <View style={s.preview}>
+              {meta?.photo ? (
+                <Image source={{ uri: meta.photo.thumb }} style={s.photo} contentFit="cover" transition={200} />
+              ) : (
+                <View style={[s.photo, s.center]}><Text style={s.noPhoto}>🌿</Text></View>
+              )}
+              <View style={s.previewText}>
+                <Text style={s.ecoName} numberOfLines={2}>{pick.name}</Text>
+                <Text style={s.ecoMeta}>
+                  {size != null ? `${size.toLocaleString()} species in this deck` : 'ecoregion'}{here ? ' · you’re here now' : ''}
+                </Text>
+                {meta?.lead ? <Text style={s.lead} numberOfLines={3}>{cleanLead(meta.lead)}</Text> : null}
+                {meta?.photo?.by ? <Text style={s.credit} numberOfLines={1}>Wikipedia · photo {meta.photo.by} ({meta.photo.lic})</Text> : null}
+              </View>
+            </View>
+            <Pressable onPress={enter} style={[s.enter, here && s.enterHere]}>
+              <Text style={s.enterTxt}>{here ? 'Stay here' : 'Enter this ecoregion'}</Text>
             </Pressable>
           </>
         ) : (
           <Text style={s.msg}>
-            {current ? `You’re in ${current.name}. Tap somewhere else to move.` : 'Tap where you are, or 📍 to use your location.'}
+            {pageReady ? 'Move the map until the pin sits on an ecoregion.' : current ? `You’re in ${current.name}.` : 'Loading the map…'}
           </Text>
         )}
       </View>
@@ -160,6 +179,8 @@ export default function EcoMap() {
     </View>
   );
 }
+
+const PIN_W = 32, PIN_H = 44;   // the pin body; the needle's tip (y=44 of the 48 viewBox) sits at pinY
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0b1a29' },
@@ -170,16 +191,26 @@ const s = StyleSheet.create({
   titleWrap: { flex: 1, alignItems: 'center', backgroundColor: 'rgba(10,15,10,0.85)', borderRadius: 14, paddingVertical: 6 },
   title: { fontFamily: F.display, fontSize: 15, color: C.text },
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#888' },
-  locBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(10,15,10,0.85)', alignItems: 'center', justifyContent: 'center' },
-  locTxt: { fontSize: 20 },
+  spacer: { width: 42 },   // balances the Home button so the title stays centred
+  pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 4 },
+  zoom: { position: 'absolute', right: 14, gap: 8 },
+  zoomBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(10,15,10,0.85)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
+  zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
   sheet: {
-    position: 'absolute', left: 0, right: 0, paddingHorizontal: 20, paddingTop: 16,
+    position: 'absolute', left: 0, right: 0, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12,
     backgroundColor: 'rgba(10,15,10,0.94)', borderTopLeftRadius: 22, borderTopRightRadius: 22,
-    borderTopWidth: 1, borderColor: 'rgba(129,199,132,0.25)', alignItems: 'center', gap: 6,
+    borderTopWidth: 1, borderColor: 'rgba(129,199,132,0.25)', gap: 10, justifyContent: 'center',
   },
-  msg: { fontFamily: F.sans, fontSize: 13, color: '#aaa', textAlign: 'center', lineHeight: 19, paddingVertical: 6 },
-  ecoName: { fontFamily: F.display, fontSize: 18, color: C.text, textAlign: 'center' },
-  ecoMeta: { fontFamily: F.sans, fontSize: 12, color: '#8B5035', letterSpacing: 0.5 },
-  enter: { marginTop: 8, paddingHorizontal: 30, paddingVertical: 13, borderRadius: 24, backgroundColor: '#2E7D32', minWidth: 240, alignItems: 'center' },
+  preview: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  photo: { width: 108, height: 108, borderRadius: 14, backgroundColor: '#1c2a1c', borderWidth: 1, borderColor: 'rgba(129,199,132,0.3)' },
+  noPhoto: { fontSize: 30 },
+  previewText: { flex: 1, gap: 3, minHeight: 108, justifyContent: 'center' },
+  msg: { fontFamily: F.sans, fontSize: 13, color: '#aaa', textAlign: 'center', lineHeight: 19, paddingVertical: 6, paddingHorizontal: 12 },
+  ecoName: { fontFamily: F.display, fontSize: 16, color: C.text, lineHeight: 20 },
+  ecoMeta: { fontFamily: F.sans, fontSize: 11.5, color: '#8B5035', letterSpacing: 0.4 },
+  lead: { fontFamily: F.sans, fontSize: 12, color: '#c9c4b8', lineHeight: 16.5, marginTop: 2 },
+  credit: { fontFamily: F.sans, fontSize: 9.5, color: '#666', marginTop: 2 },
+  enter: { paddingVertical: 12, borderRadius: 24, backgroundColor: '#2E7D32', alignItems: 'center' },
+  enterHere: { backgroundColor: '#1f3a22', borderWidth: 1, borderColor: 'rgba(129,199,132,0.35)' },
   enterTxt: { fontFamily: F.display, fontSize: 14, color: C.text },
 });
