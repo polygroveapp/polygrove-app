@@ -287,7 +287,9 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
               <View key={c.key} pointerEvents={diff === 0 ? 'auto' : 'none'}
                 style={[cardSize, { position: 'absolute', top: 0, transform: [{ translateX: diff * step }] },
                   v ? { borderRadius: 22, borderWidth: 3, borderColor: v } : null]}>
-                <PolygroveCard card={c.card} noteFrom={c.noteFrom} anonymous={!done} />
+                {/* names + scientific names SHOWN (user, 2026-09-28; was ??? / · · ·
+                    until answered): the tell is the field note, not the name */}
+                <PolygroveCard card={c.card} noteFrom={c.noteFrom} />
               </View>
             );
           })}
