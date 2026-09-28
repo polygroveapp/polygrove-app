@@ -154,7 +154,7 @@ export default function EcoMap() {
       )}
 
       {/* the preview sheet sits above the tab bar */}
-      <View style={[s.sheet, { bottom: NAV_HEIGHT + insets.bottom, height: SHEET_H }]}>
+      <View style={[s.sheet, { bottom: 0, height: SHEET_H + NAV_HEIGHT + insets.bottom, paddingBottom: NAV_HEIGHT + insets.bottom + 12 }]}>
         {err && !pick ? (
           <Text style={s.msg}>{err}</Text>
         ) : pick ? (
@@ -184,7 +184,7 @@ export default function EcoMap() {
           </Text>
         )}
       </View>
-      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}><BottomNav active="map" /></View>
+      <BottomNav active="map" />
     </View>
   );
 }

@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
-import BottomNav from '../components/BottomNav';
+import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import HexPhoto from '../components/HexPhoto';
 import { C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
 import { Card, loadCatalog, photoFor } from '../lib/catalog';
@@ -138,7 +138,7 @@ export default function FieldNotes() {
       extraData={owned}
       ListHeaderComponent={header}
       columnWrapperStyle={{ gap: 10 }}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: NAV_HEIGHT + insets.bottom + 20 }}
       ListEmptyComponent={
         <View style={[s.center, { paddingTop: 40 }]}>
           <Text style={s.msg}>{cards.length === 0 ? 'Nothing journaled here yet — open a pack.' : 'No journaled cards match these filters.'}</Text>

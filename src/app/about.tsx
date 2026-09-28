@@ -3,7 +3,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BottomNav from '../components/BottomNav';
+import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import { C, F } from '../constants/polygrove';
 
 const open = (u: string) => WebBrowser.openBrowserAsync(u);
@@ -12,7 +12,7 @@ export default function About() {
   const insets = useSafeAreaInsets();
   return (
     <View style={s.root}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: 22, paddingBottom: 30 }}>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: 22, paddingBottom: NAV_HEIGHT + insets.bottom + 24 }}>
         <Text style={s.logo}>Polygrove</Text>
         <Text style={s.tag}>every living thing is a card</Text>
 

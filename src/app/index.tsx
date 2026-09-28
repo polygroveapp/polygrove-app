@@ -11,7 +11,7 @@ import Animated, {
   useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BottomNav from '../components/BottomNav';
+import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import HexPhoto from '../components/HexPhoto';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { cardById, loadCatalog, photoFor } from '../lib/catalog';
@@ -75,7 +75,7 @@ export default function Home() {
     <View style={s.root}>
       <LinearGradient colors={['#0a0f0a', '#1a2e1a', '#0f1a0f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill} />
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: NAV_HEIGHT + insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
         {/* header */}
         <View style={s.header}>
           <Text style={s.logo}>Polygrove</Text>
