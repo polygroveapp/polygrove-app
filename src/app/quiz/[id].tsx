@@ -11,11 +11,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { Easing, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
+import HexPhoto from '../../components/HexPhoto';
 import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SolarCelebration from '../../components/SolarCelebration';
 import { C, F, MASTERY, getLevel, getTier } from '../../constants/polygrove';
-import { Card, cardById, getCards, loadCatalog } from '../../lib/catalog';
+import { Card, cardById, getCards, loadCatalog, photoFor } from '../../lib/catalog';
 import {
   LOCK_THRESHOLD, NUM_Q, countsOf, isFullyLocked, loadMastery, nextUnlocked, recordCorrect, scoreOf, useMastery,
 } from '../../lib/mastery';
@@ -321,6 +322,28 @@ function PickButton({ onPick, disabled }: { onPick: () => boolean; disabled?: bo
   );
 }
 
+// FOOD WEB options carry the species' PHOTO under the name box (user,
+// 2026-09-28): three tiles in a row, the box colours like any option, the
+// hexagon photo below it. Options that aren't deck cards get an empty hexagon.
+const _byName = new Map<string, Card>();
+function cardByName(name: string): Card | undefined {
+  if (!_byName.size) for (const c of getCards()) _byName.set(c.name, c);
+  return _byName.get(name);
+}
+function FoodWebOption({ name, st, disabled, onPress }: { name: string; st: { bg: string; bc: string; tc: string }; disabled: boolean; onPress: () => void }) {
+  const c = cardByName(name);
+  return (
+    <Pressable disabled={disabled} onPress={onPress} style={s.fwTile}>
+      <View style={[s.opt, s.fwBox, { backgroundColor: st.bg, borderColor: st.bc }]}>
+        <Text style={[s.fwTxt, { color: st.tc }]} numberOfLines={3}>{name}</Text>
+      </View>
+      <View style={s.fwPhoto}>
+        <HexPhoto uri={c ? photoFor(c.id, 250) : undefined} width={64} height={72} borderColor={st.bc === '#333' ? '#3a3a3a' : st.bc} borderWidth={3} />
+      </View>
+    </Pressable>
+  );
+}
+
 // one question — mc / tf / dual / pick, with the demo's option-state colors:
 // dark → gold selected → green right / red wrong
 function Question({ q, card, done, onAnswer, onReshuffle }: { q: Q; card: Card; done: boolean; onAnswer: (r: boolean) => void; onReshuffle: () => void }) {
@@ -349,15 +372,10 @@ function QuestionBody({ q, card, done, onAnswer }: { q: Exclude<Q, { type: 'pick
         {[{ side: q.s1, sel: s1, set: setS1, color: C.text }, { side: q.s2, sel: s2, set: setS2, color: C.green }].map(({ side, sel: sv, set, color }) => (
           <View key={side.title}>
             <Text style={[s.sideTitle, { color }]}>{side.title}</Text>
-            <View style={{ gap: 6 }}>
-              {side.opts.map(o => {
-                const st = optStyle(o === side.a, sv === o);
-                return (
-                  <Pressable key={o} disabled={done} onPress={() => set(o)} style={[s.opt, { backgroundColor: st.bg, borderColor: st.bc }]}>
-                    <Text style={[s.optTxt, { color: st.tc }]}>{o}</Text>
-                  </Pressable>
-                );
-              })}
+            <View style={s.fwRow}>
+              {side.opts.map(o => (
+                <FoodWebOption key={o} name={o} st={optStyle(o === side.a, sv === o)} disabled={done} onPress={() => set(o)} />
+              ))}
             </View>
           </View>
         ))}
@@ -378,7 +396,13 @@ function QuestionBody({ q, card, done, onAnswer }: { q: Exclude<Q, { type: 'pick
         <Text style={s.qTxt}>{q.type === 'tf' ? `“${q.q}”` : q.q}</Text>
       </View>
       <View style={{ gap: 7 }}>
-        {q.type === 'mc' ? q.opts.map(o => {
+        {q.type === 'mc' && q.short === 'Food web' ? (
+          <View style={s.fwRow}>
+            {q.opts.map(o => (
+              <FoodWebOption key={o} name={o} st={optStyle(o === q.a, sel === o)} disabled={done} onPress={() => { setSel(o); onAnswer(o === q.a); }} />
+            ))}
+          </View>
+        ) : q.type === 'mc' ? q.opts.map(o => {
           const st = optStyle(o === q.a, sel === o);
           return (
             <Pressable key={o} disabled={done} onPress={() => { setSel(o); onAnswer(o === q.a); }}
@@ -431,6 +455,11 @@ const s = StyleSheet.create({
   sideTitle: { fontFamily: F.sansBold, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
   opt: { borderWidth: 2, borderRadius: 11, paddingVertical: 12, paddingHorizontal: 14 },
   optTxt: { fontFamily: F.sans, fontSize: 14, lineHeight: 18 },
+  fwRow: { flexDirection: 'row', gap: 8 },
+  fwTile: { flex: 1, alignItems: 'center', gap: 6 },
+  fwBox: { width: '100%', minHeight: 64, paddingVertical: 8, paddingHorizontal: 8, justifyContent: 'center' },
+  fwTxt: { fontFamily: F.sansBold, fontSize: 11.5, lineHeight: 14, textAlign: 'center' },
+  fwPhoto: { width: '100%', alignItems: 'center', paddingVertical: 6, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.35)' },
   tfOpt: { paddingVertical: 16, alignItems: 'center' },
   tfTxt: { fontFamily: F.display, fontSize: 18 },
   confirm: { padding: 13, borderRadius: 14, alignItems: 'center', backgroundColor: '#FFC107', marginTop: 12 },
