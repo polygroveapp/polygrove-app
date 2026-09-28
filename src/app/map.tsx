@@ -7,7 +7,9 @@
 // PIN PICKING (user, 2026-09-28): a fixed pin sits in the middle of the
 // visible map; you pan the world under it (or tap to slide a spot under it)
 // and the sheet previews the ecoregion under the pin — its Wikipedia photo
-// and first sentence (eco_meta.json) — with the Enter button.
+// and first sentence (eco_meta.json) — with the Enter button (Stay in /
+// Return to / Explore, by whether it's yours / visited / new). Visited
+// ecoregions are outlined in a stronger green on the map.
 // Bridge: page → {ready | center{eid|null,name,bbox}}; app → {state{current,collected,fly,pad}}.
 // NO LOCATION (user, 2026-09-28): the app never reads the device's location
 // and nothing about where the pin goes leaves the phone — the page is ours,
@@ -92,6 +94,7 @@ export default function EcoMap() {
   const size = pick && catalogReady ? ecoDeckSize(pick.eid) : null;
   const meta = pick && metaReady ? ecoMeta(pick.eid) : undefined;
   const here = !!pick && current?.eid === pick.eid;
+  const visited = !!pick && collected.includes(pick.eid);
 
   return (
     <View style={s.root}>
@@ -166,7 +169,7 @@ export default function EcoMap() {
               </View>
             </View>
             <Pressable onPress={enter} style={[s.enter, here && s.enterHere]}>
-              <Text style={s.enterTxt}>{here ? 'Stay here' : 'Enter this ecoregion'}</Text>
+              <Text style={s.enterTxt}>{here ? 'Stay in ecoregion' : visited ? 'Return to ecoregion' : 'Explore ecoregion'}</Text>
             </Pressable>
           </>
         ) : (
