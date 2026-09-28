@@ -107,14 +107,14 @@ export default function Home() {
           </View>
         ) : (
           <View style={s.body}>
-            {/* the ecoregion: photo · place on the map · first sentence */}
-            <EcoHero eco={eco} />
             {/* stats */}
             <View style={s.stats}>
               <Stat n={journaledPct} pct label="Journaled" />
               <Stat n={owned.length} label="Species" />
               <Stat n={masteryPct(owned.map(o => o.speciesId))} pct label="Mastery" />
             </View>
+            {/* the ecoregion: place on the map · photo · first sentence (stats above it, user 2026-09-28) */}
+            <EcoHero eco={eco} />
 
             {/* discovery pack */}
             <Animated.View style={[pulseStyle, { borderRadius: 16 }]}>

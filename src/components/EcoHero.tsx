@@ -1,8 +1,9 @@
 // THE ECOREGION HERO on home (user, 2026-09-28: "for each home page put the
 // photo of the ecoregion and description and place on the map"): the site's
-// ecoregion-page header on the phone — Wikipedia lead photo, the region's
-// place on the globe (the picker page in ?mini mode, non-interactive), the
-// first sentence, and the credit. Tapping it opens the map.
+// ecoregion-page header on the phone — the region's place on the globe (the
+// picker page in ?mini mode, non-interactive) left, Wikipedia lead photo
+// right, the first sentence, and the credit. Sits under the stats row.
+// Tapping it opens the map.
 
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -30,17 +31,18 @@ export default function EcoHero({ eco }: { eco: CurrentEco }) {
 
   return (
     <Pressable onPress={() => router.push('/map')} style={s.card}>
+      {/* map on the LEFT, photo on the right (user, 2026-09-28) */}
       <View style={s.row}>
-        {meta.photo ? (
-          <Image source={{ uri: meta.photo.thumb }} style={[s.pane, s.photo]} contentFit="cover" transition={250} cachePolicy="disk" />
-        ) : (
-          <View style={[s.pane, s.photo, s.center]}><Text style={s.noPhoto}>🌿</Text></View>
-        )}
         {mapOk && (
           <View style={[s.pane, s.map]} pointerEvents="none">
             <WebView key={eco.eid} source={{ uri: MINI_URL + eco.eid }} style={s.web} onError={() => setMapOk(false)}
               scrollEnabled={false} bounces={false} javaScriptEnabled scalesPageToFit={false} originWhitelist={['https://*']} />
           </View>
+        )}
+        {meta.photo ? (
+          <Image source={{ uri: meta.photo.thumb }} style={[s.pane, s.photo]} contentFit="cover" transition={250} cachePolicy="disk" />
+        ) : (
+          <View style={[s.pane, s.photo, s.center]}><Text style={s.noPhoto}>🌿</Text></View>
         )}
       </View>
       {meta.lead ? <Text style={s.lead} numberOfLines={3}>{cleanLead(meta.lead)}</Text> : null}
