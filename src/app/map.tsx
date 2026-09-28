@@ -72,11 +72,17 @@ export default function EcoMap() {
     web.current?.injectJavaScript(`window.polygroveSetState && window.polygroveSetState(${state}); true;`);
   };
   useEffect(() => { if (pageReady) pushState(false); }, [collected, padTop, padBottom]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // fly to your ecoregion once, whichever arrives last: the page's ready or
+  // the stored ecoregion (a cold start can read storage after the page loads)
+  const flown = useRef(false);
+  useEffect(() => {
+    if (pageReady && current && !flown.current) { flown.current = true; pushState(true); }
+  }, [pageReady, current]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const onMessage = (e: WebViewMessageEvent) => {
     let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox'] };
     try { m = JSON.parse(e.nativeEvent.data); } catch { return; }
-    if (m.type === 'ready') { setPageReady(true); setTimeout(() => pushState(true), 50); }
+    if (m.type === 'ready') setPageReady(true);
     if (m.type === 'center') setPick(m.eid != null && m.name && m.bbox ? { eid: m.eid, name: m.name, bbox: m.bbox } : null);
   };
 
