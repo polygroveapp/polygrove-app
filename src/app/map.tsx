@@ -117,20 +117,20 @@ export default function EcoMap() {
       {/* the pin — a classic red map pin (user, 2026-09-28); its tip is the point the page reads */}
       {pageReady && (
         <View style={[s.pin, { top: pinY - PIN_H }]} pointerEvents="none">
-          {/* the round pushpin: a small glossy GOLD ball on a thin steel needle
-              (user, 2026-09-28: gold — after grey, black, yellow — smaller ball,
-              smaller overall) */}
+          {/* the round pushpin: a small glossy RED ball on a thin steel needle
+              (user, 2026-09-28: red in the end — tried grey, black, yellow, gold,
+              orange — smaller ball, smaller overall) */}
           <Svg width={PIN_W} height={PIN_H + 3} viewBox="0 0 20 33">
             <Defs>
               <RadialGradient id="ball" cx="38%" cy="32%" r="65%">
-                <Stop offset="0" stopColor="#ffe9a8" />
-                <Stop offset="0.45" stopColor="#F5A623" />
-                <Stop offset="1" stopColor="#8a5a08" />
+                <Stop offset="0" stopColor="#ff8a80" />
+                <Stop offset="0.45" stopColor="#e53935" />
+                <Stop offset="1" stopColor="#8e1b1b" />
               </RadialGradient>
             </Defs>
             <Ellipse cx="10" cy="31" rx="3.5" ry="1.4" fill="rgba(0,0,0,0.45)" />
             <Path d="M9.4 13 L10.6 13 L10.3 30 L9.7 30 Z" fill="#d7dbde" stroke="#5f666c" strokeWidth="0.5" />
-            <Circle cx="10" cy="7" r="6.5" fill="url(#ball)" stroke="#6e4706" strokeWidth="0.7" />
+            <Circle cx="10" cy="7" r="6.5" fill="url(#ball)" stroke="#7a1414" strokeWidth="0.7" />
             <Ellipse cx="7.4" cy="4.4" rx="1.9" ry="1.2" fill="rgba(255,255,255,0.75)" />
           </Svg>
         </View>
