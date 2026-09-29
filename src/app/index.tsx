@@ -5,8 +5,8 @@
 // Journal is where cards live. The tab is called CAMP (user, same day).
 
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming,
@@ -43,7 +43,8 @@ export default function Home() {
     }, 300);
   };
   // "How Packs Work": queued by the pack screen when a first pack ends
-  const [packsTip, setPacksTip] = useState(() => takePacksPopup());
+  const [packsTip, setPacksTip] = useState(false);
+  useFocusEffect(useCallback(() => { if (takePacksPopup()) setPacksTip(true); }, []));
   const eco = useCurrentEco();
   const owned = useCollection(eco?.eid);
   const daily = useDiscoveryCountdown();
@@ -246,7 +247,7 @@ const s = StyleSheet.create({
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
   // bigger, and the tagline under it is gone (user, 2026-09-28)
   // the tagline sits BETWEEN the wordmark and the ecoregion name (user, 2026-09-29)
-  tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 8 },
+  tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 4 },   // a little closer to the ecoregion name (user, 2026-09-29)
   ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 20, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // wraps: the full name always shows
   body: { paddingHorizontal: 20, paddingTop: 12 },   // a little closer to the header line (user, 2026-09-29)
   // stats

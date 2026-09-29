@@ -436,7 +436,7 @@ const s = StyleSheet.create({
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
   // the tagline sits BETWEEN the wordmark and the ecoregion name (user, 2026-09-29)
-  tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 8 },
+  tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 4 },   // a little closer to the ecoregion name (user, 2026-09-29)
   ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 20, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // wraps: the full name always shows
   back: { position: 'absolute', left: 16, top: 12, paddingVertical: 6, zIndex: 2 },
   backTxt: { fontFamily: F.sansBold, fontSize: 14, color: C.greenSoft },

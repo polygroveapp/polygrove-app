@@ -11,9 +11,12 @@
 // Collecting Field Notes" tip card (shown once more if nothing is touched for
 // 10 seconds); and the fifth card sends you straight back to Camp, where the
 // first pack is followed by "How Packs Work". Only the app's 3-skip rule stays.
+// THE END OF A PACK (user, 2026-09-29) is the app's own: the five cards you
+// journaled, in the gallery's swipe view, over "Take Solar Quiz" and "Journal",
+// with ✕ back to Camp.
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -140,13 +143,18 @@ export default function PackOpening() {
     if (done && pack && eid != null && idx < pack.length) returnCards(eid, pack.slice(idx));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done]);
-  // the demo: the fifth card goes straight HOME (setScreen("home")) — no
-  // "pack complete" page — and a first pack queues "How Packs Work" there
+  // the fifth card opens YOUR PACK: the cards you just journaled, to swipe
+  // through (user, 2026-09-29; the demo went straight home). A first pack
+  // still queues "How Packs Work" for the next time Camp comes forward.
+  const keptIds = useRef<string[]>([]);
   const over = !!pack && (done || idx >= pack.length);
   useEffect(() => {
     if (!over) return;
     if (!tipSeen('firstPack')) { markTip('firstPack'); queuePacksPopup(); }
-    const t = setTimeout(() => router.replace({ pathname: '/', params: { tab: '1' } }), 100);
+    const ids = keptIds.current;
+    const t = setTimeout(() => router.replace(ids.length
+      ? { pathname: '/gallery', params: { ids: ids.join(','), start: '0', pack: '1', tab: '1' } }
+      : { pathname: '/', params: { tab: '1' } }), 100);
     return () => clearTimeout(t);
   }, [over, router]);
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
@@ -182,6 +190,7 @@ export default function PackOpening() {
   const onSwiped = (dir: 1 | -1) => {
     if (dir === 1) {
       addToCollection(eid ?? currentEco()!.eid, pack[idx].card);
+      keptIds.current.push(pack[idx].card.id);
       snapshotStashed(pack[idx]);   // journal = offline forever
       setKept(k => k + 1);
     } else {

@@ -3,6 +3,10 @@
 // (the current one wide, in the card's accent), and a horizontal carousel of
 // the real cards with neighbors peeking at both sides. Drag to move between
 // cards, tap a card to flip it. Wider gaps between cards than the demo (user).
+// PACK MODE (?pack=1; user, 2026-09-29): where a pack ends — the cards you
+// just journaled, "Take Solar Quiz" (on the card in front) or "Journal"
+// beneath them, and ✕ top-right back to Camp. Tapping the backdrop does
+// nothing here: an accidental tap must not throw the pack away.
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -24,7 +28,8 @@ export default function Gallery() {
   const win = useWindowDimensions();
   // glow = a card that just went Solar: it arrives with the demo's gold pulse
   // (highlightCard) for a couple of seconds (user, 2026-09-26)
-  const { ids, start, glow } = useLocalSearchParams<{ ids?: string; start?: string; glow?: string }>();
+  const { ids, start, glow, pack } = useLocalSearchParams<{ ids?: string; start?: string; glow?: string; pack?: string }>();
+  const isPack = pack === '1';
   const [glowing, setGlowing] = useState<string | null>(glow ?? null);
   const pulse = useSharedValue(0);
   useEffect(() => {
@@ -56,7 +61,7 @@ export default function Gallery() {
   // like the demo (card 0.8 of the screen, the rest is the two peeks)
   const cardSize = {
     width: Math.min(Math.round(win.width * 0.8), 340),
-    height: Math.min(600, win.height - 150 - insets.top - insets.bottom),
+    height: Math.min(600, win.height - (isPack ? 190 : 150) - insets.top - insets.bottom),
   };
   const step = cardSize.width + GAP;
   const n = cards.length;
@@ -72,22 +77,30 @@ export default function Gallery() {
     });
   const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/deck'));
+  const close = () => (router.canGoBack() ? router.back() : router.replace(isPack ? '/' : '/deck'));
   const cur = cards[idx];
   const accent = cur ? TROPHIC_COLOR[cur.trophic] || C.greenSoft : C.greenSoft;
 
   return (
     // the whole backdrop closes: any tap outside the card (the dark area, the
     // gaps, a peeking neighbor) dismisses the gallery (user, 2026-09-26)
-    <Pressable onPress={close} style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
+    <Pressable onPress={isPack ? undefined : close} style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
       {/* top-LEFT, as a labeled pill: the faint ✕ top-right hid under Expo's dev
           gear on the simulator and was easy to miss (user, 2026-09-26) */}
-      <Pressable onPress={close} hitSlop={12} style={[s.x, { top: insets.top + 8 }]}>
-        <Text style={s.xTxt}>✕  Close</Text>
-      </Pressable>
+      {isPack ? (
+        // top-RIGHT (user, 2026-09-29); nudged left in development only, where
+        // Expo's gear sits on that corner
+        <Pressable onPress={close} hitSlop={12} style={[s.x, s.xRight, { top: insets.top + 8, right: __DEV__ ? 78 : 16 }]}>
+          <Text style={s.xTxt}>✕  Camp</Text>
+        </Pressable>
+      ) : (
+        <Pressable onPress={close} hitSlop={12} style={[s.x, { top: insets.top + 8 }]}>
+          <Text style={s.xTxt}>✕  Close</Text>
+        </Pressable>
+      )}
       <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 20 }}>
         <View style={s.head}>
-          <Text style={s.label}>☀️ Cards</Text>
+          <Text style={s.label}>{isPack ? `🌲 Your pack · ${n} journaled` : '☀️ Cards'}</Text>
           <View style={s.dots}>
             {cards.map((c, i) => (
               <Pressable key={c.id} onPress={() => go(i)} hitSlop={4}
@@ -113,7 +126,17 @@ export default function Gallery() {
             })}
           </Animated.View>
         </GestureDetector>
-        {cur && (() => {
+        {cur && isPack && (
+          <View style={s.packRow}>
+            <Pressable onPress={() => router.replace({ pathname: '/quiz/[id]', params: { id: cur.id } })} style={s.packQuiz}>
+              <Text style={s.packQuizTxt}>☀️ Take Solar Quiz</Text>
+            </Pressable>
+            <Pressable onPress={() => router.replace('/deck')} style={s.packJournal}>
+              <Text style={s.packJournalTxt}>📖 Journal</Text>
+            </Pressable>
+          </View>
+        )}
+        {cur && !isPack && (() => {
           const mastered = isFullyLocked(countsOf(cur.species_id));
           return (
             <View style={s.quizRow}>
@@ -135,7 +158,17 @@ const s = StyleSheet.create({
     position: 'absolute', left: 16, zIndex: 10, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
   },
+  xRight: { left: undefined },
   xTxt: { color: C.text, fontFamily: F.sansBold, fontSize: 13 },
+  // pack mode: the two ways on
+  packRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  packQuiz: { flex: 1.4, paddingVertical: 13, borderRadius: 14, alignItems: 'center', backgroundColor: '#FFC107' },
+  packQuizTxt: { fontFamily: F.display, fontSize: 13.5, color: '#1a1a1a' },
+  packJournal: {
+    flex: 1, paddingVertical: 13, borderRadius: 14, alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: '#333',
+  },
+  packJournalTxt: { fontFamily: F.display, fontSize: 13, color: '#ccc' },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 },
   label: { fontFamily: F.sansBold, fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1 },
   dots: { flexDirection: 'row', gap: 4 },
