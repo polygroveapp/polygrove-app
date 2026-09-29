@@ -15,14 +15,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import EcoHero from '../components/EcoHero';
 import SolarPicker from '../components/SolarPicker';
+import TipCard from '../components/TipCard';
 import { C, F } from '../constants/polygrove';
 import { loadCatalog } from '../lib/catalog';
 import { loadCollection, useCollection } from '../lib/collection';
 import { loadDaily, useDiscoveryCountdown } from '../lib/daily';
 import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
-import { loadMastery, masteryPct, useMastery } from '../lib/mastery';
+import { countsOf, isFullyLocked, loadMastery, masteryPct, useMastery } from '../lib/mastery';
 import { offlineReady, packsReady, topUp } from '../lib/offline';
 import { SOLAR_PACK_COST, loadSol, useSol } from '../lib/sol';
+import { takePacksPopup } from '../lib/tips';
 
 export default function Home() {
   const router = useRouter();
@@ -30,6 +32,8 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [offline, setOffline] = useState(false);
   const [picker, setPicker] = useState(false);
+  // "How Packs Work": queued by the pack screen when a first pack ends
+  const [packsTip, setPacksTip] = useState(() => takePacksPopup());
   const eco = useCurrentEco();
   const owned = useCollection(eco?.eid);
   const daily = useDiscoveryCountdown();
@@ -183,6 +187,28 @@ export default function Home() {
       </ScrollView>
       <BottomNav active="home" />
       <SolarPicker visible={picker} owned={owned} onClose={() => setPicker(false)} />
+      {/* the demo's first-pack popup, word for word; its button starts a quiz
+          on a random journaled card that isn't fully mastered */}
+      <TipCard visible={packsTip} maxWidth={380}>
+        <Text style={s.tipTitle}> 🌲 How Packs Work 🌲</Text>
+        <Text style={s.tipBody}>
+          In the game you will get one <Text style={{ color: C.green }}>Discovery Pack</Text> to open every day. To get more
+          cards you can open Solar Packs with <Text style={{ color: '#FFD700' }}>Sol Points 🔆</Text> which you earn through
+          taking Solar Quizzes.{'\n\n'}
+          <Text style={{ color: C.text }}>Try a Solar Quiz out for yourself!</Text>
+        </Text>
+        <Pressable style={s.tipBtnWrap}
+          onPress={() => {
+            setPacksTip(false);
+            const pool = owned.filter(o => !isFullyLocked(countsOf(o.speciesId)));
+            const pick = pool[Math.floor(Math.random() * pool.length)];
+            if (pick) setTimeout(() => router.push({ pathname: '/quiz/[id]', params: { id: pick.id } }), 280);
+          }}>
+          <LinearGradient colors={['#FF6F00', '#FFC107', '#FFD54F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.tipBtn}>
+            <Text style={s.tipBtnTxt}>☀️ Try a Solar Quiz!</Text>
+          </LinearGradient>
+        </Pressable>
+      </TipCard>
     </View>
   );
 }
@@ -242,6 +268,12 @@ const s = StyleSheet.create({
   quizBtn: { flex: 1, borderRadius: 16, overflow: 'hidden' },
   quizGrad: { paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center' },
   quizTxt: { fontFamily: F.display, fontSize: 13, color: C.text },
+  // "How Packs Work" (demo values)
+  tipTitle: { fontFamily: F.display, fontSize: 16, color: C.text, marginBottom: 14 },
+  tipBody: { fontFamily: F.sans, fontSize: 13, color: '#aaa', lineHeight: 21.5, marginBottom: 20 },
+  tipBtnWrap: { borderRadius: 14, overflow: 'hidden', shadowColor: '#FFC107', shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 4 } },
+  tipBtn: { padding: 13, alignItems: 'center' },
+  tipBtnTxt: { fontFamily: F.display, fontSize: 14, color: '#1a1a1a' },
   // first-launch picker
   pickCard: {
     alignItems: 'center', padding: 24, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(76,175,80,0.3)',

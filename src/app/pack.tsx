@@ -5,21 +5,30 @@
 // it flies to ±600px, turns to ±25° and fades, all in 0.3s ease-out, and the
 // swipe counts 300ms later while the next card eases up to full size.
 // RIGHT journals it, LEFT releases it. Tap flips to the details back.
+// THE WHOLE EXPERIENCE is the demo's too (user, same day: "the pack opening
+// experience isn't the same"): no header row — the card fills the screen over
+// "← Skip · SWIPE · Collect →"; the first pack opens under the "When
+// Collecting Field Notes" tip card (shown once more if nothing is touched for
+// 10 seconds); and the fifth card sends you straight back to Camp, where the
+// first pack is followed by "How Packs Work". Only the app's 3-skip rule stays.
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming,
+  Easing, runOnJS, useAnimatedReaction, useAnimatedStyle, useSharedValue, withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import PolygroveCard from '../components/PolygroveCard';
+import TipCard from '../components/TipCard';
 import { C, F } from '../constants/polygrove';
 import { Card, loadCatalog, photoFor } from '../lib/catalog';
 import { addToCollection, owns } from '../lib/collection';
 import { discoveryReady, loadDaily, markDiscoveryOpened } from '../lib/daily';
 import { SOLAR_PACK_COST, canAffordSolar, loadSol, spendSol } from '../lib/sol';
+import { loadTips, markTip, queuePacksPopup, tipSeen } from '../lib/tips';
 import { currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
 import {
   PACK_SIZE, Stashed, offlineReady, popCards, popPack, releaseStashed, returnCards, snapshotStashed, topUp,
@@ -58,6 +67,13 @@ export default function PackOpening() {
   // every pack pops the queue's front (one code path, photos already on
   // disk); the queue refills its tail in the background
   const [pack, setPack] = useState<Stashed[] | null>(null);
+  // the swipe tip, and the demo's first-pack idle reminder (further down): the
+  // tip returns once if 10 seconds pass with nothing swiped or touched
+  const [tip, setTip] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const [reminded, setReminded] = useState(false);
+  // a tap on "skip" / "journal" swipes the top card for you (user, 2026-09-29)
+  const [auto, setAuto] = useState<{ dir: 1 | -1; n: number } | null>(null);
   const [noNet, setNoNet] = useState(false);
   const [eid, setEid] = useState<number | null>(null);
   useEffect(() => {
@@ -65,7 +81,7 @@ export default function PackOpening() {
       await offlineReady();
       const eco = await loadCurrentEco();
       if (!eco) { router.replace('/map'); return; }   // no ecoregion = nothing to draw from
-      await Promise.all([loadDaily(), loadSol()]);
+      await Promise.all([loadDaily(), loadSol(), loadTips()]);
       if (solar ? !canAffordSolar() : !discoveryReady()) { router.replace('/'); return; }
       setEid(eco.eid);
       // 5 keeps + up to 3 skip spares, queue first, live draw for the rest
@@ -89,12 +105,19 @@ export default function PackOpening() {
       // the pack is paid for the moment it's dealt
       if (solar) spendSol(SOLAR_PACK_COST); else markDiscoveryOpened();
       setPack([...p, ...spares]);
+      if (!tipSeen('swipe')) setTip(true);   // the demo: if (!swipeTipSeen) setShowSwipeTip(true)
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [idx, setIdx] = useState(0);
   const [kept, setKept] = useState(0);
+  useEffect(() => {
+    if (!pack || tip || touched || reminded || idx > 0 || kept > 0 || tipSeen('firstPack') || !tipSeen('swipe')) return;
+    const t = setTimeout(() => { setTip(true); setReminded(true); }, 10000);
+    return () => clearTimeout(t);
+  }, [pack, tip, touched, reminded, idx, kept]);
   const [skipped, setSkipped] = useState(0);
+  const [swiping, setSwiping] = useState(false);   // a card is mid-flight
   // skips available = spares actually dealt (offline may have fewer)
   const maxSkips = pack ? Math.max(0, pack.length - PACK_SIZE) : 0;
   const canSkip = skipped < maxSkips;
@@ -104,13 +127,22 @@ export default function PackOpening() {
     if (done && pack && eid != null && idx < pack.length) returnCards(eid, pack.slice(idx));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done]);
+  // the demo: the fifth card goes straight HOME (setScreen("home")) — no
+  // "pack complete" page — and a first pack queues "How Packs Work" there
+  const over = !!pack && (done || idx >= pack.length);
+  useEffect(() => {
+    if (!over) return;
+    if (!tipSeen('firstPack')) { markTip('firstPack'); queuePacksPopup(); }
+    const t = setTimeout(() => router.replace({ pathname: '/', params: { tab: '1' } }), 100);
+    return () => clearTimeout(t);
+  }, [over, router]);
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
   // 100dvh-130px), width min(430,screen)*0.88): window-based, no onLayout —
   // measured-flex sizing kept collapsing on the phone (2026-09-25)
   const win = useWindowDimensions();
   const cardSize = {
-    width: Math.min(win.width - 44, 370),
-    height: Math.min(600, win.height - 130 - insets.top - insets.bottom),
+    width: Math.min(win.width - 40, 370),
+    height: Math.min(640, win.height - 96 - insets.top - insets.bottom),   // no header row: the card takes the height
   };
 
   if (noNet) return (
@@ -129,21 +161,7 @@ export default function PackOpening() {
   );
   if (!pack) return <View style={s.root} />;
 
-  if (done || idx >= pack.length) return (
-    <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 20 }]}>
-      <View style={s.center}>
-        <Text style={s.doneTitle}>Pack complete</Text>
-        <Text style={s.doneSub}>{kept} journaled · {skipped} skipped</Text>
-        <Pressable onPress={() => router.replace('/deck')} style={s.primary}>
-          <Text style={s.primaryTxt}>View Journal</Text>
-        </Pressable>
-        <Text style={s.doneSub}>{solar ? 'Solar Pack · 100 Sol 🔆' : 'Next Discovery Pack in 24 hours'}</Text>
-        <Pressable onPress={() => router.replace('/')} style={s.ghost}>
-          <Text style={s.ghostTxt}>Camp</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
+  if (over) return <View style={s.root} />;   // on its way home
 
   const onSwiped = (dir: 1 | -1) => {
     if (dir === 1) {
@@ -157,27 +175,17 @@ export default function PackOpening() {
     setIdx(i => i + 1);
   };
   // the demo: setTimeout(() => onSwipe(d), 300)
-  const onFling = (dir: 1 | -1) => { setTimeout(() => onSwiped(dir), 300); };
+  const onFling = (dir: 1 | -1) => { setSwiping(true); setTimeout(() => { onSwiped(dir); setSwiping(false); }, 300); };
+  const swipeFor = (dir: 1 | -1) => setAuto(a => ({ dir, n: (a?.n ?? 0) + 1 }));
 
   return (
-    <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 14 }]}>
-      <View style={s.topRow}>
-        <Pressable onPress={() => router.replace('/')} hitSlop={12}>
-          <Text style={s.back}>‹ Camp</Text>
-        </Pressable>
-        <View style={s.dots}>
-          {Array.from({ length: PACK_SIZE }, (_, i) => (
-            <View key={i} style={[s.dot, i === kept && s.dotOn, i < kept && s.dotDone]} />
-          ))}
-        </View>
-      </View>
-
-      <View style={s.stage}>
+    <View style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 14 }]}>
+      <View style={s.stage} onTouchStart={() => { if (!touched) setTouched(true); }}>
         {/* the demo's deck.map: EVERY remaining card is mounted and stacked
             (keyed, so none remounts when the top one leaves); the last one
             rendered is on top, so the list is reversed */}
         {pack.slice(idx).reverse().map(st => (
-          <SwipeSlot key={st.card.id} top={st === pack[idx]} onFling={onFling} canSkip={canSkip}>
+          <SwipeSlot key={st.card.id} top={st === pack[idx]} onFling={onFling} canSkip={canSkip} auto={auto}>
             <View style={cardSize}>
               <PolygroveCard card={st.card} />
             </View>
@@ -185,22 +193,57 @@ export default function PackOpening() {
         ))}
       </View>
 
+      {/* footer (user, 2026-09-29): skips left · SWIPE · journal k/5 — and the
+          two sides are buttons: a tap swipes the top card that way */}
       <View style={s.hintRow}>
-        <Text style={[s.hintL, !canSkip && { color: '#3a3a3a' }]}>
-          {canSkip ? `◂ skip · ${maxSkips - skipped} left` : 'no skips left'}
-        </Text>
-        <Text style={s.hintC}>{kept + 1} of {PACK_SIZE} · tap card for details</Text>
-        <Text style={s.hintR}>journal ▸</Text>
+        <Pressable hitSlop={14} disabled={!canSkip || swiping} onPress={() => swipeFor(-1)}>
+          <Text style={[s.hintL, !canSkip && { color: '#3a3a3a' }]}>
+            {canSkip ? `◂ skip · ${maxSkips - skipped} left` : 'no skips left'}
+          </Text>
+        </Pressable>
+        <Text style={s.hintC}>swipe</Text>
+        <Pressable hitSlop={14} disabled={swiping} onPress={() => swipeFor(1)}>
+          <Text style={s.hintR}>journal {kept}/{PACK_SIZE} ▸</Text>
+        </Pressable>
       </View>
+
+      {/* "When Collecting Field Notes" — the demo's swipe tip, word for word */}
+      <TipCard visible={tip}>
+        <Text style={s.tipTitle}>When Collecting Field Notes</Text>
+        <Text style={s.tipSub}>Collect <Text style={s.tipGreen}>5 field note</Text> cards to add to your journal.</Text>
+        <View style={s.tipRule} />
+        <Text style={s.tipHead}>Swipe Actions</Text>
+        <View style={s.tipRow}>
+          <View style={[s.tipBox, s.tipBoxSkip]}>
+            <Text style={s.tipBoxLabel}>SWIPE LEFT</Text>
+            <Text style={s.tipHand}>👈</Text>
+            <Text style={[s.tipBoxVerb, { color: '#9E9E9E' }]}>TO SKIP</Text>
+            <Text style={s.tipBoxTxt}>Not interesting — draws a fresh card</Text>
+          </View>
+          <View style={[s.tipBox, s.tipBoxKeep]}>
+            <Text style={s.tipBoxLabel}>SWIPE RIGHT</Text>
+            <Text style={s.tipHand}>👉</Text>
+            <Text style={[s.tipBoxVerb, { color: C.green }]}>TO COLLECT</Text>
+            <Text style={s.tipBoxTxt}>Adds to your journal — counts toward 5</Text>
+          </View>
+        </View>
+        <View style={s.tipPill}><Text style={s.tipPillTxt}>Tap card to learn more</Text></View>
+        <Pressable onPress={() => { setTip(false); markTip('swipe'); }} style={s.tipBtnWrap}>
+          <LinearGradient colors={['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.tipBtn}>
+            <Text style={s.tipBtnTxt}>Ok, let’s go!</Text>
+          </LinearGradient>
+        </Pressable>
+      </TipCard>
     </View>
   );
 }
 
-function SwipeSlot({ children, top, onFling, canSkip }: {
+function SwipeSlot({ children, top, onFling, canSkip, auto }: {
   children: React.ReactNode;
   top: boolean;            // the active card (false = waiting underneath)
   onFling: (d: 1 | -1) => void;
   canSkip: boolean;        // skips spent → a left fling just springs back
+  auto: { dir: 1 | -1; n: number } | null;   // a footer tap: fly this way (n = which tap)
 }) {
   const tx = useSharedValue(0);
   const rot = useSharedValue(0);             // only the fly-off's turn; the drag tilt is tx × 0.12
@@ -232,6 +275,24 @@ function SwipeSlot({ children, top, onFling, canSkip }: {
       }
     });
 
+  // a footer tap flies the top card exactly as a swipe would; keyed on the
+  // tap's number, so a card that becomes top later never replays an old tap
+  // (the tap arrives as one number on a shared value — sign = direction — and
+  // the flight itself starts on the UI thread, like a swipe's)
+  const cmd = useSharedValue(0);
+  useEffect(() => {
+    if (auto && top) cmd.value = auto.dir * auto.n;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto?.n]);
+  useAnimatedReaction(() => cmd.value, (v, prev) => {
+    if (v === 0 || v === prev) return;
+    const d = v > 0 ? 1 : -1, out = { duration: 300, easing: Easing.bezier(0, 0, 0.58, 1) };
+    rot.value = withTiming(d * 25, out);
+    tx.value = withTiming(d * 600, out);
+    gone.value = withTiming(1, out);
+    runOnJS(onFling)(d);
+  });
+
   const style = useAnimatedStyle(() => ({
     transform: [
       { translateX: tx.value },
@@ -255,21 +316,38 @@ function SwipeSlot({ children, top, onFling, canSkip }: {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg, paddingHorizontal: 22 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
-  back: { fontFamily: F.sansBold, fontSize: 14, color: C.greenSoft },
-  dots: { flexDirection: 'row', gap: 6 },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#333' },
-  dotOn: { width: 18, backgroundColor: C.greenSoft },
-  dotDone: { backgroundColor: '#2E7D32' },
   stage: { flex: 1 },
   overlay: {
     position: 'absolute', top: 0, bottom: 0, left: 0, right: 0,
     alignItems: 'center', justifyContent: 'center',
   },
-  hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
-  hintL: { fontFamily: F.sansMed, fontSize: 11.5, color: '#666' },
-  hintC: { fontFamily: F.sans, fontSize: 10.5, color: C.faint },
-  hintR: { fontFamily: F.sansMed, fontSize: 11.5, color: C.greenSoft },
+  // the demo's footer: 12px #666 · 10px #555 uppercase, 2px tracking · 12px #4CAF50 600
+  hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, paddingHorizontal: 20 },
+  hintL: { fontFamily: F.sansMed, fontSize: 12, color: '#666' },
+  hintC: { fontFamily: F.sansBold, fontSize: 10, color: '#8B5035', textTransform: 'uppercase', letterSpacing: 2, marginTop: 3 },   // the header's ecoregion-name brown (user, 2026-09-29)
+  hintR: { fontFamily: F.sansBold, fontSize: 12, color: C.greenSoft },
+  // the swipe tip (demo values)
+  tipTitle: { fontFamily: F.display, fontSize: 18, color: C.text, textAlign: 'center', marginBottom: 6 },
+  tipSub: { fontFamily: F.sans, fontSize: 12, color: '#aaa', textAlign: 'center', marginBottom: 12, lineHeight: 17 },
+  tipGreen: { fontFamily: F.sansBold, color: C.green },
+  tipRule: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 16 },
+  tipHead: { fontFamily: F.display, fontSize: 14, color: C.text, textAlign: 'center', marginBottom: 8, marginTop: 4 },
+  tipRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  tipBox: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center' },
+  tipBoxSkip: { backgroundColor: 'rgba(158,158,158,0.08)', borderColor: 'rgba(158,158,158,0.2)' },
+  tipBoxKeep: { backgroundColor: 'rgba(76,175,80,0.08)', borderColor: 'rgba(76,175,80,0.2)' },
+  tipBoxLabel: { fontFamily: F.sansBold, fontSize: 10, color: '#9E9E9E', letterSpacing: 1, marginBottom: 6 },
+  tipHand: { fontSize: 20, marginBottom: 5 },
+  tipBoxVerb: { fontFamily: F.display, fontSize: 9, letterSpacing: 1, marginBottom: 4 },
+  tipBoxTxt: { fontFamily: F.sans, fontSize: 9, color: '#666', lineHeight: 12, textAlign: 'center' },
+  tipPill: {
+    alignSelf: 'center', paddingVertical: 4, paddingHorizontal: 12, borderRadius: 20, marginBottom: 4,
+    backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+  },
+  tipPillTxt: { fontFamily: F.sans, fontSize: 12, color: '#bbb' },
+  tipBtnWrap: { marginTop: 12, borderRadius: 14, overflow: 'hidden' },
+  tipBtn: { padding: 13, alignItems: 'center' },
+  tipBtnTxt: { fontFamily: F.display, fontSize: 14, color: C.text },
   doneTitle: { fontFamily: F.display, fontSize: 26, color: C.text },
   doneSub: { fontFamily: F.sans, fontSize: 13, color: C.dim, marginBottom: 14 },
   primary: {
