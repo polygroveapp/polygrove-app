@@ -123,7 +123,6 @@ export default function FieldNotes() {
         <Pressable onPress={() => router.push('/map')} hitSlop={8}>
           <Text style={s.ecoLabel} numberOfLines={1}>{eco ? eco.name : 'Choose your ecoregion'}</Text>
         </Pressable>
-        <Text style={s.tagline}>An educational ecology trading card game</Text>
       </View>
       <View style={s.titleWrap}>
         <Text style={s.title}>Field Notes</Text>
@@ -293,8 +292,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.15)',
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
-  ecoLabel: { fontFamily: F.sansBold, fontSize: 11, color: '#8B5035', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2, maxWidth: 320 },
-  tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5 },
+  ecoLabel: { fontFamily: F.sansBold, fontSize: 15, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },
   titleWrap: { alignItems: 'center', paddingTop: 16, marginBottom: 4 },
   row: { flexDirection: 'row', gap: 10, paddingHorizontal: 20 },
   title: { fontFamily: F.display, fontSize: 20, color: C.text, marginBottom: 2 },

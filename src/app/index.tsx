@@ -86,7 +86,6 @@ export default function Home() {
               {eco ? eco.name : 'Choose your ecoregion'}<Text style={{ color: '#6b4a3a' }}>  ›</Text>
             </Text>
           </Pressable>
-          <Text style={s.tagline}>An educational ecology trading card game</Text>
         </View>
 
         {!ready ? (
@@ -108,13 +107,8 @@ export default function Home() {
           </View>
         ) : (
           <View style={s.body}>
-            {/* stats */}
-            <View style={s.stats}>
-              <Stat n={journaledPct} pct label="Journaled" />
-              <Stat n={owned.length} label="Species" />
-              <Stat n={masteryPct(owned.map(o => o.speciesId))} pct label="Mastery" />
-            </View>
-            {/* the ecoregion: place on the map · photo · first sentence (stats above it, user 2026-09-28) */}
+            {/* the ecoregion: place on the map · photo · first sentence, then the
+                packs, THEN the stats (user, 2026-09-28) */}
             <EcoHero eco={eco} />
 
             {/* discovery pack */}
@@ -163,6 +157,13 @@ export default function Home() {
               <Text style={{ color: C.gold }}>Sol Points 🔆</Text>
             </Text>
 
+            {/* stats */}
+            <View style={s.stats}>
+              <Stat n={journaledPct} pct label="Journaled" />
+              <Stat n={owned.length} label="Species" />
+              <Stat n={masteryPct(owned.map(o => o.speciesId))} pct label="Mastery" />
+            </View>
+
             {/* journal · solar quiz (a random journaled card that isn't fully mastered) */}
             <View style={s.row2}>
               <Pressable onPress={() => router.push('/deck')} style={s.reviewBtn}>
@@ -206,11 +207,11 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.15)',
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
-  ecoLabel: { fontFamily: F.sansBold, fontSize: 11, color: '#8B5035', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2, maxWidth: 320 },
-  tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5 },
+  // bigger, and the tagline under it is gone (user, 2026-09-28)
+  ecoLabel: { fontFamily: F.sansBold, fontSize: 15, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },
   body: { paddingHorizontal: 20, paddingTop: 20 },
   // stats
-  stats: { flexDirection: 'row', justifyContent: 'center', gap: 40, marginBottom: 24 },
+  stats: { flexDirection: 'row', justifyContent: 'center', gap: 40, marginTop: 6, marginBottom: 24 },
   statN: { fontFamily: F.display, fontSize: 32, color: C.green, lineHeight: 38 },
   statPct: { fontFamily: F.display, fontSize: 14, color: C.green, marginTop: 4, marginLeft: 1 },
   statL: { fontFamily: F.sansBold, fontSize: 10, color: '#666', textTransform: 'uppercase', marginTop: 2 },
