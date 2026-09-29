@@ -40,7 +40,7 @@ const HEADER_H = 62;   // the "Where are you?" bar, below the safe area
 // the sheet is a FIXED height whatever it shows: the pin sits in the middle
 // of the map above it, so a sheet that grew with its content would move the
 // pin, change what's under it, and chase itself
-const SHEET_H = 206;
+const SHEET_H = 222;   // (was 206: the credit line and the bolder deck line outgrew it, and the centred content spilled over the top edge)
 const TILT_REST = 9;   // degrees of lean at rest; motion adds or removes up to this much
 
 type Pick = { eid: number; name: string; bbox: [number, number, number, number] };
@@ -211,10 +211,11 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
               )}
               <View style={s.previewText}>
                 <Text style={s.ecoName} numberOfLines={2}>{pick.name}</Text>
-                <Text style={s.ecoMeta}>
-                  {size != null ? `${size.toLocaleString()} species in this deck` : 'ecoregion'}{here ? ' · you’re here now' : ''}
+                {/* one line always: the "here" note shortens the count rather than wrapping */}
+                <Text style={s.ecoMeta} numberOfLines={1}>
+                  {size != null ? `${size.toLocaleString()} species${here ? '' : ' in this deck'}` : 'ecoregion'}{here ? ' · you’re here now' : ''}
                 </Text>
-                {meta?.lead ? <Text style={s.lead} numberOfLines={3}>{cleanLead(meta.lead)}</Text> : null}
+                {meta?.lead ? <Text style={s.lead} numberOfLines={pick.name.length > 26 ? 2 : 3}>{cleanLead(meta.lead)}</Text> : null}
                 <Text style={s.credit} numberOfLines={1}>
                   <Text style={s.wikiLink}>Wikipedia ›</Text>{meta?.photo?.by ? `  ·  photo ${meta.photo.by} (${meta.photo.lic})` : ''}
                 </Text>
@@ -225,7 +226,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
             </Pressable>
           </>
         ) : (
-          <Text style={s.msg}>
+          <Text style={[s.msg, { marginTop: 56 }]}>
             {pageReady ? 'Move the map until the pin sits on an ecoregion.' : current ? `You’re in ${current.name}.` : 'Loading the map…'}
           </Text>
         )}
@@ -254,7 +255,9 @@ const s = StyleSheet.create({
   sheet: {
     position: 'absolute', left: 0, right: 0, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12,
     backgroundColor: 'rgba(10,15,10,0.94)', borderTopLeftRadius: 22, borderTopRightRadius: 22,
-    borderTopWidth: 1, borderColor: 'rgba(129,199,132,0.25)', gap: 10, justifyContent: 'center',
+    // content hangs from the TOP padding: if it ever outgrows the sheet it
+    // must not push the photo and name up onto the border (user, 2026-09-29)
+    borderTopWidth: 1, borderColor: 'rgba(129,199,132,0.25)', gap: 10, justifyContent: 'flex-start', overflow: 'hidden',
   },
   preview: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   photo: { width: 108, height: 108, borderRadius: 14, backgroundColor: '#1c2a1c', borderWidth: 1, borderColor: 'rgba(129,199,132,0.3)' },

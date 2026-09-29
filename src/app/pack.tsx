@@ -180,6 +180,8 @@ export default function PackOpening() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 14 }]}>
+      {/* the demo's backdrop: the app's dark green gradient, not flat black */}
+      <LinearGradient colors={['#0a0f0a', '#1a2e1a', '#0f1a0f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.bg} />
       <View style={s.stage} onTouchStart={() => { if (!touched) setTouched(true); }}>
         {/* the demo's deck.map: EVERY remaining card is mounted and stacked
             (keyed, so none remounts when the top one leaves); the last one
@@ -314,7 +316,8 @@ function SwipeSlot({ children, top, onFling, canSkip, auto }: {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg, paddingHorizontal: 22 },
+  root: { flex: 1, backgroundColor: '#0d140d', paddingHorizontal: 22 },
+  bg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   stage: { flex: 1 },
   overlay: {

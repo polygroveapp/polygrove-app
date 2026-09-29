@@ -32,6 +32,16 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [offline, setOffline] = useState(false);
   const [picker, setPicker] = useState(false);
+  // the demo's openPack(): "Opening..." for 300ms, then the deck appears in
+  // place — `tab` tells the navigator not to slide the screen in
+  const [opening, setOpening] = useState(false);
+  const openPack = (solar: boolean) => {
+    setOpening(true);
+    setTimeout(() => {
+      router.push({ pathname: '/pack', params: solar ? { solar: '1', tab: '1' } : { tab: '1' } });
+      setOpening(false);
+    }, 300);
+  };
   // "How Packs Work": queued by the pack screen when a first pack ends
   const [packsTip, setPacksTip] = useState(() => takePacksPopup());
   const eco = useCurrentEco();
@@ -118,12 +128,14 @@ export default function Home() {
 
             {/* discovery pack */}
             <Animated.View style={[pulseStyle, { borderRadius: 16 }]}>
-              <Pressable onPress={() => daily.ready && router.push('/pack')} disabled={!daily.ready}>
-                <LinearGradient colors={daily.ready ? ['#1B5E20', '#4CAF50'] : ['#2a2a2a', '#333333']}
+              <Pressable onPress={() => daily.ready && openPack(false)} disabled={!daily.ready || opening}>
+                <LinearGradient colors={opening ? ['#333333', '#333333'] : daily.ready ? ['#1B5E20', '#4CAF50'] : ['#2a2a2a', '#333333']}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.packBtn}>
-                  <Text style={s.tree}>🌲</Text>
-                  <Text style={[s.packTxt, !daily.ready && { color: '#777' }]}>Open Discovery Pack</Text>
-                  <Text style={s.tree}>🌲</Text>
+                  {opening ? <Text style={s.packTxt}>Opening...</Text> : <>
+                    <Text style={s.tree}>🌲</Text>
+                    <Text style={[s.packTxt, !daily.ready && { color: '#777' }]}>Open Discovery Pack</Text>
+                    <Text style={s.tree}>🌲</Text>
+                  </>}
                 </LinearGradient>
               </Pressable>
             </Animated.View>
@@ -138,7 +150,7 @@ export default function Home() {
 
             {/* solar pack — 100 Sol a pack, outside the daily limit (demo rule) */}
             {solOk ? (
-              <Pressable onPress={() => router.push('/pack?solar=1')}>
+              <Pressable onPress={() => openPack(true)} disabled={opening}>
                 <LinearGradient colors={['#FF6F00', '#FFC107', '#FFD54F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={[s.solarBtn, { borderColor: '#FFC107' }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -157,8 +169,7 @@ export default function Home() {
                 <Text style={s.solarSol}>{solBal}/{SOLAR_PACK_COST} Sol 🔆</Text>
               </View>
             )}
-            {/* a little closer to the ecoregion card below (user, 2026-09-29) */}
-            <Text style={[s.hint, { marginBottom: 7 }]}>
+            <Text style={s.hint}>
               {solOk ? 'Open a Solar Pack with ' : 'Take a quiz to earn '}
               <Text style={{ color: C.gold }}>Sol Points 🔆</Text>
             </Text>
