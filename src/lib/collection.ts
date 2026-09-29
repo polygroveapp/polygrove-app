@@ -20,7 +20,9 @@ const listeners = new Set<() => void>();
 let _snaps: Record<number, Owned[]> = {};
 const EMPTY: Owned[] = [];
 
+let _version = 0;   // bumps on every change, in any deck
 function emit() {
+  _version++;
   _snaps = {};
   for (const eid of Object.keys(_decks)) {
     _snaps[+eid] = Object.values(_decks[+eid]).sort((a, b) => b.at - a.at);
@@ -64,6 +66,15 @@ export const collectedEcoregions = (): number[] =>
   Object.keys(_decks).map(Number).filter(eid => Object.keys(_decks[eid]).length > 0);
 // every owned entry across all decks (offline heal pass)
 export const allOwned = (): Owned[] => Object.values(_decks).flatMap(d => Object.values(d));
+
+// "is this species in THAT deck?" for a screen that looks across decks
+// (Social buys into whichever ecoregion a card belongs to). Subscribed, so the
+// answer is a real dependency of the render — a plain owns() call during
+// render is invisible to React and to its compiler's memoization.
+export function useOwns(eid: number | null | undefined, speciesId: number | null | undefined): boolean {
+  useSyncExternalStore(l => { listeners.add(l); return () => listeners.delete(l); }, () => _version, () => _version);
+  return eid != null && speciesId != null && !!_decks[eid]?.[speciesId];
+}
 
 export function useCollection(eid: number | null | undefined): Owned[] {
   return useSyncExternalStore(

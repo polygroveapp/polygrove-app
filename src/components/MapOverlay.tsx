@@ -236,7 +236,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
           </Text>
         )}
       </View>
-      <BottomNav active="map" />
+      <BottomNav active="map" shown={visible} />
     </View>
   );
 }

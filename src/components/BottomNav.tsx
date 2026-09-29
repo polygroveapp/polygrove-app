@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { makeMutable, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from '../constants/polygrove';
 import CompassIcon from './CompassIcon';
@@ -34,24 +34,28 @@ export type Tab = typeof TABS[number]['id'] | 'none';   // 'none' = no tab lit (
 
 const PAD = 4;              // track padding around the thumb
 const PILL_H = 60;
-let lastIndex = 0;          // where the thumb was on the previous screen
+// ONE thumb position for every copy of the bar (2026-09-29). Each screen has
+// its own BottomNav, and the map's lives forever inside MapOverlay — with a
+// position per copy the thumb jumped instead of gliding (the map's copy was
+// already on "Map" when it came forward). Shared, whichever copy is on screen
+// shows the same thumb, and the copy that comes forward slides it to its tab.
+const thumbX = makeMutable(1);   // the app opens on the map
 
-export default function BottomNav({ active }: { active: Tab }) {
+// shown = this copy's screen is the one in front (MapOverlay passes its `visible`)
+export default function BottomNav({ active, shown = true }: { active: Tab; shown?: boolean }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [trackW, setTrackW] = useState(0);
   const index = TABS.findIndex(t => t.id === active);
   const slot = trackW > 0 ? (trackW - PAD * 2) / TABS.length : 0;
 
-  // the thumb: starts where it was on the last screen, springs to this tab
-  const x = useSharedValue(lastIndex);
+  // the thumb glides from wherever it is to this tab when this copy comes forward
   useEffect(() => {
-    if (index < 0) return;
-    x.value = withSpring(index, { damping: 16, stiffness: 170, mass: 0.6 });
-    lastIndex = index;
-  }, [index, x]);
+    if (index < 0 || !shown) return;
+    thumbX.value = withSpring(index, { damping: 16, stiffness: 170, mass: 0.6 });
+  }, [index, shown]);
   const thumb = useAnimatedStyle(() => ({
-    transform: [{ translateX: PAD + x.value * slot }],
+    transform: [{ translateX: PAD + thumbX.value * slot }],
     width: slot,
   }));
 
