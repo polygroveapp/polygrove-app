@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { openWeb } from '../../lib/web';
+import CloseX from '../../components/CloseX';
 import FwGraph from '../../components/FwGraph';
 import { C, F } from '../../constants/polygrove';
 import { cardById, getCards, loadCatalog } from '../../lib/catalog';
@@ -53,9 +54,7 @@ export default function FoodWebScreen() {
           <Text style={{ color: C.faint, fontFamily: F.sans }}>no recorded interactions</Text>
         )}
       </View>
-      <Pressable onPress={goBack} style={[s.x, { top: insets.top + 12 }]} hitSlop={8}>
-        <Text style={s.xTxt}>×</Text>
-      </Pressable>
+      <CloseX onPress={goBack} />
       {/* ⓘ (user, 2026-09-26): every GloBI interaction record behind this web */}
       <Pressable hitSlop={10} style={[s.iBtn, { bottom: insets.bottom + 18 }]}
         onPress={async () => { setShowRecs(true); if (!recs) setRecs(await globiRecords(card.sci)); }}>
@@ -97,12 +96,6 @@ const s = StyleSheet.create({
   sub: { fontFamily: F.sansBold, fontSize: 12, color: '#666666', letterSpacing: 2, marginTop: 4 },
   stage: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 10 },
   square: { width: '100%', maxWidth: 520, aspectRatio: 1 },
-  x: {
-    position: 'absolute', right: 20, width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  xTxt: { color: C.text, fontSize: 18, lineHeight: 20 },
   hint: { position: 'absolute', bottom: 24, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: '#666666', fontFamily: F.sans },
   iBtn: {
     position: 'absolute', right: 22, width: 30, height: 30, borderRadius: 15,

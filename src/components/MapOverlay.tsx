@@ -32,7 +32,7 @@ import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
 import { C, F } from '../constants/polygrove';
 import { loadCatalog } from '../lib/catalog';
-import { collectedEcoregions, loadCollection } from '../lib/collection';
+import { collectedEcoregions, collectionCount, loadCollection } from '../lib/collection';
 import { cleanLead, ecoDeckSize, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco, wikiUrl } from '../lib/ecoregions';
 
 const PICKER_URL = 'https://polygrovedb.pages.dev/map';   // Pages serves map.html here
@@ -77,12 +77,17 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // push the app's state into the page: current ecoregion (fly-to on first
   // show) + collected ecoregions (gold) + chrome padding
   const pushState = (fly: boolean) => {
-    const state = JSON.stringify({ current: current?.eid ?? null, collected, fly, pad: { top: padTop, bottom: padBottom } });
+    // camp = the ecoregion you are in (gold border); completed = decks with
+    // every card journaled (gold inside) — known once the catalog has loaded
+    const completed = catalogReady
+      ? collected.filter(eid => { const n = ecoDeckSize(eid); return n > 0 && collectionCount(eid) >= n; })
+      : [];
+    const state = JSON.stringify({ current: current?.eid ?? null, camp: current?.eid ?? null, collected, completed, fly, pad: { top: padTop, bottom: padBottom } });
     web.current?.injectJavaScript(`window.polygroveSetState && window.polygroveSetState(${state}); true;`);
   };
   // also when the page becomes ready: with no camp chosen yet nothing else
   // sends the padding, and the page would read the pin at the screen's centre
-  useEffect(() => { if (pageReady) pushState(false); }, [pageReady, collected, padTop, padBottom]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (pageReady) pushState(false); }, [pageReady, collected, catalogReady, current?.eid, padTop, padBottom]);   // eslint-disable-line react-hooks/exhaustive-deps
   // fly to your camp whenever it isn't the one the map last flew to — on
   // launch (whichever arrives last, the page's ready or the stored camp) and
   // again if the camp changed while the map sat behind another tab

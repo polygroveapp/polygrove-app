@@ -15,6 +15,7 @@ import { C, F, getTier } from '../constants/polygrove';
 import { Card, cardById } from '../lib/catalog';
 import { Owned } from '../lib/collection';
 import { countsOf, isFullyLocked, scoreOf } from '../lib/mastery';
+import CloseX from './CloseX';
 import PolygroveCard from './PolygroveCard';
 
 const pickThree = (owned: Owned[]): Card[] => {
@@ -62,10 +63,9 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onClose} onShow={() => setIdx(1)}>
       <View style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
+        <CloseX onPress={onClose} />
         <View style={s.top}>
-          <Pressable onPress={onClose} hitSlop={12} style={s.closeBtn}><Text style={s.close}>✕ Close</Text></Pressable>
           <Text style={s.title}>☀️ Choose a card</Text>
-          <View style={{ width: 74 }} />
         </View>
         <Text style={s.sub}>Swipe between three of your cards · ace a question to earn Sol</Text>
 
@@ -104,9 +104,7 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0a0f0a', paddingHorizontal: 20 },
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  closeBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)', width: 74, alignItems: 'center' },
-  close: { fontFamily: F.sansBold, fontSize: 12, color: '#aaa' },
+  top: { alignItems: 'center', justifyContent: 'center', minHeight: 36 },
   title: { fontFamily: F.display, fontSize: 17, color: C.text },
   sub: { fontFamily: F.sans, fontSize: 11, color: '#777', textAlign: 'center', marginTop: 8, marginBottom: 12 },
   dots: { flexDirection: 'row', gap: 4, justifyContent: 'center', marginBottom: 10 },
