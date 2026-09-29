@@ -29,6 +29,10 @@ const BASE = 'https://polygrovedb.pages.dev/data';
 
 let _cards: Card[] | null = null;
 let _photos: Record<string, string> = {};
+// how each photo sits in the card's hexagon (framing.json — only the cards
+// whose subject a centre crop would cut): [aspect, scale, cx, cy]
+export type Frame = [number, number, number, number];
+let _framing: Record<string, Frame> = {};
 let _byName: Record<string, Card> = {};
 let _inflight: Promise<{ cards: Card[]; photos: Record<string, string> }> | null = null;
 
@@ -46,6 +50,8 @@ export function loadCatalog(onStage?: (s: string) => void) {
     const photos: Record<string, string> = await fetch(`${BASE}/photos.json`)
       .then(r => (r.ok ? r.json() : {}))
       .catch(() => ({}));
+    // framing is a nicety: without it photos fall back to the centre crop
+    fetch(`${BASE}/framing.json`).then(r => (r.ok ? r.json() : {})).then((f: Record<string, Frame>) => { _framing = f || {}; }).catch(() => {});
     _cards = cards; _photos = photos;
     _byName = Object.fromEntries(cards.map(c => [c.name.toLowerCase(), c]));
     return { cards, photos };
@@ -59,11 +65,15 @@ export function loadCatalog(onStage?: (s: string) => void) {
 const _extra: Record<string, Card> = {};
 const _localPhoto: Record<string, string> = {};      // id → file:// uri
 const _extraPhotoUrl: Record<string, string> = {};   // id → CDN thumb (commons link)
-export function registerOfflineCard(card: Card, localUri?: string, photoUrl?: string) {
+const _extraFrame: Record<string, Frame> = {};       // id → framing, kept with the stash
+export function registerOfflineCard(card: Card, localUri?: string, photoUrl?: string, frame?: Frame) {
   _extra[card.id] = card;
   if (localUri) _localPhoto[card.id] = localUri;
   if (photoUrl) _extraPhotoUrl[card.id] = photoUrl;
+  if (frame) _extraFrame[card.id] = frame;
 }
+// the site's current framing wins; the stashed copy serves offline
+export const framingFor = (id: string): Frame | undefined => _framing[id] ?? _extraFrame[id];
 export function unregisterLocalPhoto(id: string) { delete _localPhoto[id]; }
 
 export const getCards = () => _cards ?? [];

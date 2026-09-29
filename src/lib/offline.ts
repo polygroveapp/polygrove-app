@@ -12,7 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 import {
-  Card, cardById, loadCatalog, photoRemote, registerOfflineCard, unregisterLocalPhoto,
+  Card, Frame, cardById, framingFor, loadCatalog, photoRemote, registerOfflineCard, unregisterLocalPhoto,
 } from './catalog';
 import { allOwned, loadCollection, owns, ownsAnywhere } from './collection';
 import { GlobiRow, fieldNote, globiRecords, seedDossier } from './dossier';
@@ -25,6 +25,7 @@ export type Stashed = {
   photoUrl?: string;    // the CDN thumb — keeps the ⓘ Commons link working offline
   photoFile?: string;   // basename under photos/ — uri rebuilt at load (iOS moves
                         // the app sandbox between updates, absolute uris go stale)
+  frame?: Frame;        // how the photo sits in the hexagon — so offline cards are framed too
 };
 
 const qKey = (eid: number) => `polygrove.packqueue.v2.${eid}`;
@@ -48,6 +49,7 @@ function register(s: Stashed) {
     s.card,
     s.photoFile && canFS ? photoUri(s.photoFile) : undefined,
     s.photoUrl,
+    s.frame,
   );
   seedDossier(s.card.sci, s.note, s.globi);
 }
@@ -159,7 +161,7 @@ async function prep(card: Card): Promise<Stashed | null> {
       photoFile = await downloadPhoto(card.species_id, photoUrl);   // no-op if on disk
       if (!photoFile) return null;   // queued cards must be FULLY offline-ready
     }
-    return { card, note, globi, photoUrl, photoFile };
+    return { card, note, globi, photoUrl, photoFile, frame: framingFor(card.id) };
   } catch { return null; }
 }
 

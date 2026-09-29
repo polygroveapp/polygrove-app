@@ -16,7 +16,7 @@ import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SolarCelebration from '../../components/SolarCelebration';
 import { C, F, MASTERY, getLevel, getTier } from '../../constants/polygrove';
-import { Card, cardById, getCards, loadCatalog, photoFor } from '../../lib/catalog';
+import { Card, cardById, framingFor, getCards, loadCatalog, photoFor } from '../../lib/catalog';
 import {
   LOCK_THRESHOLD, NUM_Q, countsOf, isFullyLocked, loadMastery, nextUnlocked, recordCorrect, scoreOf, useMastery,
 } from '../../lib/mastery';
@@ -339,7 +339,7 @@ function FoodWebOption({ name, st, disabled, onPress }: { name: string; st: { bg
         <Text style={[s.fwTxt, { color: st.tc }]} numberOfLines={3}>{name}</Text>
       </View>
       <View style={s.fwPhoto}>
-        <HexPhoto uri={c ? photoFor(c.id, 250) : undefined} width={64} height={72} borderColor={st.bc === '#333' ? '#3a3a3a' : st.bc} borderWidth={3} />
+        <HexPhoto uri={c ? photoFor(c.id, 250) : undefined} frame={c ? framingFor(c.id) : undefined} width={64} height={72} borderColor={st.bc === '#333' ? '#3a3a3a' : st.bc} borderWidth={3} />
       </View>
     </Pressable>
   );

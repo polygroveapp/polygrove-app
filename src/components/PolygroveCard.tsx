@@ -11,7 +11,7 @@ import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, View } from
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
-import { Card, photoCommonsPage, photoFor } from '../lib/catalog';
+import { Card, photoCommonsPage, photoFor, framingFor } from '../lib/catalog';
 import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
 import FwGraph from './FwGraph';
 import HexPhoto from './HexPhoto';
@@ -126,7 +126,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
             </Defs>
             <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
           </Svg>
-          <HexPhoto uri={photo} width={demoFrame ? 200 : 148} height={demoFrame ? 226 : 167} borderColor={tc} borderWidth={6} />
+          <HexPhoto uri={photo} frame={framingFor(raw.id)} width={demoFrame ? 200 : 148} height={demoFrame ? 226 : 167} borderColor={tc} borderWidth={6} />
           {/* ⓘ bottom-right → the Commons file page (user, 2026-09-26): the ONLY
               full-photo view — our hex crop is an edit, so the uncropped
               original is shown at its source, credited. Nested Pressable so
@@ -156,7 +156,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
       <Animated.View style={[s.phone, demoFrame && s.phoneDemo, backStyle]}
         onLayout={(e: LayoutChangeEvent) => { const { width, height } = e.nativeEvent.layout; setFace({ x: 0, y: 0, w: width, h: height }); }}>
         <View style={s.head}>
-          <HexPhoto uri={photoFor(card.id, 120)} width={46} height={52} borderColor={tc} borderWidth={4} />
+          <HexPhoto uri={photoFor(card.id, 120)} frame={framingFor(raw.id)} width={46} height={52} borderColor={tc} borderWidth={4} />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.name} numberOfLines={1}>{card.name}</Text>
             <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>

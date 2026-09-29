@@ -13,7 +13,7 @@ import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import HexPhoto from '../components/HexPhoto';
 import { C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
-import { Card, loadCatalog, photoFor } from '../lib/catalog';
+import { Card, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
 import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
@@ -259,7 +259,7 @@ function Cell({ card, onPress, glow = false }: { card: Card; onPress: () => void
             <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
           </Svg>
         )}
-        <HexPhoto uri={photo} width={58} height={66} borderColor={journaled ? tc : '#2a2a2a'} borderWidth={3} />
+        <HexPhoto uri={photo} frame={framingFor(card.id)} width={58} height={66} borderColor={journaled ? tc : '#2a2a2a'} borderWidth={3} />
         {!journaled && <Text style={s.unknown}>?</Text>}
       </View>
       <View style={[s.divider, { backgroundColor: journaled ? t.border : '#262626' }]} />
