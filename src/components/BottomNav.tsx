@@ -61,7 +61,10 @@ export default function BottomNav({ active }: { active: Tab }) {
           </Animated.View>
         )}
         {TABS.map(t => (
-          <Pressable key={t.id} onPress={() => { if (t.id !== active) router.replace(t.href); }} style={s.tab}>
+          <Pressable key={t.id} style={s.tab}
+            // tabs just SWITCH — no slide (user, 2026-09-29); `tab` tells the
+            // stack to skip the animation, only the thumb glides
+            onPress={() => { if (t.id !== active) router.replace({ pathname: t.href, params: { tab: '1' } }); }}>
             <Text style={s.icon}>{t.icon}</Text>
             <Text style={[s.label, t.id === active && s.labelOn]}>{t.label}</Text>
           </Pressable>
