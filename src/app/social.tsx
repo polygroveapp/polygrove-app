@@ -160,7 +160,7 @@ const s = StyleSheet.create({
     alignItems: 'center', padding: 24, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(76,175,80,0.3)',
     backgroundColor: 'rgba(76,175,80,0.08)',
   },
-  globe: { fontSize: 42, marginBottom: 8 },
+  globe: { fontSize: 42, marginBottom: 8, opacity: 0.72 },   // muted, like the tab's
   cardTitle: { fontFamily: F.display, fontSize: 19, color: C.text, marginBottom: 8 },
   cardTxt: { fontFamily: F.sans, fontSize: 13, color: '#aaa', textAlign: 'center', lineHeight: 19, marginBottom: 18 },
   btn: { paddingHorizontal: 28, paddingVertical: 13, borderRadius: 24, backgroundColor: '#2E7D32', minWidth: 240, alignItems: 'center' },

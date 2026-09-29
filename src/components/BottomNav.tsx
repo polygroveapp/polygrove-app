@@ -22,7 +22,9 @@ const TABS = [
   { id: 'home', icon: '⛺', label: 'Camp', href: '/' },   // "Camp" (user, 2026-09-28)
   { id: 'map', icon: '🧭', label: 'Map', href: '/map' },
   // SOCIAL replaces About (user, 2026-09-29): iNaturalist, a globe. About is a link at its foot.
-  { id: 'social', icon: '🌎', label: 'Social', href: '/social' },   // the Earth itself, not the wireframe globe (user)
+  // the Earth itself, not the wireframe globe — and MUTED (user, 2026-09-29):
+  // an emoji's colours can't be changed, so it is drawn a little see-through
+  { id: 'social', icon: '🌎', label: 'Social', href: '/social', dim: 0.68 },
 ] as const;
 
 export type Tab = typeof TABS[number]['id'] | 'none';   // 'none' = no tab lit (Field Notes)
@@ -66,7 +68,7 @@ export default function BottomNav({ active }: { active: Tab }) {
             // tabs just SWITCH — no slide (user, 2026-09-29); `tab` tells the
             // stack to skip the animation, only the thumb glides
             onPress={() => { if (t.id !== active) router.replace({ pathname: t.href, params: { tab: '1' } }); }}>
-            <Text style={s.icon}>{t.icon}</Text>
+            <Text style={[s.icon, 'dim' in t && { opacity: t.dim }]}>{t.icon}</Text>
             <Text style={[s.label, t.id === active && s.labelOn]}>{t.label}</Text>
           </Pressable>
         ))}
