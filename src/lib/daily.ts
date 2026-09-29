@@ -28,6 +28,12 @@ export function markDiscoveryOpened() {
   AsyncStorage.setItem(KEY, JSON.stringify({ lastAt: _lastAt })).catch(() => { /* best effort */ });
 }
 
+// the pack is ready again, as on a first launch
+export function resetDiscovery() {
+  _lastAt = 0;
+  AsyncStorage.setItem(KEY, JSON.stringify({ lastAt: 0 })).catch(() => { /* best effort */ });
+}
+
 // "5h 12m" until the next pack; the clock is state so render stays pure,
 // refreshed every 30s
 export function useDiscoveryCountdown(): { ready: boolean; label: string } {

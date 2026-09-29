@@ -33,6 +33,7 @@ function set(n: number) {
   AsyncStorage.setItem(KEY, JSON.stringify({ sol: _sol })).catch(() => { /* best effort */ });
 }
 export const spendSol = (n: number) => set(_sol - n);
+export const resetSol = () => set(STARTING_SOL);
 export const earnSol = (n: number) => set(_sol + n);
 
 export function useSol(): number {

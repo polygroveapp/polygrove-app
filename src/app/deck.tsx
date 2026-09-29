@@ -120,9 +120,7 @@ export default function FieldNotes() {
     <>
       <View style={s.header}>
         <Text style={s.logo}>Polygrove</Text>
-        <Pressable onPress={() => router.push('/map')} hitSlop={8}>
-          <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Choose your ecoregion'}</Text>
-        </Pressable>
+        <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Choose your camp'}</Text>
       </View>
       <View style={s.titleWrap}>
         <Text style={s.title}>Field Notes</Text>

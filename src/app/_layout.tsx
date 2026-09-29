@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import MapOverlay from '../components/MapOverlay';
 import Splash from '../components/Splash';
 import { C } from '../constants/polygrove';
+import { launchReset } from '../lib/launch';
 import { offlineReady } from '../lib/offline';
 
 export default function RootLayout() {
@@ -19,7 +20,7 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
   // hydrate the pack queue + journal snapshots before any screen needs them
-  useEffect(() => { offlineReady(); }, []);
+  useEffect(() => { offlineReady(); launchReset(); }, []);
   // the demo's intro plays over the app on every cold launch, and the app
   // LAUNCHES STRAIGHT TO THE MAP (user, 2026-09-29) — it opens underneath the
   // intro, so the map is already drawn when the intro lifts

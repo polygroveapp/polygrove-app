@@ -14,6 +14,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { F } from '../constants/polygrove';
 import { cleanLead, CurrentEco, ecoMeta, loadEcoMeta, wikiUrl } from '../lib/ecoregions';
+import { saveMiniMap, useMiniMap } from '../lib/minimap';
 
 const MINI_URL = 'https://polygrovedb.pages.dev/map?mini=';
 
@@ -24,6 +25,7 @@ export default function EcoHero({ eco }: { eco: CurrentEco }) {
   // stored with the choice is the offline fallback
   const [fetched, setFetched] = useState<{ eid: number; lead?: string; photo?: CurrentEco['photo']; wiki?: string } | null>(null);
   const [mapOk, setMapOk] = useState(true);
+  const snap = useMiniMap(eco.eid);
   useEffect(() => {
     let live = true;
     loadEcoMeta().then(() => { const m = ecoMeta(eco.eid); if (live && m) setFetched({ eid: eco.eid, lead: m.lead, photo: m.photo, wiki: m.wiki }); }).catch(() => {});
@@ -38,9 +40,20 @@ export default function EcoHero({ eco }: { eco: CurrentEco }) {
     <Pressable onPress={openWiki} style={s.card}>
       {/* map on the LEFT, photo on the right (user, 2026-09-28) */}
       <View style={s.row}>
-        {mapOk && (
+        {/* ALWAYS LOADED (user, 2026-09-29): the first visit draws the map in
+            a WebView, which hands back a picture of itself; from then on the
+            picture shows at once — no page, no network */}
+        {snap ? (
+          <Image source={{ uri: snap }} style={[s.pane, s.map]} contentFit="cover" />
+        ) : mapOk && (
           <View style={[s.pane, s.map]} pointerEvents="none">
             <WebView key={eco.eid} source={{ uri: MINI_URL + eco.eid }} style={s.web} onError={() => setMapOk(false)}
+              onMessage={e => {
+                try {
+                  const m = JSON.parse(e.nativeEvent.data);
+                  if (m.type === 'snapshot' && m.eid === eco.eid && typeof m.data === 'string' && m.data.length > 5000) saveMiniMap(eco.eid, m.data);
+                } catch { /* not ours */ }
+              }}
               scrollEnabled={false} bounces={false} javaScriptEnabled scalesPageToFit={false} originWhitelist={['https://*']} />
           </View>
         )}

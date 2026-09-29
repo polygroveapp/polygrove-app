@@ -81,11 +81,8 @@ export default function Home() {
         {/* header */}
         <View style={s.header}>
           <Text style={s.logo}>Polygrove</Text>
-          <Pressable onPress={() => router.push('/map')} hitSlop={8}>
-            <Text style={s.ecoLabel} numberOfLines={2}>
-              {eco ? eco.name : 'Choose your ecoregion'}<Text style={{ color: '#6b4a3a' }}>  ›</Text>
-            </Text>
-          </Pressable>
+          {/* just the name: no arrow, not tappable (user, 2026-09-29) — the Map tab is the way there */}
+          <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Choose your camp'}</Text>
         </View>
 
         {!ready ? (
