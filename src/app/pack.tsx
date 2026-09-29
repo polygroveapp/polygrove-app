@@ -14,7 +14,7 @@
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing, runOnJS, useAnimatedReaction, useAnimatedStyle, useSharedValue, withTiming,
@@ -27,6 +27,7 @@ import { C, F } from '../constants/polygrove';
 import { Card, loadCatalog, photoFor } from '../lib/catalog';
 import { addToCollection, owns } from '../lib/collection';
 import { discoveryReady, loadDaily, markDiscoveryOpened } from '../lib/daily';
+import { fieldNote } from '../lib/dossier';
 import { SOLAR_PACK_COST, canAffordSolar, loadSol, spendSol } from '../lib/sol';
 import { loadTips, markTip, queuePacksPopup, tipSeen } from '../lib/tips';
 import { currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
@@ -104,6 +105,18 @@ export default function PackOpening() {
       }
       // the pack is paid for the moment it's dealt
       if (solar) spendSol(SOLAR_PACK_COST); else markDiscoveryOpened();
+      // the demo's cards arrive COMPLETE: warm the first two cards' photo and
+      // field note before the deck is shown, so no card appears with an empty
+      // hexagon and a "…" note (seen in a frame capture, 2026-09-29). Capped
+      // at 1.2s — a slow network shows the deck anyway.
+      const first = [...p, ...spares].slice(0, 2);
+      await Promise.race([
+        Promise.allSettled(first.flatMap(st => {
+          const uri = photoFor(st.card.id, 500);
+          return [fieldNote(st.card.sci), uri && /^https?:/.test(uri) ? Image.prefetch(uri) : null];
+        })),
+        new Promise(r => setTimeout(r, 1200)),
+      ]);
       setPack([...p, ...spares]);
       if (!tipSeen('swipe')) setTip(true);   // the demo: if (!swipeTipSeen) setShowSwipeTip(true)
     })();
