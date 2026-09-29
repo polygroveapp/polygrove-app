@@ -85,7 +85,7 @@ export default function Home() {
         {/* header */}
         <View style={s.header}>
           <Text style={s.logo}>Polygrove</Text>
-          <Text style={s.tagline}>An educational ecology trading card game</Text>
+          <Text style={s.tagline}>An educational ecology trading card app</Text>
           {/* just the name: no arrow, not tappable (user, 2026-09-29) — the Map tab is the way there */}
           <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Choose your camp'}</Text>
         </View>

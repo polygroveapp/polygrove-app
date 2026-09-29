@@ -126,7 +126,7 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
         <View style={s.header}>
           <Pressable onPress={back} hitSlop={12} style={s.back}><Text style={s.backTxt}>‹ Back</Text></Pressable>
           <Text style={s.logo}>Polygrove</Text>
-          <Text style={s.tagline}>An educational ecology trading card game</Text>
+          <Text style={s.tagline}>An educational ecology trading card app</Text>
           <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Solar Quiz'}</Text>
         </View>
         <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>

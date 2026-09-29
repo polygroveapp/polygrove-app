@@ -120,7 +120,7 @@ export default function FieldNotes() {
     <>
       <View style={s.header}>
         <Text style={s.logo}>Polygrove</Text>
-        <Text style={s.tagline}>An educational ecology trading card game</Text>
+        <Text style={s.tagline}>An educational ecology trading card app</Text>
         <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Choose your camp'}</Text>
       </View>
       <View style={s.titleWrap}>

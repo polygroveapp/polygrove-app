@@ -46,7 +46,7 @@ export default function Splash({ onDone }: { onDone: () => void }) {
         </Svg>
       </FadeUp>
       <FadeUp delay={800}><Text style={s.title}>Polygrove</Text></FadeUp>
-      <FadeUp delay={1400}><Text style={s.sub}>An educational ecology trading card game</Text></FadeUp>
+      <FadeUp delay={1400}><Text style={s.sub}>An educational ecology trading card app</Text></FadeUp>
     </Animated.View>
   );
 }
