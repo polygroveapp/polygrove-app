@@ -5,7 +5,7 @@
 // note, FOOD WEB divider + mini web, "Tap card to flip". Tap flips (0.55s).
 
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
+import { openWeb as openPage } from '../lib/web';   // `openWeb` here is the card's own food-web expander
 import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -131,9 +131,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
               the card flip doesn't fire. */}
           {!!commons && (
             <Pressable hitSlop={10} style={[s.photoBtn, { right: 12 }]}
-              onPress={() => WebBrowser.openBrowserAsync(commons, {
-                presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-              })}>
+              onPress={() => openPage(commons)}>
               <Text style={[s.photoBtnTxt, { fontStyle: 'italic', fontFamily: F.sansBold }]}>i</Text>
             </Pressable>
           )}
@@ -221,7 +219,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
                           </View>
                         ))}
                     </ScrollView>
-                    <Pressable onPress={() => WebBrowser.openBrowserAsync('https://www.globalbioticinteractions.org/')}>
+                    <Pressable onPress={() => openPage('https://www.globalbioticinteractions.org/')}>
                       <Text style={s.recCredit}>source: GloBI ›</Text>
                     </Pressable>
                   </View>
@@ -274,7 +272,7 @@ function FieldNote({ tc, note, sci }: { tc: string; note: string | null; sci: st
   const wiki = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(sci)}&go=Go`;
   return (
     <Pressable style={[s.note, { borderLeftColor: tc, backgroundColor: `${tc}14` }]}
-      onPress={() => WebBrowser.openBrowserAsync(wiki)}>
+      onPress={() => openPage(wiki)}>
       <Text style={[s.noteK, { color: tc }]}>✦ FIELD NOTE</Text>
       <Text style={s.noteTxt} numberOfLines={3}>
         {note ?? '…'}

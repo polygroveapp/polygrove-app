@@ -82,7 +82,7 @@ export default function Home() {
         <View style={s.header}>
           <Text style={s.logo}>Polygrove</Text>
           <Pressable onPress={() => router.push('/map')} hitSlop={8}>
-            <Text style={s.ecoLabel} numberOfLines={1}>
+            <Text style={s.ecoLabel} numberOfLines={2}>
               {eco ? eco.name : 'Choose your ecoregion'}<Text style={{ color: '#6b4a3a' }}>  ›</Text>
             </Text>
           </Pressable>
@@ -209,7 +209,7 @@ const s = StyleSheet.create({
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
   // bigger, and the tagline under it is gone (user, 2026-09-28)
-  ecoLabel: { fontFamily: F.sansBold, fontSize: 15, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },
+  ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 20, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // wraps: the full name always shows
   body: { paddingHorizontal: 20, paddingTop: 20 },
   // stats
   stats: { flexDirection: 'row', justifyContent: 'center', gap: 40, marginBottom: 24 },

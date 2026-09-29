@@ -1,12 +1,12 @@
 // ABOUT — the ❓ tab: what Polygrove is and where every fact comes from.
 
-import * as WebBrowser from 'expo-web-browser';
+import { openWeb } from '../lib/web';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import { C, F } from '../constants/polygrove';
 
-const open = (u: string) => WebBrowser.openBrowserAsync(u);
+const open = (u: string) => openWeb(u);
 
 export default function About() {
   const insets = useSafeAreaInsets();

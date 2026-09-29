@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as WebBrowser from 'expo-web-browser';
+import { openWeb } from '../../lib/web';
 import FwGraph from '../../components/FwGraph';
 import { C, F } from '../../constants/polygrove';
 import { cardById, getCards, loadCatalog } from '../../lib/catalog';
@@ -78,7 +78,7 @@ export default function FoodWebScreen() {
                 </View>
               ))}
             </ScrollView>
-            <Pressable onPress={() => WebBrowser.openBrowserAsync('https://www.globalbioticinteractions.org/')}>
+            <Pressable onPress={() => openWeb('https://www.globalbioticinteractions.org/')}>
               <Text style={s.recCredit}>source: GloBI — globalbioticinteractions.org ›</Text>
             </Pressable>
           </View>

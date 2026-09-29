@@ -9,7 +9,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import * as WebBrowser from 'expo-web-browser';
+import { openWeb } from '../lib/web';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { F } from '../constants/polygrove';
@@ -33,8 +33,7 @@ export default function EcoHero({ eco }: { eco: CurrentEco }) {
   const f = fetched?.eid === eco.eid ? fetched : undefined;
   const meta = { lead: eco.lead ?? f?.lead, photo: eco.photo ?? f?.photo, wiki: eco.wiki ?? f?.wiki };
   // no article title known → Wikipedia's own search on the ecoregion name
-  const openWiki = () => WebBrowser.openBrowserAsync(meta.wiki ? wikiUrl(meta.wiki) : wikiUrl(eco.name),
-    { presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN });
+  const openWiki = () => openWeb(meta.wiki ? wikiUrl(meta.wiki) : wikiUrl(eco.name));
 
   return (
     <Pressable onPress={openWiki} style={s.card}>

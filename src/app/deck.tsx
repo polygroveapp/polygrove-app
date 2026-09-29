@@ -121,7 +121,7 @@ export default function FieldNotes() {
       <View style={s.header}>
         <Text style={s.logo}>Polygrove</Text>
         <Pressable onPress={() => router.push('/map')} hitSlop={8}>
-          <Text style={s.ecoLabel} numberOfLines={1}>{eco ? eco.name : 'Choose your ecoregion'}</Text>
+          <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Choose your ecoregion'}</Text>
         </Pressable>
       </View>
       <View style={s.titleWrap}>
@@ -292,7 +292,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.15)',
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
-  ecoLabel: { fontFamily: F.sansBold, fontSize: 15, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },
+  ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 20, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // wraps: the full name always shows
   titleWrap: { alignItems: 'center', paddingTop: 16, marginBottom: 4 },
   row: { flexDirection: 'row', gap: 10, paddingHorizontal: 20 },
   title: { fontFamily: F.display, fontSize: 20, color: C.text, marginBottom: 2 },
