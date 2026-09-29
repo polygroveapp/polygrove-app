@@ -1,4 +1,4 @@
-// The fixed bottom tab bar: ⛺ Camp · 🧭 Map · 🌎 Social (home mock, 2026-09-26;
+// The fixed bottom tab bar: ⛺ Camp · compass Map · 🌎 Social (home mock, 2026-09-26;
 // plain tent instead of the demo's house per user; the middle tab is the MAP —
 // Field Notes is reached from home's Journal button). Plain buttons over
 // expo-router — the stack stays simple.
@@ -17,10 +17,12 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from '../constants/polygrove';
+import CompassIcon from './CompassIcon';
 
 const TABS = [
   { id: 'home', icon: '⛺', label: 'Camp', href: '/' },   // "Camp" (user, 2026-09-28)
-  { id: 'map', icon: '🧭', label: 'Map', href: '/map' },
+  // a DRAWN compass in gold, muted (user, 2026-09-29; brown was tried) — CompassIcon
+  { id: 'map', icon: 'compass', label: 'Map', href: '/map', dim: 0.85 },
   // SOCIAL replaces About (user, 2026-09-29): iNaturalist, a globe. About is a link at its foot.
   // the Earth itself, not the wireframe globe — and ONLY the globe is muted
   // (user, 2026-09-29; all three were for a moment): an emoji's colours can't
@@ -69,7 +71,9 @@ export default function BottomNav({ active }: { active: Tab }) {
             // tabs just SWITCH — no slide (user, 2026-09-29); `tab` tells the
             // stack to skip the animation, only the thumb glides
             onPress={() => { if (t.id !== active) router.replace({ pathname: t.href, params: { tab: '1' } }); }}>
-            <Text style={[s.icon, 'dim' in t && { opacity: t.dim }]}>{t.icon}</Text>
+            {t.icon === 'compass'
+              ? <View style={[s.iconBox, { opacity: t.dim }]}><CompassIcon size={24} /></View>
+              : <Text style={[s.icon, 'dim' in t && { opacity: t.dim }]}>{t.icon}</Text>}
             <Text style={[s.label, t.id === active && s.labelOn]}>{t.label}</Text>
           </Pressable>
         ))}
@@ -97,6 +101,7 @@ const s = StyleSheet.create({
   thumbShine: { position: 'absolute', top: 0, left: 10, right: 10, height: 1, backgroundColor: 'rgba(255,255,255,0.28)' },   // the inset top highlight
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999 },
   icon: { fontSize: 21, lineHeight: 25 },
+  iconBox: { height: 25, justifyContent: 'center' },   // the emoji's line height, so the labels line up
   label: { fontFamily: F.sansBold, fontSize: 11, color: '#8f8f8f', marginTop: 1 },
   labelOn: { color: C.text },
 });
