@@ -276,10 +276,10 @@ function FieldNote({ tc, note, sci }: { tc: string; note: string | null; sci: st
     <Pressable style={[s.note, { borderLeftColor: tc, backgroundColor: `${tc}14` }]}
       onPress={() => openPage(wiki)}>
       <Text style={[s.noteK, { color: tc }]}>✦ FIELD NOTE</Text>
-      <Text style={s.noteTxt} numberOfLines={3}>
-        {note ?? '…'}
-        {note ? <Text style={{ color: '#666666', fontSize: 10.5 }}>  — Wikipedia</Text> : null}
-      </Text>
+      {/* the credit is its OWN line (user, 2026-09-29): inside the note's text a
+          long note's "…" swallowed it — the source must show however long the note is */}
+      <Text style={s.noteTxt} numberOfLines={3}>{note ?? '…'}</Text>
+      {note ? <Text style={s.noteSrc} numberOfLines={1}>— Wikipedia</Text> : null}
     </Pressable>
   );
 }
@@ -348,6 +348,7 @@ const s = StyleSheet.create({
   note: { borderLeftWidth: 3, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12, marginBottom: 8 },
   noteK: { fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', fontFamily: F.sansBold },
   noteTxt: { fontSize: 12.5, color: C.text, fontFamily: F.sans, lineHeight: 17, marginTop: 2 },
+  noteSrc: { fontSize: 10.5, color: '#666666', fontFamily: F.sans, marginTop: 3 },
   // .dc-fwlabel
   fwLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 9, marginBottom: 5 },
   fwLine: { flex: 1, height: 1, backgroundColor: '#333333' },
