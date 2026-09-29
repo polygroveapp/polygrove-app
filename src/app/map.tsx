@@ -1,4 +1,4 @@
-// WHERE ARE YOU — pick the ecoregion you're in. The map IS the website's
+// WHERE DO YOU WANT TO CAMP? (user, 2026-09-29; was "Where are you?") — pick the ecoregion you're in. The map IS the website's
 // Ecoregions-page map (user, 2026-09-28): the site serves it as a standalone
 // MapLibre page (explorer/map.html — black land, blue water, terrain relief,
 // green ecoregion borders, glowing green selection, green names) and the app
@@ -20,7 +20,9 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Circle, Defs, Ellipse, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Circle, Defs, Ellipse, Path, Polygon, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import { C, F } from '../constants/polygrove';
@@ -69,7 +71,9 @@ export default function EcoMap() {
     const state = JSON.stringify({ current: current?.eid ?? null, collected, fly, pad: { top: padTop, bottom: padBottom } });
     web.current?.injectJavaScript(`window.polygroveSetState && window.polygroveSetState(${state}); true;`);
   };
-  useEffect(() => { if (pageReady) pushState(false); }, [collected, padTop, padBottom]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // also when the page becomes ready: with no camp chosen yet nothing else
+  // sends the padding, and the page would read the pin at the screen's centre
+  useEffect(() => { if (pageReady) pushState(false); }, [pageReady, collected, padTop, padBottom]);   // eslint-disable-line react-hooks/exhaustive-deps
   // fly to your ecoregion once, whichever arrives last: the page's ready or
   // the stored ecoregion (a cold start can read storage after the page loads)
   const flown = useRef(false);
@@ -78,11 +82,37 @@ export default function EcoMap() {
   }, [pageReady, current]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const onMessage = (e: WebViewMessageEvent) => {
-    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox'] };
+    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox']; deg?: number };
     try { m = JSON.parse(e.nativeEvent.data); } catch { return; }
     if (m.type === 'ready') setPageReady(true);
+    if (m.type === 'bearing' && typeof m.deg === 'number') bearing.value = m.deg;
     if (m.type === 'center') setPick(m.eid != null && m.name && m.bbox ? { eid: m.eid, name: m.name, bbox: m.bbox } : null);
   };
+
+  // the compass: the page reports its bearing (needle), the app sets it
+  const bearing = useSharedValue(0);
+  const dragFrom = useSharedValue(0);
+  const tick = useSharedValue(0);   // drags send every other frame (~30 fps is plenty)
+  const setBearing = (deg: number, animate: boolean) => {
+    web.current?.injectJavaScript(`window.polygroveBearing && window.polygroveBearing(${deg.toFixed(1)}, ${animate}); true;`);
+  };
+  // gesture callbacks run on touch events, never during render — the refs
+  // rule can't see that through runOnJS
+  /* eslint-disable react-hooks/refs */
+  const compassGesture = Gesture.Exclusive(
+    Gesture.Pan().minDistance(6)
+      .onStart(() => { dragFrom.value = bearing.value; })
+      .onChange(e => {
+        const b = dragFrom.value + e.translationX * 1.2;
+        bearing.value = b;
+        tick.value = (tick.value + 1) % 2;
+        if (tick.value === 0) runOnJS(setBearing)(b, false);
+      })
+      .onEnd(() => { runOnJS(setBearing)(bearing.value, false); }),
+    Gesture.Tap().onEnd(() => { bearing.value = withTiming(0, { duration: 350 }); runOnJS(setBearing)(0, true); }),
+  );
+  /* eslint-enable react-hooks/refs */
+  const needleStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${-bearing.value}deg` }] }));
 
   const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom && window.polygroveZoom(${d}); true;`);
 
@@ -140,18 +170,34 @@ export default function EcoMap() {
           <Text style={s.back}>‹ Camp</Text>
         </Pressable>
         <View style={s.titleWrap}>
-          <Text style={s.title}>Where are you?</Text>
+          <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>Where do you want to camp?</Text>
           <Text style={s.sub}>{pageReady ? 'move the map under the pin' : err ? 'map unavailable' : 'loading ecoregions…'}</Text>
         </View>
         <View style={s.spacer} />
       </View>
 
       {/* zoom in / out (user, 2026-09-28) — zooms around the pin */}
+      {/* bottom-right: − then + (plus outermost) · bottom-left: the compass
+          (user, 2026-09-29) — its needle follows the map, drag it to spin the
+          map, tap it to face north again */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]}>
-          <Pressable onPress={() => zoom(1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>+</Text></Pressable>
           <Pressable onPress={() => zoom(-1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>−</Text></Pressable>
+          <Pressable onPress={() => zoom(1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>+</Text></Pressable>
         </View>
+      )}
+      {pageReady && (
+        <GestureDetector gesture={compassGesture}>
+          <View style={[s.compass, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]}>
+            <Animated.View style={needleStyle}>
+              <Svg width={26} height={26} viewBox="0 0 26 26">
+                <Polygon points="13,2 17.5,13 8.5,13" fill="#E53935" />
+                <Polygon points="13,24 17.5,13 8.5,13" fill="#cfd4d8" />
+                <Circle cx="13" cy="13" r="1.8" fill="#0a0f0a" />
+              </Svg>
+            </Animated.View>
+          </View>
+        </GestureDetector>
       )}
 
       {/* the preview sheet sits above the tab bar */}
@@ -198,12 +244,16 @@ const s = StyleSheet.create({
   top: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, gap: 10 },
   backBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(10,15,10,0.85)' },
   back: { fontFamily: F.sansBold, fontSize: 14, color: C.greenSoft },
-  titleWrap: { flex: 1, alignItems: 'center', backgroundColor: 'rgba(10,15,10,0.85)', borderRadius: 14, paddingVertical: 6 },
+  titleWrap: { flex: 1, alignItems: 'center', backgroundColor: 'rgba(10,15,10,0.85)', borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10 },
   title: { fontFamily: F.display, fontSize: 15, color: C.text },
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#888' },
   spacer: { width: 42 },   // balances the Home button so the title stays centred
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
-  zoom: { position: 'absolute', right: 14, gap: 8 },
+  zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row' },
+  compass: {
+    position: 'absolute', left: 14, width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(10,15,10,0.85)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)',
+  },
   zoomBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(10,15,10,0.85)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
   sheet: {

@@ -95,7 +95,7 @@ export default function Home() {
           <View style={s.body}>
             <View style={s.pickCard}>
               <Text style={s.pickEmoji}>🗺️</Text>
-              <Text style={s.pickTitle}>Where are you?</Text>
+              <Text style={s.pickTitle}>Where do you want to camp?</Text>
               <Text style={s.pickTxt}>
                 Pick the ecoregion you’re in on the map. Your daily pack draws from its species,
                 and every ecoregion is its own deck to collect.
