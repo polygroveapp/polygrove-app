@@ -77,7 +77,7 @@ export default function EcoHero({ eco }: { eco: CurrentEco }) {
 const s = StyleSheet.create({
   card: {
     borderRadius: 16, borderWidth: 1, borderColor: 'rgba(129,199,132,0.22)', backgroundColor: 'rgba(0,0,0,0.25)',
-    padding: 10, gap: 8, marginBottom: 20,
+    padding: 10, gap: 8, marginBottom: 12,   // a little closer to the buttons below (user, 2026-09-29)
   },
   row: { flexDirection: 'row', gap: 8 },
   pane: { flex: 1, height: 118, borderRadius: 12, overflow: 'hidden', backgroundColor: '#132013' },

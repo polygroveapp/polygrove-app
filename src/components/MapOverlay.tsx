@@ -163,15 +163,16 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
           <Svg width={PIN_W} height={PIN_H + 3} viewBox="0 0 20 33">
             <Defs>
               <RadialGradient id="ball" cx="38%" cy="32%" r="65%">
-                <Stop offset="0" stopColor="#ff8a80" />
-                <Stop offset="0.45" stopColor="#e53935" />
-                <Stop offset="1" stopColor="#8e1b1b" />
+                {/* a MUTED red (user, 2026-09-29): brick rather than signal red */}
+                <Stop offset="0" stopColor="#d99a94" />
+                <Stop offset="0.45" stopColor="#b5524b" />
+                <Stop offset="1" stopColor="#6b2a26" />
               </RadialGradient>
             </Defs>
             <Ellipse cx="10" cy="31" rx="3.5" ry="1.4" fill="rgba(0,0,0,0.45)" />
             <Path d="M9.4 13 L10.6 13 L10.3 30 L9.7 30 Z" fill="#d7dbde" stroke="#5f666c" strokeWidth="0.5" />
-            <Circle cx="10" cy="7" r="6.5" fill="url(#ball)" stroke="#7a1414" strokeWidth="0.7" />
-            <Ellipse cx="7.4" cy="4.4" rx="1.9" ry="1.2" fill="rgba(255,255,255,0.75)" />
+            <Circle cx="10" cy="7" r="6.5" fill="url(#ball)" stroke="#5a2320" strokeWidth="0.7" />
+            <Ellipse cx="7.4" cy="4.4" rx="1.9" ry="1.2" fill="rgba(255,255,255,0.55)" />
           </Svg>
         </View>
       )}
