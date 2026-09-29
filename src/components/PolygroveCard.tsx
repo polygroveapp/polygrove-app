@@ -26,8 +26,10 @@ let _glowSeq = 0;
 // nameAs (user, 2026-09-28): every Q6 card CLAIMS to be the card in question —
 // its name with a "?" plus the plain scientific name — so the names don't tell
 // them apart; the note is still masked like an anonymous card.
-export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, nameAs }:
-  { card: Card; anonymous?: boolean; noteFrom?: Card; nameAs?: { name: string; sci: string } }) {
+// demoFrame (pack opening, user 2026-09-29): the demo's card exactly — the
+// big 200×226 hexagon, the 3px border and the drop shadow.
+export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, nameAs, demoFrame = false }:
+  { card: Card; anonymous?: boolean; noteFrom?: Card; nameAs?: { name: string; sci: string }; demoFrame?: boolean }) {
   const card = nameAs ? { ...raw, name: `${nameAs.name}?`, sci: nameAs.sci } : anonymous ? { ...raw, name: '???', sci: '· · ·' } : raw;
   const hideNames = anonymous || !!nameAs;
   const noteCard = noteFrom ?? raw;
@@ -106,7 +108,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
     // on iOS (found natively on the simulator, 2026-09-25)
     <Pressable onPress={doFlip} style={{ width: '100%', height: '100%' }}>
       {/* FRONT — .face.front */}
-      <Animated.View style={[s.phone, frontStyle]}>
+      <Animated.View style={[s.phone, demoFrame && s.phoneDemo, frontStyle]}>
         <View style={s.site}>
           <Text style={s.siteGlyph}>⚑</Text>
           <Text style={s.siteMid}>polygrove.io</Text>
@@ -124,7 +126,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
             </Defs>
             <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
           </Svg>
-          <HexPhoto uri={photo} width={148} height={167} borderColor={tc} borderWidth={6} />
+          <HexPhoto uri={photo} width={demoFrame ? 200 : 148} height={demoFrame ? 226 : 167} borderColor={tc} borderWidth={6} />
           {/* ⓘ bottom-right → the Commons file page (user, 2026-09-26): the ONLY
               full-photo view — our hex crop is an edit, so the uncropped
               original is shown at its source, credited. Nested Pressable so
@@ -151,7 +153,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
       </Animated.View>
 
       {/* BACK — .face.back */}
-      <Animated.View style={[s.phone, backStyle]}
+      <Animated.View style={[s.phone, demoFrame && s.phoneDemo, backStyle]}
         onLayout={(e: LayoutChangeEvent) => { const { width, height } = e.nativeEvent.layout; setFace({ x: 0, y: 0, w: width, h: height }); }}>
         <View style={s.head}>
           <HexPhoto uri={photoFor(card.id, 120)} width={46} height={52} borderColor={tc} borderWidth={4} />
@@ -314,6 +316,11 @@ function MiniWeb({ card, onExpand, onLayout }: { card: Card; onExpand: () => voi
 
 const s = StyleSheet.create({
   // .phone — the card body itself
+  // the demo's CardDisplay frame: border 3px #333, radius 20, shadow 0 8px 32px rgba(0,0,0,.5)
+  phoneDemo: {
+    borderWidth: 3, borderRadius: 20,
+    shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 10,
+  },
   phone: {
     // explicit insets, NOT ...StyleSheet.absoluteFillObject — the spread
     // silently fails on iOS Fabric here (found on the simulator, 2026-09-25)

@@ -153,9 +153,12 @@ export default function PackOpening() {
   // 100dvh-130px), width min(430,screen)*0.88): window-based, no onLayout —
   // measured-flex sizing kept collapsing on the phone (2026-09-25)
   const win = useWindowDimensions();
+  // the demo's swipe stage: the card is at most 340 wide and as tall as the
+  // screen allows (its `calc(100vh - 120px)`), hung from the TOP — 16px under
+  // the status bar — with the footer directly beneath it
   const cardSize = {
-    width: Math.min(win.width - 40, 370),
-    height: Math.min(640, win.height - 96 - insets.top - insets.bottom),   // no header row: the card takes the height
+    width: Math.min(win.width - 40, 340),
+    height: win.height - insets.top - insets.bottom - 16 - 62,
   };
 
   if (noNet) return (
@@ -192,7 +195,7 @@ export default function PackOpening() {
   const swipeFor = (dir: 1 | -1) => setAuto(a => ({ dir, n: (a?.n ?? 0) + 1 }));
 
   return (
-    <View style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 14 }]}>
+    <View style={[s.root, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 10 }]}>
       {/* the demo's backdrop: the app's dark green gradient, not flat black */}
       <LinearGradient colors={['#0a0f0a', '#1a2e1a', '#0f1a0f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.bg} />
       <View style={s.stage} onTouchStart={() => { if (!touched) setTouched(true); }}>
@@ -202,7 +205,7 @@ export default function PackOpening() {
         {pack.slice(idx).reverse().map(st => (
           <SwipeSlot key={st.card.id} top={st === pack[idx]} onFling={onFling} canSkip={canSkip} auto={auto}>
             <View style={cardSize}>
-              <PolygroveCard card={st.card} />
+              <PolygroveCard card={st.card} demoFrame />
             </View>
           </SwipeSlot>
         ))}
@@ -335,12 +338,12 @@ const s = StyleSheet.create({
   stage: { flex: 1 },
   overlay: {
     position: 'absolute', top: 0, bottom: 0, left: 0, right: 0,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'flex-start',   // hung from the top, like the demo
   },
   // the demo's footer: 12px #666 · 10px #555 uppercase, 2px tracking · 12px #4CAF50 600
-  hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, paddingHorizontal: 20 },
-  hintL: { fontFamily: F.sansMed, fontSize: 12, color: '#666' },
-  hintC: { fontFamily: F.sansBold, fontSize: 10, color: '#8B5035', textTransform: 'uppercase', letterSpacing: 2, marginTop: 3 },   // the header's ecoregion-name brown (user, 2026-09-29)
+  hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 4, paddingHorizontal: 20 },
+  hintL: { fontFamily: F.sansMed, fontSize: 12, color: C.text },   // Pass in WHITE (user, 2026-09-29)
+  hintC: { fontFamily: F.sansBold, fontSize: 10, color: '#8B5035', textTransform: 'uppercase', letterSpacing: 2, marginTop: 3 },   // SWIPE in the header's BROWN (user, 2026-09-29; grey was tried)
   hintR: { fontFamily: F.sansBold, fontSize: 12, color: C.greenSoft },
   // the swipe tip (demo values)
   tipTitle: { fontFamily: F.display, fontSize: 18, color: C.text, textAlign: 'center', marginBottom: 6 },
