@@ -22,6 +22,7 @@
 
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { DeviceMotion } from 'expo-sensors';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +40,7 @@ const HEADER_H = 62;   // the "Where are you?" bar, below the safe area
 // of the map above it, so a sheet that grew with its content would move the
 // pin, change what's under it, and chase itself
 const SHEET_H = 206;
+const TILT_REST = 9;   // degrees of lean at rest; motion adds or removes up to this much
 
 type Pick = { eid: number; name: string; bbox: [number, number, number, number] };
 
@@ -94,6 +96,33 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     if (m.type === 'ready') setPageReady(true);
     if (m.type === 'center') setPick(m.eid != null && m.name && m.bbox ? { eid: m.eid, name: m.name, bbox: m.bbox } : null);
   };
+
+  // SUBTLE MOTION (user, 2026-09-29: "as much as the new Photos widget
+  // feature, very subtle"): the map leans a few degrees with the phone and
+  // settles back. The resting posture is a slow running average, so however
+  // you hold the phone is "level"; only movement away from it shows.
+  useEffect(() => {
+    if (!visible || !pageReady) return;
+    let sub: { remove: () => void } | null = null, live = true;
+    let base: [number, number] | null = null, out: [number, number] = [TILT_REST, 0], sent: [number, number] = [-1, 0];
+    const deg = (r: number) => (r * 180) / Math.PI, clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+    DeviceMotion.isAvailableAsync().then(ok => {
+      if (!ok || !live) return;   // simulators have no motion sensor
+      DeviceMotion.setUpdateInterval(50);
+      sub = DeviceMotion.addListener(m => {
+        if (!m.rotation) return;
+        const b = deg(m.rotation.beta), g = deg(m.rotation.gamma);
+        base = base ? [base[0] + (b - base[0]) * 0.02, base[1] + (g - base[1]) * 0.02] : [b, g];
+        const pitch = clamp(TILT_REST + (b - base[0]) * 0.5, 0, TILT_REST * 2);
+        const bearing = clamp((g - base[1]) * 0.3, -5, 5);
+        out = [out[0] + (pitch - out[0]) * 0.25, out[1] + (bearing - out[1]) * 0.25];
+        if (Math.abs(out[0] - sent[0]) < 0.15 && Math.abs(out[1] - sent[1]) < 0.15) return;
+        sent = [out[0], out[1]];
+        web.current?.injectJavaScript(`window.polygroveTilt && window.polygroveTilt(${out[0].toFixed(2)}, ${out[1].toFixed(2)}); true;`);
+      });
+    }).catch(() => {});
+    return () => { live = false; sub?.remove(); };
+  }, [visible, pageReady]);
 
   const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom && window.polygroveZoom(${d}); true;`);
 
