@@ -157,7 +157,8 @@ export default function Home() {
                 <Text style={s.solarSol}>{solBal}/{SOLAR_PACK_COST} Sol 🔆</Text>
               </View>
             )}
-            <Text style={s.hint}>
+            {/* a little closer to the ecoregion card below (user, 2026-09-29) */}
+            <Text style={[s.hint, { marginBottom: 7 }]}>
               {solOk ? 'Open a Solar Pack with ' : 'Take a quiz to earn '}
               <Text style={{ color: C.gold }}>Sol Points 🔆</Text>
             </Text>
