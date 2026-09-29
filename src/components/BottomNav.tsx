@@ -1,4 +1,4 @@
-// The fixed bottom tab bar: ⛺ Home · 🧭 Map · ❓ About (home mock, 2026-09-26;
+// The fixed bottom tab bar: ⛺ Camp · 🧭 Map · 🌎 Social (home mock, 2026-09-26;
 // plain tent instead of the demo's house per user; the middle tab is the MAP —
 // Field Notes is reached from home's Journal button). Plain buttons over
 // expo-router — the stack stays simple.
@@ -21,7 +21,8 @@ import { C, F } from '../constants/polygrove';
 const TABS = [
   { id: 'home', icon: '⛺', label: 'Camp', href: '/' },   // "Camp" (user, 2026-09-28)
   { id: 'map', icon: '🧭', label: 'Map', href: '/map' },
-  { id: 'about', icon: '❓', label: 'About', href: '/about' },
+  // SOCIAL replaces About (user, 2026-09-29): iNaturalist, a globe. About is a link at its foot.
+  { id: 'social', icon: '🌎', label: 'Social', href: '/social' },   // the Earth itself, not the wireframe globe (user)
 ] as const;
 
 export type Tab = typeof TABS[number]['id'] | 'none';   // 'none' = no tab lit (Field Notes)

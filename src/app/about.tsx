@@ -1,14 +1,18 @@
-// ABOUT — the ❓ tab: what Polygrove is and where every fact comes from.
+// ABOUT — what Polygrove is and where every fact comes from. Reached from the
+// foot of the Social tab since 2026-09-29 (it used to be the ❓ tab).
 
-import { openWeb } from '../lib/web';
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
+import CloseX from '../components/CloseX';
 import { C, F } from '../constants/polygrove';
+import { openWeb } from '../lib/web';
 
 const open = (u: string) => openWeb(u);
 
 export default function About() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   return (
     <View style={s.root}>
@@ -42,7 +46,9 @@ export default function About() {
 
         <Text style={s.foot}>content: polygrovedb.pages.dev · GBIF, Wikipedia & 25 open sources</Text>
       </ScrollView>
-      <BottomNav active="about" />
+      {/* About is reached from Social now (2026-09-29), so that is the tab that stays lit */}
+      <CloseX onPress={() => (router.canGoBack() ? router.back() : router.replace('/social'))} />
+      <BottomNav active="social" />
     </View>
   );
 }

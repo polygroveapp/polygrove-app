@@ -77,7 +77,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // push the app's state into the page: current ecoregion (fly-to on first
   // show) + collected ecoregions (gold) + chrome padding
   const pushState = (fly: boolean) => {
-    // camp = the ecoregion you are in (gold border); completed = decks with
+    // camp = the ecoregion you are in (brown border); completed = decks with
     // every card journaled (gold inside) — known once the catalog has loaded
     const completed = catalogReady
       ? collected.filter(eid => { const n = ecoDeckSize(eid); return n > 0 && collectionCount(eid) >= n; })
