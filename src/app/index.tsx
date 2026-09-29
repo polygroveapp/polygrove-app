@@ -236,7 +236,7 @@ const s = StyleSheet.create({
   // the tagline sits BETWEEN the wordmark and the ecoregion name (user, 2026-09-29)
   tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 8 },
   ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 20, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // wraps: the full name always shows
-  body: { paddingHorizontal: 20, paddingTop: 20 },
+  body: { paddingHorizontal: 20, paddingTop: 12 },   // a little closer to the header line (user, 2026-09-29)
   // stats
   stats: { flexDirection: 'row', justifyContent: 'center', gap: 40, marginBottom: 24 },
   statN: { fontFamily: F.display, fontSize: 32, color: C.green, lineHeight: 38 },
