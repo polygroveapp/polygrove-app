@@ -19,19 +19,18 @@ const MINI_URL = 'https://polygrovedb.pages.dev/map?mini=';
 
 export default function EcoHero({ eco }: { eco: CurrentEco }) {
   const router = useRouter();
-  // regions chosen before lead/photo/wiki were stored with the choice: fetch
-  // whatever's missing from eco_meta (stored values win)
-  const complete = !!(eco.lead && eco.photo && eco.wiki);
+  // the site's metadata wins whenever it can be fetched (descriptions get
+  // better — the second sentence replaced the first on 2026-09-29); what was
+  // stored with the choice is the offline fallback
   const [fetched, setFetched] = useState<{ eid: number; lead?: string; photo?: CurrentEco['photo']; wiki?: string } | null>(null);
   const [mapOk, setMapOk] = useState(true);
   useEffect(() => {
-    if (complete) return;
     let live = true;
     loadEcoMeta().then(() => { const m = ecoMeta(eco.eid); if (live && m) setFetched({ eid: eco.eid, lead: m.lead, photo: m.photo, wiki: m.wiki }); }).catch(() => {});
     return () => { live = false; };
-  }, [eco.eid, complete]);
+  }, [eco.eid]);
   const f = fetched?.eid === eco.eid ? fetched : undefined;
-  const meta = { lead: eco.lead ?? f?.lead, photo: eco.photo ?? f?.photo, wiki: eco.wiki ?? f?.wiki };
+  const meta = { lead: f?.lead ?? eco.lead, photo: f?.photo ?? eco.photo, wiki: f?.wiki ?? eco.wiki };
   // no article title known → Wikipedia's own search on the ecoregion name
   const openWiki = () => openWeb(meta.wiki ? wikiUrl(meta.wiki) : wikiUrl(eco.name));
 
