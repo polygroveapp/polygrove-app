@@ -23,6 +23,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { DeviceMotion } from 'expo-sensors';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,7 +33,7 @@ import BottomNav, { NAV_HEIGHT } from './BottomNav';
 import { C, F } from '../constants/polygrove';
 import { loadCatalog } from '../lib/catalog';
 import { collectedEcoregions, loadCollection } from '../lib/collection';
-import { cleanLead, ecoDeckSize, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { cleanLead, ecoDeckSize, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco, wikiUrl } from '../lib/ecoregions';
 
 const PICKER_URL = 'https://polygrovedb.pages.dev/map';   // Pages serves map.html here
 const HEADER_H = 62;   // the "Where are you?" bar, below the safe area
@@ -199,7 +200,10 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
           <Text style={s.msg}>{err}</Text>
         ) : pick ? (
           <>
-            <View style={s.preview}>
+            {/* the preview opens the ecoregion's Wikipedia article (user, 2026-09-29) */}
+            <Pressable style={s.preview}
+              onPress={() => WebBrowser.openBrowserAsync(wikiUrl(meta?.wiki ?? pick.name),
+                { presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN })}>
               {meta?.photo ? (
                 <Image source={{ uri: meta.photo.thumb }} style={s.photo} contentFit="cover" transition={200} />
               ) : (
@@ -211,9 +215,11 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
                   {size != null ? `${size.toLocaleString()} species in this deck` : 'ecoregion'}{here ? ' · you’re here now' : ''}
                 </Text>
                 {meta?.lead ? <Text style={s.lead} numberOfLines={3}>{cleanLead(meta.lead)}</Text> : null}
-                {meta?.photo?.by ? <Text style={s.credit} numberOfLines={1}>Wikipedia · photo {meta.photo.by} ({meta.photo.lic})</Text> : null}
+                <Text style={s.credit} numberOfLines={1}>
+                  <Text style={s.wikiLink}>Wikipedia ›</Text>{meta?.photo?.by ? `  ·  photo ${meta.photo.by} (${meta.photo.lic})` : ''}
+                </Text>
               </View>
-            </View>
+            </Pressable>
             <Pressable onPress={enter} style={[s.enter, here && s.enterHere]}>
               <Text style={s.enterTxt}>{here ? 'Stay in ecoregion' : visited ? 'Return to ecoregion' : 'Explore ecoregion'}</Text>
             </Pressable>
@@ -259,6 +265,7 @@ const s = StyleSheet.create({
   ecoMeta: { fontFamily: F.sans, fontSize: 11.5, color: '#8B5035', letterSpacing: 0.4 },
   lead: { fontFamily: F.sans, fontSize: 12, color: '#c9c4b8', lineHeight: 16.5, marginTop: 2 },
   credit: { fontFamily: F.sans, fontSize: 9.5, color: '#666', marginTop: 2 },
+  wikiLink: { fontFamily: F.sansBold, color: C.greenSoft },
   enter: { paddingVertical: 12, borderRadius: 24, backgroundColor: '#2E7D32', alignItems: 'center' },
   enterHere: { backgroundColor: '#1f3a22', borderWidth: 1, borderColor: 'rgba(129,199,132,0.35)' },
   enterTxt: { fontFamily: F.display, fontSize: 14, color: C.text },
