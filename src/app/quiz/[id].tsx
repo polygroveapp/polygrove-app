@@ -126,6 +126,7 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
         <View style={s.header}>
           <Pressable onPress={back} hitSlop={12} style={s.back}><Text style={s.backTxt}>‹ Back</Text></Pressable>
           <Text style={s.logo}>Polygrove</Text>
+          <Text style={s.tagline}>An educational ecology trading card game</Text>
           <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Solar Quiz'}</Text>
         </View>
         <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
@@ -434,6 +435,8 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.15)',
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
+  // the tagline sits BETWEEN the wordmark and the ecoregion name (user, 2026-09-29)
+  tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 8 },
   ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 20, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // wraps: the full name always shows
   back: { position: 'absolute', left: 16, top: 12, paddingVertical: 6, zIndex: 2 },
   backTxt: { fontFamily: F.sansBold, fontSize: 14, color: C.greenSoft },

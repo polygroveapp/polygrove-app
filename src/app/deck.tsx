@@ -120,6 +120,7 @@ export default function FieldNotes() {
     <>
       <View style={s.header}>
         <Text style={s.logo}>Polygrove</Text>
+        <Text style={s.tagline}>An educational ecology trading card game</Text>
         <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Choose your camp'}</Text>
       </View>
       <View style={s.titleWrap}>
@@ -290,6 +291,8 @@ const s = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.15)',
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
+  // the tagline sits BETWEEN the wordmark and the ecoregion name (user, 2026-09-29)
+  tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 8 },
   ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 20, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // wraps: the full name always shows
   titleWrap: { alignItems: 'center', paddingTop: 16, marginBottom: 4 },
   row: { flexDirection: 'row', gap: 10, paddingHorizontal: 20 },

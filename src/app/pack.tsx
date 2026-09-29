@@ -1,13 +1,17 @@
-// Pack opening, faithful to the demo: cards arrive FACE-UP as a swipe deck.
-// Drag rotates the card (offset * 0.12deg, demo SwipeCard); past 100px it flies
-// off — RIGHT journals it, LEFT releases it. Tap flips to the details back.
+// Pack opening — the DEMO's swipe deck, its motion verbatim (App.jsx
+// SwipeCard; user, 2026-09-29: "have it the same as the demo app … just use
+// the same code"): every remaining card is stacked, the ones underneath at
+// 95%; the top card follows the finger and tilts offset × 0.12°; past 100px
+// it flies to ±600px, turns to ±25° and fades, all in 0.3s ease-out, and the
+// swipe counts 300ms later while the next card eases up to full size.
+// RIGHT journals it, LEFT releases it. Tap flips to the details back.
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming,
+  Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PolygroveCard from '../components/PolygroveCard';
@@ -91,7 +95,6 @@ export default function PackOpening() {
   const [idx, setIdx] = useState(0);
   const [kept, setKept] = useState(0);
   const [skipped, setSkipped] = useState(0);
-  const [flinging, setFlinging] = useState(false);
   // skips available = spares actually dealt (offline may have fewer)
   const maxSkips = pack ? Math.max(0, pack.length - PACK_SIZE) : 0;
   const canSkip = skipped < maxSkips;
@@ -153,12 +156,8 @@ export default function PackOpening() {
     }
     setIdx(i => i + 1);
   };
-  // the fling starts the card behind moving forward at once; the swap waits
-  // until it has fully arrived, so there is nothing left to snap
-  const onFling = (dir: 1 | -1) => {
-    setFlinging(true);
-    setTimeout(() => { onSwiped(dir); setFlinging(false); }, FORWARD_MS);
-  };
+  // the demo: setTimeout(() => onSwipe(d), 300)
+  const onFling = (dir: 1 | -1) => { setTimeout(() => onSwiped(dir), 300); };
 
   return (
     <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 14 }]}>
@@ -174,13 +173,11 @@ export default function PackOpening() {
       </View>
 
       <View style={s.stage}>
-        {/* the top card and the one waiting behind it are ONE keyed list: when
-            the top card leaves, the card behind keeps its component (no remount,
-            no photo reload flash) and is brought forward from the stack WHILE
-            the top card flies off (user, 2026-09-26). Behind renders first so
-            it sits underneath. */}
-        {pack.slice(idx, idx + 2).reverse().map(st => (
-          <SwipeSlot key={st.card.id} top={st === pack[idx]} bringForward={flinging} onFling={onFling} canSkip={canSkip}>
+        {/* the demo's deck.map: EVERY remaining card is mounted and stacked
+            (keyed, so none remounts when the top one leaves); the last one
+            rendered is on top, so the list is reversed */}
+        {pack.slice(idx).reverse().map(st => (
+          <SwipeSlot key={st.card.id} top={st === pack[idx]} onFling={onFling} canSkip={canSkip}>
             <View style={cardSize}>
               <PolygroveCard card={st.card} />
             </View>
@@ -199,24 +196,20 @@ export default function PackOpening() {
   );
 }
 
-// the card behind waits slightly smaller, lower and dimmer, then is brought
-// forward slowly while the top card flies off (user, 2026-09-26)
-const FORWARD_MS = 520;
-const FORWARD_EASE = Easing.out(Easing.cubic);
-
-function SwipeSlot({ children, top, bringForward, onFling, canSkip }: {
+function SwipeSlot({ children, top, onFling, canSkip }: {
   children: React.ReactNode;
-  top: boolean;            // the swipeable card (false = waiting behind)
-  bringForward: boolean;   // the card above is flying off — come forward now
+  top: boolean;            // the active card (false = waiting underneath)
   onFling: (d: 1 | -1) => void;
   canSkip: boolean;        // skips spent → a left fling just springs back
 }) {
   const tx = useSharedValue(0);
-  const op = useSharedValue(1);
-  const fwd = useSharedValue(top ? 1 : 0);   // 0 = waiting in the stack, 1 = in front
+  const rot = useSharedValue(0);             // only the fly-off's turn; the drag tilt is tx × 0.12
+  const gone = useSharedValue(0);            // 0 → 1 as it leaves
+  const scale = useSharedValue(top ? 1 : 0.95);
+  // the demo's `transition: all 0.3s ease` on scale(active ? 1 : 0.95)
   useEffect(() => {
-    if (top || bringForward) fwd.value = withTiming(1, { duration: FORWARD_MS, easing: FORWARD_EASE });
-  }, [top, bringForward, fwd]);
+    scale.value = withTiming(top ? 1 : 0.95, { duration: 300, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+  }, [top, scale]);
 
   const pan = Gesture.Pan()
     .enabled(top)
@@ -225,24 +218,27 @@ function SwipeSlot({ children, top, bringForward, onFling, canSkip }: {
     .onEnd(() => {
       if (Math.abs(tx.value) > 100 && (tx.value > 0 || canSkip)) {
         const d = tx.value > 0 ? 1 : -1;
-        // start both animations HERE, once — a withTiming born inside
-        // useAnimatedStyle restarts every frame and never progresses
-        tx.value = withTiming(d * 600, { duration: 300 });
-        op.value = withTiming(0, { duration: 300 });
+        // the demo's gone state: translateX(±600px) rotate(±25deg), opacity 0,
+        // `all 0.3s ease-out` — started HERE, once (a withTiming born inside
+        // useAnimatedStyle restarts every frame and never progresses)
+        const out = { duration: 300, easing: Easing.bezier(0, 0, 0.58, 1) };
+        rot.value = tx.value * 0.12;
+        rot.value = withTiming(d * 25, out);
+        tx.value = withTiming(d * 600, out);
+        gone.value = withTiming(1, out);
         runOnJS(onFling)(d);
       } else {
-        tx.value = withSpring(0, { damping: 16, stiffness: 160 });
+        tx.value = withTiming(0, { duration: 300, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });   // the demo's 0.3s ease back
       }
     });
 
   const style = useAnimatedStyle(() => ({
     transform: [
       { translateX: tx.value },
-      { translateY: 14 * (1 - fwd.value) },
-      { rotate: `${tx.value * 0.12}deg` },   // the demo's drag tilt
-      { scale: 0.95 + 0.05 * fwd.value },
+      { rotate: `${gone.value > 0 ? rot.value : tx.value * 0.12}deg` },
+      { scale: scale.value },
     ],
-    opacity: op.value * (0.55 + 0.45 * fwd.value),
+    opacity: 1 - gone.value,
   }));
 
   // NOTE: s.overlay carries explicit top/left/right/bottom — absolute children

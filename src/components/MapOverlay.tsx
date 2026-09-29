@@ -261,7 +261,8 @@ const s = StyleSheet.create({
   previewText: { flex: 1, gap: 3, minHeight: 108, justifyContent: 'center' },
   msg: { fontFamily: F.sans, fontSize: 13, color: '#aaa', textAlign: 'center', lineHeight: 19, paddingVertical: 6, paddingHorizontal: 12 },
   ecoName: { fontFamily: F.display, fontSize: 16, color: C.text, lineHeight: 20 },
-  ecoMeta: { fontFamily: F.sans, fontSize: 11.5, color: '#8B5035', letterSpacing: 0.4 },
+  // the header's ecoregion-name brown, and its weight — the regular weight read darker (user, 2026-09-29)
+  ecoMeta: { fontFamily: F.sansBold, fontSize: 11.5, color: '#8B5035', letterSpacing: 0.6 },
   lead: { fontFamily: F.sans, fontSize: 12, color: '#c9c4b8', lineHeight: 16.5, marginTop: 2 },
   credit: { fontFamily: F.sans, fontSize: 9.5, color: '#666', marginTop: 2 },
   wikiLink: { fontFamily: F.sansBold, color: C.greenSoft },
