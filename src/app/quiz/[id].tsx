@@ -20,8 +20,7 @@ import { Card, cardById, getCards, loadCatalog, photoFor } from '../../lib/catal
 import {
   LOCK_THRESHOLD, NUM_Q, countsOf, isFullyLocked, loadMastery, nextUnlocked, recordCorrect, scoreOf, useMastery,
 } from '../../lib/mastery';
-import { owns } from '../../lib/collection';
-import { ecoMembers, useCurrentEco } from '../../lib/ecoregions';
+import { useCurrentEco } from '../../lib/ecoregions';
 import { offlineReady } from '../../lib/offline';
 import { Q, buildQuiz } from '../../lib/quiz';
 import { earnSol } from '../../lib/sol';
@@ -109,14 +108,11 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
     advance();
   };
 
-  // after Solar: back to the Species screen with THIS card showing (user,
-  // 2026-09-26) — the gallery over the ecoregion's journaled cards, opened on
-  // it, replacing the quiz so Back lands on Field Notes
+  // after Solar: FIELD NOTES with this card's tile scrolled into view and
+  // haloed gold (user, 2026-09-28; was the gallery opened on the card)
   const showSolarCard = () => {
     setCelebrate(false);
-    const j = eco ? ecoMembers(eco.eid).filter(c => owns(eco.eid, c.species_id)).sort((a, b) => a.name.localeCompare(b.name)) : [card];
-    const start = Math.max(0, j.findIndex(c => c.id === card.id));
-    router.replace({ pathname: '/gallery', params: { ids: j.map(c => c.id).join(','), start: String(start), glow: card.id } });
+    router.replace({ pathname: '/deck', params: { glow: card.id } });
   };
   if (celebrate) return <SolarCelebration card={card} sol={5} onDone={showSolarCard} />;
 

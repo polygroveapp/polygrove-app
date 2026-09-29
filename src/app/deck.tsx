@@ -4,9 +4,10 @@
 // with a ❓ and "???" until you find them. Needs the catalog → online-only;
 // the Journal is the offline view.
 
-import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
@@ -25,6 +26,10 @@ export default function FieldNotes() {
   const masteryVersion = useMastery();   // tiers re-render as quizzes are won
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // glow = the card that just went Solar (user, 2026-09-28): its tile is
+  // scrolled into view and haloed gold
+  const { glow } = useLocalSearchParams<{ glow?: string }>();
+  const list = useRef<SectionList<Card[]>>(null);
 
   const load = () =>
     Promise.all([loadCatalog(), loadCollection(), loadCurrentEco(), loadMastery()])
@@ -64,6 +69,22 @@ export default function FieldNotes() {
   // how many cards each option would leave, given the other two filters —
   // the count sits at the right of every chip and button (user, 2026-09-26)
   const countIf = (patch: Partial<Sel>) => cards.reduce((n, c) => n + (matches(c, { ...cur, ...patch }) ? 1 : 0), 0);
+  // rows of three: the list is a SectionList so the FILTER BAR can stick to
+  // the top while the cards scroll under it (user, 2026-09-28)
+  const triples = useMemo(() => { const out: Card[][] = []; for (let i = 0; i < rows.length; i += 3) out.push(rows.slice(i, i + 3)); return out; }, [rows]);
+  // the fresh Solar card: scroll its row into view (SectionList item 0 is the
+  // section header, so rows are 1-based)
+  const scrollToGlow = (retry = true) => {
+    const r = rows.findIndex(c => c.id === glow);
+    if (r < 0) return;
+    try { list.current?.scrollToLocation({ sectionIndex: 0, itemIndex: Math.floor(r / 3) + 1, viewPosition: 0.35, animated: true }); }
+    catch { if (retry) setTimeout(() => scrollToGlow(false), 300); }
+  };
+  useEffect(() => {
+    if (!glow || !ready) return;
+    const t = setTimeout(() => scrollToGlow(), 400);
+    return () => clearTimeout(t);
+  }, [glow, ready]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const filterBar = (
     <View style={s.filters}>
@@ -110,7 +131,6 @@ export default function FieldNotes() {
           {cards.length}/{deckSize} Journaled{rows.length !== cards.length ? ` · ${rows.length} shown` : ''}
         </Text>
       </View>
-      {filterBar}
     </>
   );
 
@@ -129,28 +149,38 @@ export default function FieldNotes() {
     </View>
   );
   else body = (
-    <FlatList
-      data={rows}
-      keyExtractor={c => c.id}
-      numColumns={3}
-      initialNumToRender={18}
+    <SectionList
+      ref={list}
+      sections={[{ data: triples }]}
+      keyExtractor={r => r.map(c => c.id).join('|')}
+      stickySectionHeadersEnabled
+      renderSectionHeader={() => filterBar}
+      onScrollToIndexFailed={info => {   // a far row: jump close, then land on it
+        list.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
+        setTimeout(() => scrollToGlow(false), 300);
+      }}
+      initialNumToRender={8}
       windowSize={7}
       extraData={owned}
       ListHeaderComponent={header}
-      columnWrapperStyle={{ gap: 10 }}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: NAV_HEIGHT + insets.bottom + 20 }}
+      contentContainerStyle={{ paddingBottom: NAV_HEIGHT + insets.bottom + 20 }}
       ListEmptyComponent={
         <View style={[s.center, { paddingTop: 40 }]}>
           <Text style={s.msg}>{cards.length === 0 ? 'Nothing journaled here yet — open a pack.' : 'No journaled cards match these filters.'}</Text>
         </View>
       }
-      renderItem={({ item }) => (
-        <Cell card={item}
-          onPress={() => {
-            // the demo's card gallery over the journaled cards, starting here
-            const j = rows.filter(c => owns(eco.eid, c.species_id));
-            router.push({ pathname: '/gallery', params: { ids: j.map(c => c.id).join(','), start: String(j.findIndex(c => c.id === item.id)) } });
-          }} />
+      renderItem={({ item: row }) => (
+        <View style={s.row}>
+          {row.map(item => (
+            <Cell key={item.id} card={item} glow={item.id === glow}
+              onPress={() => {
+                // the demo's card gallery over the journaled cards, starting here
+                const j = rows.filter(c => owns(eco.eid, c.species_id));
+                router.push({ pathname: '/gallery', params: { ids: j.map(c => c.id).join(','), start: String(j.findIndex(c => c.id === item.id)) } });
+              }} />
+          ))}
+          {row.length < 3 && Array.from({ length: 3 - row.length }).map((_, i) => <View key={`pad${i}`} style={s.cellWrap} />)}
+        </View>
       )}
     />
   );
@@ -197,8 +227,18 @@ function Chip({ label, count, on, color, onPress }: { label: string; count: numb
 // mastery level. Undiscovered = an empty hexagon with a ?. Mastery score is
 // 0 for everyone until the quiz lands.
 let _glowSeq = 0;
-function Cell({ card, onPress }: { card: Card; onPress: () => void }) {
+function Cell({ card, onPress, glow = false }: { card: Card; onPress: () => void; glow?: boolean }) {
   const journaled = true;   // only journaled cards are listed (user, 2026-09-26: no ? tiles)
+  // the fresh Solar card: gold border + the demo's gold pulse around the tile
+  const pulse = useSharedValue(0);
+  useEffect(() => {
+    if (glow) pulse.value = withRepeat(withSequence(withTiming(1, { duration: 900 }), withTiming(0, { duration: 900 })), -1, false);
+  }, [glow, pulse]);
+  const glowStyle = useAnimatedStyle(() => ({
+    shadowColor: '#FFD700', shadowOpacity: glow ? 0.55 + 0.45 * pulse.value : 0,
+    shadowRadius: 10 + 12 * pulse.value, shadowOffset: { width: 0, height: 0 },
+    transform: [{ scale: glow ? 1 + 0.02 * pulse.value : 1 }],
+  }));
   const score = scoreOf(card.species_id);
   const t = getTier(score);
   // the whole tile is themed by LEVEL (user, 2026-09-26): hexagon, glow, divider
@@ -206,8 +246,9 @@ function Cell({ card, onPress }: { card: Card; onPress: () => void }) {
   const photo = journaled ? photoFor(card.id, 250) : undefined;
   const [glowId] = useState(() => `fn${++_glowSeq}`);
   return (
+    <Animated.View style={[s.cellWrap, glowStyle]}>
     <Pressable onPress={onPress} disabled={!journaled}
-      style={[s.cell, !journaled && { opacity: 0.45 }]}>
+      style={[s.cell, !journaled && { opacity: 0.45 }, glow && s.cellGold]}>
       <View style={s.photoWrap}>
         {journaled && (
           <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
@@ -236,6 +277,7 @@ function Cell({ card, onPress }: { card: Card; onPress: () => void }) {
         </View>
       </View>
     </Pressable>
+    </Animated.View>
   );
 }
 
@@ -247,17 +289,19 @@ const s = StyleSheet.create({
   retryTxt: { fontFamily: F.sansBold, color: C.green, fontSize: 13 },
   // the demo's header, same as home
   header: {
-    marginHorizontal: -20, padding: 20, alignItems: 'center',
+    padding: 20, alignItems: 'center',
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.15)',
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
   ecoLabel: { fontFamily: F.sansBold, fontSize: 11, color: '#8B5035', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2, maxWidth: 320 },
   tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5 },
-  titleWrap: { alignItems: 'center', paddingTop: 16, marginBottom: 12 },
+  titleWrap: { alignItems: 'center', paddingTop: 16, marginBottom: 4 },
+  row: { flexDirection: 'row', gap: 10, paddingHorizontal: 20 },
   title: { fontFamily: F.display, fontSize: 20, color: C.text, marginBottom: 2 },
   sub: { fontFamily: F.sans, fontSize: 12, color: '#555' },
   // filters: three dropdown buttons, the open one's options as chips below
-  filters: { marginBottom: 14 },
+  // sticky: opaque so the cards slide underneath (user, 2026-09-28)
+  filters: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, backgroundColor: '#0d140d' },
   filterRow: { flexDirection: 'row', gap: 8 },
   filterBtn: {
     flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,
@@ -277,10 +321,12 @@ const s = StyleSheet.create({
   // grid tile — the pack card in miniature
   // the regular card's border (PolygroveCard s.phone: 1px #333) — the level
   // shows only in the footer, the role in the hexagon + divider
+  cellWrap: { flex: 1, marginBottom: 10 },
   cell: {
-    flex: 1 / 3, aspectRatio: 3 / 4, marginBottom: 10, borderRadius: 12, borderWidth: 1,
+    aspectRatio: 3 / 4, borderRadius: 12, borderWidth: 1,
     borderColor: '#333333', backgroundColor: '#1a1a1a', overflow: 'hidden',
   },
+  cellGold: { borderWidth: 2, borderColor: '#FFD700' },
   photoWrap: { flex: 1, backgroundColor: '#111111', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   divider: { height: 1.5 },
   name: { fontFamily: F.display, fontSize: 8.5, color: C.text, lineHeight: 11, paddingHorizontal: 6, paddingTop: 5, minHeight: 27 },
