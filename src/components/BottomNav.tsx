@@ -22,8 +22,10 @@ const TABS = [
   { id: 'home', icon: '⛺', label: 'Camp', href: '/' },   // "Camp" (user, 2026-09-28)
   { id: 'map', icon: '🧭', label: 'Map', href: '/map' },
   // SOCIAL replaces About (user, 2026-09-29): iNaturalist, a globe. About is a link at its foot.
-  // the Earth itself, not the wireframe globe (user, 2026-09-29)
-  { id: 'social', icon: '🌎', label: 'Social', href: '/social' },
+  // the Earth itself, not the wireframe globe — and ONLY the globe is muted
+  // (user, 2026-09-29; all three were for a moment): an emoji's colours can't
+  // be changed, so it is drawn a little see-through
+  { id: 'social', icon: '🌎', label: 'Social', href: '/social', dim: 0.68 },
 ] as const;
 
 export type Tab = typeof TABS[number]['id'] | 'none';   // 'none' = no tab lit (Field Notes)
@@ -67,7 +69,7 @@ export default function BottomNav({ active }: { active: Tab }) {
             // tabs just SWITCH — no slide (user, 2026-09-29); `tab` tells the
             // stack to skip the animation, only the thumb glides
             onPress={() => { if (t.id !== active) router.replace({ pathname: t.href, params: { tab: '1' } }); }}>
-            <Text style={s.icon}>{t.icon}</Text>
+            <Text style={[s.icon, 'dim' in t && { opacity: t.dim }]}>{t.icon}</Text>
             <Text style={[s.label, t.id === active && s.labelOn]}>{t.label}</Text>
           </Pressable>
         ))}
@@ -94,9 +96,7 @@ const s = StyleSheet.create({
   thumbFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   thumbShine: { position: 'absolute', top: 0, left: 10, right: 10, height: 1, backgroundColor: 'rgba(255,255,255,0.28)' },   // the inset top highlight
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999 },
-  // ALL THREE icons are muted (user, 2026-09-29): an emoji's colours can't be
-  // changed, so they are drawn a little see-through over the glass
-  icon: { fontSize: 21, lineHeight: 25, opacity: 0.68 },
+  icon: { fontSize: 21, lineHeight: 25 },
   label: { fontFamily: F.sansBold, fontSize: 11, color: '#8f8f8f', marginTop: 1 },
   labelOn: { color: C.text },
 });
