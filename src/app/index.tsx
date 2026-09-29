@@ -107,9 +107,12 @@ export default function Home() {
           </View>
         ) : (
           <View style={s.body}>
-            {/* the ecoregion: place on the map · photo · first sentence, then the
-                packs, THEN the stats (user, 2026-09-28) */}
-            <EcoHero eco={eco} />
+            {/* stats */}
+            <View style={s.stats}>
+              <Stat n={journaledPct} pct label="Journaled" />
+              <Stat n={owned.length} label="Species" />
+              <Stat n={masteryPct(owned.map(o => o.speciesId))} pct label="Mastery" />
+            </View>
 
             {/* discovery pack */}
             <Animated.View style={[pulseStyle, { borderRadius: 16 }]}>
@@ -157,12 +160,10 @@ export default function Home() {
               <Text style={{ color: C.gold }}>Sol Points 🔆</Text>
             </Text>
 
-            {/* stats */}
-            <View style={s.stats}>
-              <Stat n={journaledPct} pct label="Journaled" />
-              <Stat n={owned.length} label="Species" />
-              <Stat n={masteryPct(owned.map(o => o.speciesId))} pct label="Mastery" />
-            </View>
+
+            {/* the ecoregion: place on the map · photo · first sentence — order is
+                stats → packs → this → journal/quiz (user, 2026-09-28) */}
+            <EcoHero eco={eco} />
 
             {/* journal · solar quiz (a random journaled card that isn't fully mastered) */}
             <View style={s.row2}>
@@ -211,7 +212,7 @@ const s = StyleSheet.create({
   ecoLabel: { fontFamily: F.sansBold, fontSize: 15, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },
   body: { paddingHorizontal: 20, paddingTop: 20 },
   // stats
-  stats: { flexDirection: 'row', justifyContent: 'center', gap: 40, marginTop: 6, marginBottom: 24 },
+  stats: { flexDirection: 'row', justifyContent: 'center', gap: 40, marginBottom: 24 },
   statN: { fontFamily: F.display, fontSize: 32, color: C.green, lineHeight: 38 },
   statPct: { fontFamily: F.display, fontSize: 14, color: C.green, marginTop: 4, marginLeft: 1 },
   statL: { fontFamily: F.sansBold, fontSize: 10, color: '#666', textTransform: 'uppercase', marginTop: 2 },
