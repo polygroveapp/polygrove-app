@@ -193,12 +193,12 @@ export default function PackOpening() {
         ))}
       </View>
 
-      {/* footer (user, 2026-09-29): skips left · SWIPE · journal k/5 — and the
+      {/* footer (user, 2026-09-29): "Pass" (not skip) · SWIPE · journal k/5 — and the
           two sides are buttons: a tap swipes the top card that way */}
       <View style={s.hintRow}>
         <Pressable hitSlop={14} disabled={!canSkip || swiping} onPress={() => swipeFor(-1)}>
           <Text style={[s.hintL, !canSkip && { color: '#3a3a3a' }]}>
-            {canSkip ? `◂ skip · ${maxSkips - skipped} left` : 'no skips left'}
+            {canSkip ? `◂ Pass · ${maxSkips - skipped} left` : 'no passes left'}
           </Text>
         </Pressable>
         <Text style={s.hintC}>swipe</Text>
@@ -217,7 +217,7 @@ export default function PackOpening() {
           <View style={[s.tipBox, s.tipBoxSkip]}>
             <Text style={s.tipBoxLabel}>SWIPE LEFT</Text>
             <Text style={s.tipHand}>👈</Text>
-            <Text style={[s.tipBoxVerb, { color: '#9E9E9E' }]}>TO SKIP</Text>
+            <Text style={[s.tipBoxVerb, { color: '#9E9E9E' }]}>TO PASS</Text>
             <Text style={s.tipBoxTxt}>Not interesting — draws a fresh card</Text>
           </View>
           <View style={[s.tipBox, s.tipBoxKeep]}>
