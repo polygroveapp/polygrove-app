@@ -43,7 +43,9 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: C.bg },
           // tab changes (BottomNav's `tab` param) switch instantly; everything
           // else slides in from the right
-          animation: (route.params as { tab?: string } | undefined)?.tab ? 'none' : 'slide_from_right',
+          // Field Notes RISES FROM THE BOTTOM (user, 2026-09-29), like the web pages
+          animation: (route.params as { tab?: string } | undefined)?.tab ? 'none'
+            : route.name === 'deck' ? 'slide_from_bottom' : 'slide_from_right',
         })}
       />
       {/* the map lives here, always loaded, shown on the Map tab */}
