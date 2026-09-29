@@ -20,6 +20,7 @@ import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, cardById, getCards, loadCatalog } from '../lib/catalog';
 import { countsOf, isFullyLocked, loadMastery, useMastery } from '../lib/mastery';
 import { offlineReady } from '../lib/offline';
+import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 const GAP = 22;   // space between cards (demo: ~none)
 
@@ -86,6 +87,7 @@ export default function Gallery() {
     // the whole backdrop closes: any tap outside the card (the dark area, the
     // gaps, a peeking neighbor) dismisses the gallery (user, 2026-09-26)
     <Pressable onPress={isPack ? undefined : close} style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
+      <GreenBackdrop />
       <CloseX onPress={close} />
       <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 20 }}>
         <View style={s.head}>
@@ -142,7 +144,7 @@ export default function Gallery() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0a0f0a' },
+  root: { flex: 1, backgroundColor: GREEN_BG },
   // pack mode: the two ways on
   packRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
   packQuiz: { flex: 1.4, paddingVertical: 13, borderRadius: 14, alignItems: 'center', backgroundColor: '#FFC107' },

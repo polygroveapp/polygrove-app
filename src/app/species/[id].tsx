@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F, TROPHIC_COLOR } from '../../constants/polygrove';
 import { FoodwebLink, cardById, cardByName, getCards, loadCatalog, photoFor } from '../../lib/catalog';
 import { offlineReady } from '../../lib/offline';
+import GreenBackdrop, { GREEN_BG } from '../../components/GreenBackdrop';
 
 export default function SpeciesCard() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,11 +23,13 @@ export default function SpeciesCard() {
 
   if (!ready) return (
     <View style={[s.center, { paddingTop: insets.top }]}>
+      <GreenBackdrop />
       <ActivityIndicator color={C.green} />
     </View>
   );
   if (!card) return (
     <View style={[s.center, { paddingTop: insets.top }]}>
+      <GreenBackdrop />
       <Text style={{ fontFamily: F.sans, color: C.dim }}>Card not found.</Text>
       <Pressable onPress={goBack}><Text style={s.back}>‹ Back</Text></Pressable>
     </View>
@@ -51,7 +54,9 @@ function CardBody({ card, tc }: { card: NonNullable<ReturnType<typeof cardById>>
   ];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }}
+    <View style={{ flex: 1, backgroundColor: GREEN_BG }}>
+    <GreenBackdrop />
+    <ScrollView style={{ flex: 1 }}
       contentContainerStyle={{ paddingTop: insets.top + 6, paddingBottom: insets.bottom + 30 }}>
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
         hitSlop={12} style={{ paddingHorizontal: 16 }}>
@@ -107,6 +112,7 @@ function CardBody({ card, tc }: { card: NonNullable<ReturnType<typeof cardById>>
         )}
       </View>
     </ScrollView>
+    </View>
   );
 }
 
@@ -129,7 +135,7 @@ function WebList({ title, links, color, onOpen }:
 }
 
 const s = StyleSheet.create({
-  center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  center: { flex: 1, backgroundColor: GREEN_BG, alignItems: 'center', justifyContent: 'center' },
   back: { fontFamily: F.sansBold, fontSize: 14, color: C.greenSoft, paddingVertical: 6 },
   photoFrame: {
     marginTop: 8, marginHorizontal: 20, borderRadius: 18, borderWidth: 2,

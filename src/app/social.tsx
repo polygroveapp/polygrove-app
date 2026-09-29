@@ -18,6 +18,7 @@ import { loadCurrentEco, loadEcoMeta } from '../lib/ecoregions';
 import { loadFollows, useFollows } from '../lib/follows';
 import { Naturalist, Sighting, feed, searchNaturalists } from '../lib/inatPublic';
 import { loadSol, useSol } from '../lib/sol';
+import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 export default function Social() {
   const router = useRouter();
@@ -63,6 +64,7 @@ export default function Social() {
 
   return (
     <View style={s.root}>
+      <GreenBackdrop />
       <ScrollView keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: 20, paddingBottom: NAV_HEIGHT + insets.bottom + 24 }}>
         <View style={s.head}>
@@ -132,7 +134,7 @@ export function Person({ p, onPress }: { p: Naturalist; onPress: () => void }) {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root: { flex: 1, backgroundColor: GREEN_BG },
   center: { alignItems: 'center', justifyContent: 'center' },
   head: { alignItems: 'center', marginBottom: 18 },
   title: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34 },

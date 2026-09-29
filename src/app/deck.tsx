@@ -6,7 +6,7 @@
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, SectionList, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
@@ -17,6 +17,7 @@ import { Card, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
 import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
+import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 export default function FieldNotes() {
   const router = useRouter();
@@ -86,8 +87,22 @@ export default function FieldNotes() {
     return () => clearTimeout(t);
   }, [glow, ready]);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  // THE BAR WEARS THE PAGE'S GRADIENT (2026-09-29): it has to be opaque for
+  // the cards to slide under, so it carries its own screen-sized copy of the
+  // backdrop, shifted to wherever the bar is on screen — no flat stripe
+  const win = useWindowDimensions();
+  const scrollY = useSharedValue(0);
+  const headerH = useSharedValue(0);
+  const sliceStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -Math.max(0, headerH.value - scrollY.value) }],
+  }));
+
   const filterBar = (
     <View style={s.filters}>
+      <Animated.View pointerEvents="none"
+        style={[{ position: 'absolute', left: 0, top: -insets.top, width: win.width, height: win.height }, sliceStyle]}>
+        <GreenBackdrop />
+      </Animated.View>
       <View style={s.filterRow}>
         <FilterBtn label="Level" value={level ? levelOpts.find(o => o.key === level)?.label : undefined}
           color={level ? MASTERY.find(m => m.key === level)?.border : undefined} count={rows.length}
@@ -117,7 +132,7 @@ export default function FieldNotes() {
   );
 
   const header = (
-    <>
+    <View onLayout={e => { headerH.value = e.nativeEvent.layout.height; }}>
       <View style={s.header}>
         <Text style={s.logo}>Polygrove</Text>
         <Text style={s.tagline}>An educational ecology trading card app</Text>
@@ -129,7 +144,7 @@ export default function FieldNotes() {
           {cards.length}/{deckSize} Journaled{rows.length !== cards.length ? ` · ${rows.length} shown` : ''}
         </Text>
       </View>
-    </>
+    </View>
   );
 
   let body: React.ReactNode;
@@ -152,6 +167,8 @@ export default function FieldNotes() {
       sections={[{ data: triples }]}
       keyExtractor={r => r.map(c => c.id).join('|')}
       stickySectionHeadersEnabled
+      onScroll={e => { scrollY.value = e.nativeEvent.contentOffset.y; }}
+      scrollEventThrottle={16}
       renderSectionHeader={() => filterBar}
       onScrollToIndexFailed={info => {   // a far row: jump close, then land on it
         list.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
@@ -185,6 +202,7 @@ export default function FieldNotes() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
+      <GreenBackdrop />
       {ready && eco && !error ? body : <>{header}{body}</>}
       <BottomNav active="none" />
     </View>
@@ -280,7 +298,7 @@ function Cell({ card, onPress, glow = false }: { card: Card; onPress: () => void
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0d140d' },
+  root: { flex: 1, backgroundColor: GREEN_BG },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   msg: { fontFamily: F.sans, fontSize: 13, color: C.dim, textAlign: 'center' },
   retry: { marginTop: 18, paddingHorizontal: 22, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(76,175,80,0.4)', backgroundColor: 'rgba(76,175,80,0.15)' },
@@ -300,7 +318,7 @@ const s = StyleSheet.create({
   sub: { fontFamily: F.sans, fontSize: 12, color: '#555' },
   // filters: three dropdown buttons, the open one's options as chips below
   // sticky: opaque so the cards slide underneath (user, 2026-09-28)
-  filters: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, backgroundColor: '#0d140d' },
+  filters: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, backgroundColor: GREEN_BG, overflow: 'hidden' },
   filterRow: { flexDirection: 'row', gap: 8 },
   filterBtn: {
     flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,

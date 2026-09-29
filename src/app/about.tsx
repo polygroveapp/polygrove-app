@@ -8,6 +8,7 @@ import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import CloseX from '../components/CloseX';
 import { C, F } from '../constants/polygrove';
 import { openWeb } from '../lib/web';
+import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 const open = (u: string) => openWeb(u);
 
@@ -16,6 +17,7 @@ export default function About() {
   const insets = useSafeAreaInsets();
   return (
     <View style={s.root}>
+      <GreenBackdrop />
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: 22, paddingBottom: NAV_HEIGHT + insets.bottom + 24 }}>
         <Text style={s.logo}>Polygrove</Text>
         <Text style={s.tag}>every living thing is a card</Text>
@@ -54,7 +56,7 @@ export default function About() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root: { flex: 1, backgroundColor: GREEN_BG },
   logo: { fontFamily: F.display, fontSize: 30, color: C.green, textAlign: 'center' },
   tag: { fontFamily: F.sans, fontSize: 13, color: C.dim, textAlign: 'center', marginTop: 4, marginBottom: 10 },
   h: { fontFamily: F.display, fontSize: 15, color: C.text, marginTop: 22, marginBottom: 6 },

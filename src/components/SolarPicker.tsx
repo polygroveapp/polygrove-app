@@ -17,6 +17,7 @@ import { Owned } from '../lib/collection';
 import { countsOf, isFullyLocked, scoreOf } from '../lib/mastery';
 import CloseX from './CloseX';
 import PolygroveCard from './PolygroveCard';
+import GreenBackdrop, { GREEN_BG } from './GreenBackdrop';
 
 const pickThree = (owned: Owned[]): Card[] => {
   const open = owned.filter(o => !isFullyLocked(countsOf(o.speciesId)));
@@ -63,6 +64,7 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onClose} onShow={() => setIdx(1)}>
       <View style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
+        <GreenBackdrop />
         <CloseX onPress={onClose} />
         <View style={s.top}>
           <Text style={s.title}>☀️ Choose a card</Text>
@@ -103,7 +105,7 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0a0f0a', paddingHorizontal: 20 },
+  root: { flex: 1, backgroundColor: GREEN_BG, paddingHorizontal: 20 },
   top: { alignItems: 'center', justifyContent: 'center', minHeight: 36 },
   title: { fontFamily: F.display, fontSize: 17, color: C.text },
   sub: { fontFamily: F.sans, fontSize: 11, color: '#777', textAlign: 'center', marginTop: 8, marginBottom: 12 },

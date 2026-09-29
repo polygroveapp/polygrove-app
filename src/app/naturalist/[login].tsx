@@ -18,6 +18,7 @@ import { Naturalist, Sighting, naturalist, sightingsOf } from '../../lib/inatPub
 import { cardForSpecies } from '../../lib/shop';
 import { loadSol, useSol } from '../../lib/sol';
 import { openWeb } from '../../lib/web';
+import GreenBackdrop, { GREEN_BG } from '../../components/GreenBackdrop';
 
 export default function Account() {
   const router = useRouter();
@@ -67,6 +68,7 @@ export default function Account() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top + 8 }]}>
+      <GreenBackdrop />
       <CloseX onPress={close} />
       <FlatList
         data={list}
@@ -113,7 +115,7 @@ function Stat({ n, label }: { n: number; label: string }) {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root: { flex: 1, backgroundColor: GREEN_BG },
   center: { alignItems: 'center', justifyContent: 'center' },
   head: { alignItems: 'center', paddingTop: 34, paddingBottom: 18 },
   avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: '#1c2a1c', borderWidth: 2, borderColor: 'rgba(129,199,132,0.4)', marginBottom: 10 },

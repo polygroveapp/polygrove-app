@@ -10,6 +10,7 @@ import { cardById, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, useCollection } from '../lib/collection';
 import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 import { offlineReady } from '../lib/offline';
+import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 export default function Journal() {
   const router = useRouter();
@@ -22,10 +23,11 @@ export default function Journal() {
   useEffect(() => {
     Promise.allSettled([loadCollection(), loadCurrentEco(), offlineReady(), loadCatalog()]).then(() => setReady(true));
   }, []);
-  if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
+  if (!ready) return <View style={{ flex: 1, backgroundColor: GREEN_BG }}><GreenBackdrop /></View>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: GREEN_BG, paddingTop: insets.top }}>
+      <GreenBackdrop />
       <View style={s.header}>
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} hitSlop={12}>
           <Text style={s.back}>‹ Home</Text>

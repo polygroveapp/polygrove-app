@@ -25,6 +25,7 @@ import { countsOf, isFullyLocked, loadMastery, masteryPct, useMastery } from '..
 import { offlineReady, packsReady, topUp } from '../lib/offline';
 import { SOLAR_PACK_COST, loadSol, useSol } from '../lib/sol';
 import { takePacksPopup } from '../lib/tips';
+import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 export default function Home() {
   const router = useRouter();
@@ -90,8 +91,7 @@ export default function Home() {
 
   return (
     <View style={s.root}>
-      <LinearGradient colors={['#0a0f0a', '#1a2e1a', '#0f1a0f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill} />
+      <GreenBackdrop />
       <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: NAV_HEIGHT + insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
         {/* header */}
         <View style={s.header}>
@@ -239,7 +239,7 @@ function Stat({ n, pct, label }: { n: number; pct?: boolean; label: string }) {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0d140d' },
+  root: { flex: 1, backgroundColor: GREEN_BG },
   header: {
     padding: 20, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(0,0,0,0.15)',

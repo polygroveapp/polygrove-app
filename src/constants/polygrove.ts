@@ -2,7 +2,7 @@
 // explorer speak the same dialect.
 
 export const C = {
-  bg: '#0d0d0d',
+  bg: '#0d140d',        // the Camp green — every page sits on it (2026-09-29)
   panel: '#161616',
   card: '#141414',
   line: '#2a2a2a',

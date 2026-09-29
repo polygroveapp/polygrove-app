@@ -8,6 +8,7 @@ import { StyleSheet, Text } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { ClipPath, Defs, Image as SvgImage, Polygon, Svg } from 'react-native-svg';
 import { C, F } from '../constants/polygrove';
+import GreenBackdrop, { GREEN_BG } from './GreenBackdrop';
 
 const HALF_DOME = require('../../assets/images/half-dome.jpg');
 const W = 160, H = 185, B = 6;   // the demo's hexagon: 160×185, 6px green border
@@ -37,6 +38,7 @@ export default function Splash({ onDone }: { onDone: () => void }) {
   const imgH = iw * (525 / 400);
   return (
     <Animated.View style={[s.root, style]}>
+      <GreenBackdrop />
       <FadeUp delay={0}>
         <Svg width={W} height={H}>
           <Defs><ClipPath id="splashHex"><Polygon points={pts(iw, ih, B, B)} /></ClipPath></Defs>
@@ -54,7 +56,7 @@ export default function Splash({ onDone }: { onDone: () => void }) {
 const s = StyleSheet.create({
   root: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10,
-    backgroundColor: '#0a0f0a', alignItems: 'center', justifyContent: 'center', gap: 28,
+    backgroundColor: GREEN_BG, alignItems: 'center', justifyContent: 'center', gap: 28,
   },
   title: { fontFamily: F.display, fontSize: 36, color: C.green, letterSpacing: 1, lineHeight: 47 },
   sub: { fontFamily: F.sans, fontSize: 13, color: '#888', letterSpacing: 0.5, textAlign: 'center', paddingHorizontal: 40, lineHeight: 19.5 },

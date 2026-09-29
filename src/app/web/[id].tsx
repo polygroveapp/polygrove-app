@@ -13,6 +13,7 @@ import { C, F } from '../../constants/polygrove';
 import { cardById, getCards, loadCatalog } from '../../lib/catalog';
 import { globiRecords } from '../../lib/dossier';
 import { offlineReady } from '../../lib/offline';
+import GreenBackdrop, { GREEN_BG } from '../../components/GreenBackdrop';
 
 export default function FoodWebScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,9 +28,10 @@ export default function FoodWebScreen() {
   const card = ready ? cardById(String(id)) : undefined;
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
-  if (!ready) return <View style={s.root}><ActivityIndicator color={C.green} style={{ marginTop: 120 }} /></View>;
+  if (!ready) return <View style={s.root}><GreenBackdrop /><ActivityIndicator color={C.green} style={{ marginTop: 120 }} /></View>;
   if (!card) return (
     <View style={[s.root, s.center]}>
+      <GreenBackdrop />
       <Text style={{ color: C.dim, fontFamily: F.sans }}>Card not found.</Text>
       <Pressable onPress={goBack}><Text style={{ color: C.greenSoft, fontFamily: F.sansBold, padding: 10 }}>‹ Back</Text></Pressable>
     </View>
@@ -39,7 +41,8 @@ export default function FoodWebScreen() {
 
   return (
     <Pressable style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]} onPress={goBack}>
-      <View style={s.head} pointerEvents="none">
+      <GreenBackdrop />
+      <View style={[s.head, { top: insets.top + 8 }]} pointerEvents="none">
         <Text style={s.title}>{card.name}</Text>
         <Text style={s.sub}>FOOD WEB</Text>
       </View>
@@ -89,7 +92,7 @@ export default function FoodWebScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#000' },
+  root: { flex: 1, backgroundColor: GREEN_BG },
   center: { alignItems: 'center', justifyContent: 'center' },
   head: { position: 'absolute', top: 44, left: 0, right: 0, alignItems: 'center', zIndex: 2 },
   title: { fontFamily: F.display, fontSize: 22, color: C.text, textAlign: 'center', paddingHorizontal: 20, lineHeight: 26 },
