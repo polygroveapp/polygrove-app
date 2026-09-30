@@ -231,9 +231,26 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
             </Pressable>
           </>
         ) : (
-          <Text style={[s.msg, { marginTop: 56 }]}>
-            {pageReady ? 'Move the map until the pin sits on an ecoregion.' : current ? `You’re in ${current.name}.` : 'Loading the map…'}
-          </Text>
+          // NOTHING UNDER THE PIN (user, 2026-09-30, "look there's a space"): the
+          // same shape as a preview — a picture box, a title, a line, a button —
+          // so the sheet never looks half-empty; the button flies home
+          <>
+            <View style={s.preview}>
+              <View style={[s.photo, s.center]}><Text style={s.noPhoto}>{pageReady ? '🌊' : '🗺️'}</Text></View>
+              <View style={s.previewText}>
+                <Text style={s.ecoName}>{pageReady ? 'No ecoregion here' : 'Loading the map…'}</Text>
+                <Text style={s.lead}>
+                  {pageReady ? 'Open water, ice or the edge of the map. Move the map until the pin sits on land.'
+                    : current ? `You’re camped in ${current.name}.` : 'Choose where to camp once it loads.'}
+                </Text>
+              </View>
+            </View>
+            {current ? (
+              <Pressable onPress={() => pushState(true)} style={[s.enter, s.enterHere]}>
+                <Text style={s.enterTxt} numberOfLines={1}>Back to camp · {current.name}</Text>
+              </Pressable>
+            ) : null}
+          </>
         )}
       </View>
       <BottomNav active="map" shown={visible} />
