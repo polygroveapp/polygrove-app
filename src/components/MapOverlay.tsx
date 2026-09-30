@@ -31,10 +31,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
-import { C, F } from '../constants/polygrove';
+import { C, F, getLevel, MASTERY } from '../constants/polygrove';
+import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import { loadCatalog } from '../lib/catalog';
-import { collectedEcoregions, collectionCount, loadCollection } from '../lib/collection';
-import { cleanLead, ecoDeckSize, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco, wikiUrl } from '../lib/ecoregions';
+import { collectedEcoregions, loadCollection } from '../lib/collection';
+import { cleanLead, ecoDeckSize, ecoMembers, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco, wikiUrl } from '../lib/ecoregions';
 
 const PICKER_URL = 'https://polygrovedb.pages.dev/map';   // Pages serves map.html here
 const HEADER_H = 62;   // the "Where are you?" bar, below the safe area
@@ -67,7 +68,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   }, []);
   // every time the map comes forward: the journal may have grown since
   useEffect(() => {
-    if (visible) loadCollection().then(() => setCollected(collectedEcoregions()));
+    if (visible) Promise.all([loadCollection(), loadMastery()]).then(() => setCollected(collectedEcoregions()));
   }, [visible]);
 
   // the app's chrome, so the page centres the pin (and fly-to) in the visible map
@@ -78,17 +79,27 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // push the app's state into the page: current ecoregion (fly-to on first
   // show) + collected ecoregions (gold) + chrome padding
   const pushState = (fly: boolean) => {
-    // camp = the ecoregion you are in (brown border); completed = decks with
-    // every card journaled (gold inside) — known once the catalog has loaded
-    const completed = catalogReady
-      ? collected.filter(eid => { const n = ecoDeckSize(eid); return n > 0 && collectionCount(eid) >= n; })
-      : [];
-    const state = JSON.stringify({ current: current?.eid ?? null, camp: current?.eid ?? null, collected, completed, fly, pad: { top: padTop, bottom: padBottom } });
+    // camp = the ecoregion you are in (brown border). MASTERY COLOURS (user,
+    // 2026-09-30): an ecoregion you've been to is outlined dark → bright
+    // green by how far its deck is mastered — the mean tier of every card in
+    // the deck (unjournaled cards count as nothing), 0..1 — and GOLD once
+    // every card is Solar (completed: gold border + gold inside). Known once
+    // the catalog has loaded.
+    const top = MASTERY.length - 1;
+    const progress: Record<number, number> = {};
+    if (catalogReady) for (const eid of collected) {
+      const deck = ecoMembers(eid);
+      if (!deck.length) continue;
+      progress[eid] = deck.reduce((n, c) => n + getLevel(scoreOf(c.species_id)), 0) / (deck.length * top);
+    }
+    const completed = collected.filter(eid => (progress[eid] ?? 0) >= 1);
+    const state = JSON.stringify({ current: current?.eid ?? null, camp: current?.eid ?? null, collected, completed, progress, fly, pad: { top: padTop, bottom: padBottom } });
     web.current?.injectJavaScript(`window.polygroveSetState && window.polygroveSetState(${state}); true;`);
   };
   // also when the page becomes ready: with no camp chosen yet nothing else
   // sends the padding, and the page would read the pin at the screen's centre
-  useEffect(() => { if (pageReady) pushState(false); }, [pageReady, collected, catalogReady, current?.eid, padTop, padBottom]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const masteryVersion = useMastery();   // re-send when a quiz is won
+  useEffect(() => { if (pageReady) pushState(false); }, [pageReady, collected, catalogReady, current?.eid, padTop, padBottom, masteryVersion]);   // eslint-disable-line react-hooks/exhaustive-deps
   // fly to your camp whenever it isn't the one the map last flew to — on
   // launch (whichever arrives last, the page's ready or the stored camp) and
   // again if the camp changed while the map sat behind another tab
@@ -196,7 +207,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
         base = base ? [base[0] + (b - base[0]) * 0.02, base[1] + (g - base[1]) * 0.02] : [b, g];
         // 3× the first cut (user, 2026-09-30: "make the map tilt by gyro 3
         // times as much"): gains ×3, caps widened to match
-        const pitch = clamp(TILT_REST + (b - base[0]) * 1.5, 0, 40);
+        const pitch = clamp(TILT_REST + (b - base[0]) * 1.1, 0, 32);   // "a little less" up and down (user, 2026-09-30)
         const bearing = clamp((g - base[1]) * 0.9, -15, 15);
         out = [out[0] + (pitch - out[0]) * 0.25, out[1] + (bearing - out[1]) * 0.25];
         if (Math.abs(out[0] - sent[0]) < 0.15 && Math.abs(out[1] - sent[1]) < 0.15) return;
@@ -394,10 +405,11 @@ const s = StyleSheet.create({
   top: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 40, gap: 10 },
   titleWrap: { flex: 1, alignItems: 'center', backgroundColor: 'rgba(10,15,10,0.85)', borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10 },
   title: { fontFamily: F.display, fontSize: 15, color: '#ffe14d' },   // yellow (user, 2026-09-30 — after the ecoregion brown, white, dimmer white)
-  sub: { fontFamily: F.sans, fontSize: 10.5, color: '#888' },
+  sub: { fontFamily: F.sans, fontSize: 10.5, color: '#ffffff' },   // white (user, 2026-09-30; was grey)
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
   zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row' },
 
+  // the + / − green (user, 2026-09-30: brown for a minute, then "green again")
   zoomBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(10,15,10,0.85)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
   sheet: {
