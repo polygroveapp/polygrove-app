@@ -26,6 +26,7 @@ import { DeviceMotion } from 'expo-sensors';
 import { openWeb } from '../lib/web';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
@@ -40,7 +41,7 @@ const HEADER_H = 62;   // the "Where are you?" bar, below the safe area
 // the sheet is a FIXED height whatever it shows: the pin sits in the middle
 // of the map above it, so a sheet that grew with its content would move the
 // pin, change what's under it, and chase itself
-const SHEET_H = 222;   // (was 206: the credit line and the bolder deck line outgrew it, and the centred content spilled over the top edge)
+const SHEET_H = 198;   // (222 left a band of nothing under the button — user, 2026-09-30 "why is there space here"; content hangs from the top, so the sheet only needs its tallest state: 2-line name + 2-line lead + button)
 const TILT_REST = 9;   // degrees of lean at rest; motion adds or removes up to this much
 
 type Pick = { eid: number; name: string; bbox: [number, number, number, number] };
@@ -96,11 +97,39 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     if (pageReady && current && flownTo.current !== current.eid) { flownTo.current = current.eid; pushState(true); }
   }, [pageReady, current]);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  // THE PIN LEANS AGAINST THE DRAG (user, 2026-09-30, "you move right it tilts
+  // left"): it's stuck in the ground, so when the world slides under it the
+  // head lags behind — sideways drags tip it around its tip (rotateZ), up/down
+  // drags tip it toward or away from you (rotateX, with perspective). The
+  // page sends each frame's slide in pixels; a touch of smoothing turns that
+  // into a velocity, a stiff spring follows it, and once the map stops a
+  // looser spring lets it swing back upright with a little wobble.
+  const leanZ = useSharedValue(0), leanX = useSharedValue(0);
+  const vel = useRef({ x: 0, y: 0 });
+  const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clampDeg = (v: number, m: number) => Math.max(-m, Math.min(m, v));
+  const onPan = (dx: number, dy: number) => {
+    const v = vel.current;
+    v.x = v.x * 0.55 + dx * 0.45; v.y = v.y * 0.55 + dy * 0.45;
+    leanZ.value = withSpring(clampDeg(-v.x * 1.4, 32), { damping: 16, stiffness: 260, mass: 0.5 });
+    leanX.value = withSpring(clampDeg(v.y * 1.1, 26), { damping: 16, stiffness: 260, mass: 0.5 });
+    if (settle.current) clearTimeout(settle.current);
+    settle.current = setTimeout(() => {
+      v.x = 0; v.y = 0;
+      const back = { damping: 7, stiffness: 150, mass: 0.7 };
+      leanZ.value = withSpring(0, back); leanX.value = withSpring(0, back);
+    }, 70);
+  };
+  const leanStyle = useAnimatedStyle(() => ({
+    transform: [{ perspective: 420 }, { rotateX: `${leanX.value}deg` }, { rotateZ: `${leanZ.value}deg` }],
+  }));
+
   const onMessage = (e: WebViewMessageEvent) => {
-    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox'] };
+    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox']; dx?: number; dy?: number };
     try { m = JSON.parse(e.nativeEvent.data); } catch { return; }
     if (m.type === 'ready') setPageReady(true);
     if (m.type === 'center') setPick(m.eid != null && m.name && m.bbox ? { eid: m.eid, name: m.name, bbox: m.bbox } : null);
+    if (m.type === 'pan' && typeof m.dx === 'number' && typeof m.dy === 'number') onPan(m.dx, m.dy);
   };
 
   // SUBTLE MOTION (user, 2026-09-29: "as much as the new Photos widget
@@ -165,6 +194,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
           {/* the round pushpin: a small glossy RED ball on a thin steel needle
               (user, 2026-09-28: red in the end — tried grey, black, yellow, gold,
               orange — smaller ball, smaller overall) */}
+          <Animated.View style={[{ width: PIN_W, height: PIN_H + 3, transformOrigin: '50% 100%' }, leanStyle]}>
           <Svg width={PIN_W} height={PIN_H + 3} viewBox="0 0 20 33">
             <Defs>
               <RadialGradient id="ball" cx="38%" cy="32%" r="65%">
@@ -179,6 +209,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
             <Circle cx="10" cy="7" r="6.5" fill="url(#ball)" stroke="#5a2320" strokeWidth="0.7" />
             <Ellipse cx="7.4" cy="4.4" rx="1.9" ry="1.2" fill="rgba(255,255,255,0.55)" />
           </Svg>
+          </Animated.View>
         </View>
       )}
 
