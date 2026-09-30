@@ -393,7 +393,7 @@ const s = StyleSheet.create({
   // no back button (user, 2026-09-29): the tab bar's Camp is the way home
   top: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 40, gap: 10 },
   titleWrap: { flex: 1, alignItems: 'center', backgroundColor: 'rgba(10,15,10,0.85)', borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10 },
-  title: { fontFamily: F.display, fontSize: 15, color: '#ffffff' },   // the ecoregion label's brown (user, 2026-09-29, after orange and green)   // white (user, 2026-09-30; was the ecoregion brown)
+  title: { fontFamily: F.display, fontSize: 15, color: '#ffe14d' },   // yellow (user, 2026-09-30 — after the ecoregion brown, white, dimmer white)
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#888' },
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
   zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row' },
