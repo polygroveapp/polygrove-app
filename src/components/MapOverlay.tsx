@@ -117,7 +117,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     // subtler (user, 2026-09-30: "make the tilts subtler" — about half the first cut)
     leanZ.value = withSpring(clampDeg(v.x * 0.7, 16), follow);
     // fore-aft: dragging UP brings the ball toward you (+), down sends it away
-    leanX.value = withSpring(clampDeg(-v.y * 0.8, 30), follow);
+    leanX.value = withSpring(clampDeg(-v.y * 1.2, 42), follow);
     if (settle.current) clearTimeout(settle.current);
     settle.current = setTimeout(() => {
       v.x = 0; v.y = 0;
@@ -138,16 +138,29 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // toward you foreshortens the needle and slides the (bigger, nearer) ball
   // down over it; tipping away stretches the needle a little and shrinks
   // the ball back, so the stick shows
-  const NEEDLE = 22.7;   // ball centre → tip, in viewBox units (= points here)
+  // (user, 2026-09-30, second pass: "move the ball down the stick and don't
+  // let the stick pop out when scrolling up, the opposite for scrolling
+  // down") — scrolling UP: the ball slides down the needle, which keeps its
+  // length, so the needle's top stays buried in the ball (it can slide at
+  // most 6pt: the needle top sits 6.9pt below the ball's top). Scrolling
+  // DOWN: the ball slides up and the needle stretches with it, so more stick
+  // shows and no gap opens under the ball.
+  const NEEDLE_TOP = 16.3;   // needle top → tip, in viewBox units (= points here)
+  // MORE PRONOUNCED (user, 2026-09-30): the ball travels up to 12pt down the
+  // needle (the needle shortens under it at 60% of the travel, so its top
+  // stays buried) and up to 16pt up it, the needle stretching to follow
+  const slide = (a: number) => {
+    'worklet';   // called from the UI thread inside the animated styles
+    return a >= 0 ? Math.min(12, 24 * Math.sin(a)) : -18 * Math.sin(-a);
+  };
   const needleStyle = useAnimatedStyle(() => {
-    const a = (leanX.value * Math.PI) / 180;
-    return { transform: [{ scaleY: a >= 0 ? Math.cos(a) : 1 + 0.14 * Math.sin(-a) }] };
+    const a = (leanX.value * Math.PI) / 180, d = slide(a);
+    return { transform: [{ scaleY: d < 0 ? 1 - d / NEEDLE_TOP : 1 - (0.6 * d) / NEEDLE_TOP }] };
   });
   const ballStyle = useAnimatedStyle(() => {
     const a = (leanX.value * Math.PI) / 180;
-    const dy = a >= 0 ? NEEDLE * (1 - Math.cos(a)) : -NEEDLE * 0.14 * Math.sin(-a);
-    const k = a >= 0 ? 1 + 0.45 * Math.sin(a) : 1 - 0.28 * Math.sin(-a);
-    return { transform: [{ translateY: dy }, { scale: k }] };
+    const k = a >= 0 ? 1 + 0.4 * Math.sin(a) : 1 - 0.25 * Math.sin(-a);
+    return { transform: [{ translateY: slide(a) }, { scale: k }] };
   });
   // the ground shadow stays flat on the map and slides under the ball as the
   // pin leans (the ball hangs ~23pt above the tip) — the cue that makes the
@@ -181,8 +194,10 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
         if (!m.rotation) return;
         const b = deg(m.rotation.beta), g = deg(m.rotation.gamma);
         base = base ? [base[0] + (b - base[0]) * 0.02, base[1] + (g - base[1]) * 0.02] : [b, g];
-        const pitch = clamp(TILT_REST + (b - base[0]) * 0.5, 0, TILT_REST * 2);
-        const bearing = clamp((g - base[1]) * 0.3, -5, 5);
+        // 3× the first cut (user, 2026-09-30: "make the map tilt by gyro 3
+        // times as much"): gains ×3, caps widened to match
+        const pitch = clamp(TILT_REST + (b - base[0]) * 1.5, 0, 40);
+        const bearing = clamp((g - base[1]) * 0.9, -15, 15);
         out = [out[0] + (pitch - out[0]) * 0.25, out[1] + (bearing - out[1]) * 0.25];
         if (Math.abs(out[0] - sent[0]) < 0.15 && Math.abs(out[1] - sent[1]) < 0.15) return;
         sent = [out[0], out[1]];
@@ -378,7 +393,7 @@ const s = StyleSheet.create({
   // no back button (user, 2026-09-29): the tab bar's Camp is the way home
   top: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 40, gap: 10 },
   titleWrap: { flex: 1, alignItems: 'center', backgroundColor: 'rgba(10,15,10,0.85)', borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10 },
-  title: { fontFamily: F.display, fontSize: 15, color: '#8B5035' },   // the ecoregion label's brown (user, 2026-09-29, after orange and green)
+  title: { fontFamily: F.display, fontSize: 15, color: '#ffffff' },   // the ecoregion label's brown (user, 2026-09-29, after orange and green)   // white (user, 2026-09-30; was the ecoregion brown)
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#888' },
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
   zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row' },
