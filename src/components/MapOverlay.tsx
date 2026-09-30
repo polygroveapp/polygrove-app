@@ -28,7 +28,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Circle, Defs, Ellipse, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
+import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
 import { C, F } from '../constants/polygrove';
@@ -97,10 +97,10 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     if (pageReady && current && flownTo.current !== current.eid) { flownTo.current = current.eid; pushState(true); }
   }, [pageReady, current]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  // THE PIN LEANS AGAINST THE DRAG (user, 2026-09-30, "you move right it tilts
-  // left"): it's stuck in the ground, so when the world slides under it the
-  // head lags behind — sideways drags tip it around its tip (rotateZ), up/down
-  // drags tip it toward or away from you (rotateX, with perspective). The
+  // THE PIN MOVES WITH THE DRAG (user, 2026-09-30; first built leaning
+  // against it, then "flip the orientation"): sideways drags tip it around its
+  // tip the way the world is going (rotateZ), up/down drags move it up and
+  // down with a small fore-aft tip (rotateX, with perspective). The
   // page sends each frame's slide in pixels; a touch of smoothing turns that
   // into a velocity, a stiff spring follows it, and once the map stops a
   // looser spring lets it swing back upright with a little wobble.
@@ -111,8 +111,13 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   const onPan = (dx: number, dy: number) => {
     const v = vel.current;
     v.x = v.x * 0.55 + dx * 0.45; v.y = v.y * 0.55 + dy * 0.45;
-    leanZ.value = withSpring(clampDeg(-v.x * 1.4, 32), { damping: 16, stiffness: 260, mass: 0.5 });
-    leanX.value = withSpring(clampDeg(v.y * 1.1, 26), { damping: 16, stiffness: 260, mass: 0.5 });
+    const follow = { damping: 16, stiffness: 260, mass: 0.5 };
+    // FLIPPED (user, 2026-09-30: "the pin's moving the opposite way"): it
+    // goes WITH the world — drag right, it tips right; drag down, it dips
+    // subtler (user, 2026-09-30: "make the tilts subtler" — about half the first cut)
+    leanZ.value = withSpring(clampDeg(v.x * 0.7, 16), follow);
+    // fore-aft: dragging UP brings the ball toward you (+), down sends it away
+    leanX.value = withSpring(clampDeg(-v.y * 0.8, 30), follow);
     if (settle.current) clearTimeout(settle.current);
     settle.current = setTimeout(() => {
       v.x = 0; v.y = 0;
@@ -120,8 +125,36 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
       leanZ.value = withSpring(0, back); leanX.value = withSpring(0, back);
     }, 70);
   };
+  // THE TIP NEVER MOVES (user, 2026-09-30: "the bottom of the pin stays in
+  // place") — every motion pivots on it; up/down drags only tip the pin
+  // fore-aft, they don't lift it
   const leanStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 420 }, { rotateX: `${leanX.value}deg` }, { rotateZ: `${leanZ.value}deg` }],
+    transform: [{ rotateZ: `${leanZ.value}deg` }],
+  }));
+  // FORE-AFT IS FAKED IN 3D (user, 2026-09-30: "on the way up the red ball
+  // needs to be covering the stick, the other way the stick needs to be more
+  // shown"): a flat drawing tipped with a perspective transform can't do
+  // that — ball and needle are coplanar. So they're two layers: tipping
+  // toward you foreshortens the needle and slides the (bigger, nearer) ball
+  // down over it; tipping away stretches the needle a little and shrinks
+  // the ball back, so the stick shows
+  const NEEDLE = 22.7;   // ball centre → tip, in viewBox units (= points here)
+  const needleStyle = useAnimatedStyle(() => {
+    const a = (leanX.value * Math.PI) / 180;
+    return { transform: [{ scaleY: a >= 0 ? Math.cos(a) : 1 + 0.14 * Math.sin(-a) }] };
+  });
+  const ballStyle = useAnimatedStyle(() => {
+    const a = (leanX.value * Math.PI) / 180;
+    const dy = a >= 0 ? NEEDLE * (1 - Math.cos(a)) : -NEEDLE * 0.14 * Math.sin(-a);
+    const k = a >= 0 ? 1 + 0.45 * Math.sin(a) : 1 - 0.28 * Math.sin(-a);
+    return { transform: [{ translateY: dy }, { scale: k }] };
+  });
+  // the ground shadow stays flat on the map and slides under the ball as the
+  // pin leans (the ball hangs ~23pt above the tip) — the cue that makes the
+  // pin read as a solid thing
+  const shadowStyle = useAnimatedStyle(() => ({
+    opacity: 0.5,
+    transform: [{ translateX: 23 * Math.sin((leanZ.value * Math.PI) / 180) }, { translateY: 5 * Math.sin((leanX.value * Math.PI) / 180) }],
   }));
 
   const onMessage = (e: WebViewMessageEvent) => {
@@ -191,25 +224,72 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
       {/* the pin — a classic red map pin (user, 2026-09-28); its tip is the point the page reads */}
       {pageReady && (
         <View style={[s.pin, { top: pinY - PIN_H }]} pointerEvents="none">
-          {/* the round pushpin: a small glossy RED ball on a thin steel needle
-              (user, 2026-09-28: red in the end — tried grey, black, yellow, gold,
-              orange — smaller ball, smaller overall) */}
-          <Animated.View style={[{ width: PIN_W, height: PIN_H + 3, transformOrigin: '50% 100%' }, leanStyle]}>
+         <View style={{ width: PIN_W, height: PIN_H + 3 }}>
+          {/* the ground shadow: flat on the map, under the tip, NOT part of the
+              rotating pin (user, 2026-09-30: "make the pin 3D") */}
+          <Animated.View style={[{ position: 'absolute', left: (PIN_W - 36) / 2, top: PIN_H - 4, width: 36, height: 10 }, shadowStyle]}>
+            <Svg width={36} height={10} viewBox="0 0 36 10">
+              <Defs>
+                <RadialGradient id="pinshade" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0" stopColor="#000" stopOpacity="0.9" />
+                  <Stop offset="0.55" stopColor="#000" stopOpacity="0.45" />
+                  <Stop offset="1" stopColor="#000" stopOpacity="0" />
+                </RadialGradient>
+              </Defs>
+              <Ellipse cx="18" cy="5" rx="17" ry="4.5" fill="url(#pinshade)" />
+            </Svg>
+          </Animated.View>
+          {/* the round pushpin: a glossy RED ball on a steel needle (user,
+              2026-09-28: red in the end — tried grey, black, yellow, gold,
+              orange — smaller ball, smaller overall). 3D (user, 2026-09-30): a
+              lit sphere with a terminator and bounce light, a tapered needle
+              with a machined sheen, a collar where they meet */}
+          <Animated.View style={[{ width: PIN_W, height: PIN_H + 3, transformOrigin: '50% 90%' }, leanStyle]}>
+          {/* the needle, pivoting on its tip */}
+          <Animated.View style={[{ position: 'absolute', left: 0, top: 0, width: PIN_W, height: PIN_H + 3, transformOrigin: '50% 90%' }, needleStyle]}>
           <Svg width={PIN_W} height={PIN_H + 3} viewBox="0 0 20 33">
             <Defs>
-              <RadialGradient id="ball" cx="38%" cy="32%" r="65%">
-                {/* a MUTED red (user, 2026-09-29): brick rather than signal red */}
-                <Stop offset="0" stopColor="#d99a94" />
-                <Stop offset="0.45" stopColor="#b5524b" />
-                <Stop offset="1" stopColor="#6b2a26" />
-              </RadialGradient>
+              {/* a MUTED red ball (user, 2026-09-29: brick rather than signal red) is the layer above */}
+              <SvgLinear id="steel" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor="#7d858c" />
+                <Stop offset="0.42" stopColor="#f2f5f7" />
+                <Stop offset="0.6" stopColor="#c3c9ce" />
+                <Stop offset="1" stopColor="#4f565c" />
+              </SvgLinear>
+              <SvgLinear id="collar" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor="#4a5056" />
+                <Stop offset="0.5" stopColor="#b9c0c6" />
+                <Stop offset="1" stopColor="#3b4146" />
+              </SvgLinear>
             </Defs>
-            <Ellipse cx="10" cy="31" rx="3.5" ry="1.4" fill="rgba(0,0,0,0.45)" />
-            <Path d="M9.4 13 L10.6 13 L10.3 30 L9.7 30 Z" fill="#d7dbde" stroke="#5f666c" strokeWidth="0.5" />
-            <Circle cx="10" cy="7" r="6.5" fill="url(#ball)" stroke="#5a2320" strokeWidth="0.7" />
-            <Ellipse cx="7.4" cy="4.4" rx="1.9" ry="1.2" fill="rgba(255,255,255,0.55)" />
+            <Path d="M8.8 13.4 L11.2 13.4 L10.25 29.7 L9.75 29.7 Z" fill="url(#steel)" />
+            <Ellipse cx="10" cy="13.2" rx="2.3" ry="0.9" fill="url(#collar)" stroke="#2d3236" strokeWidth="0.35" />
           </Svg>
           </Animated.View>
+          {/* the ball, drawn over the needle, scaling about its own centre */}
+          <Animated.View style={[{ position: 'absolute', left: 0, top: 0, width: PIN_W, height: PIN_H + 3, transformOrigin: '50% 21%' }, ballStyle]}>
+          <Svg width={PIN_W} height={PIN_H + 3} viewBox="0 0 20 33">
+            <Defs>
+              <RadialGradient id="ball2" cx="34%" cy="28%" r="72%">
+                <Stop offset="0" stopColor="#eab0aa" />
+                <Stop offset="0.3" stopColor="#c45c54" />
+                <Stop offset="0.68" stopColor="#8e3430" />
+                <Stop offset="1" stopColor="#3f1513" />
+              </RadialGradient>
+              <RadialGradient id="bounce2" cx="70%" cy="82%" r="45%">
+                <Stop offset="0" stopColor="#ffb6a8" stopOpacity="0.22" />
+                <Stop offset="1" stopColor="#ffb6a8" stopOpacity="0" />
+              </RadialGradient>
+            </Defs>
+            <Circle cx="10" cy="7" r="6.5" fill="url(#ball2)" />
+            <Circle cx="10" cy="7" r="6.5" fill="url(#bounce2)" />
+            <Circle cx="10" cy="7" r="6.5" fill="none" stroke="#2f0f0e" strokeWidth="0.45" />
+            <Ellipse cx="7.2" cy="4.1" rx="2.2" ry="1.35" fill="rgba(255,255,255,0.62)" transform="rotate(-28 7.2 4.1)" />
+            <Circle cx="6.3" cy="3.4" r="0.7" fill="rgba(255,255,255,0.95)" />
+          </Svg>
+          </Animated.View>
+          </Animated.View>
+         </View>
         </View>
       )}
 
