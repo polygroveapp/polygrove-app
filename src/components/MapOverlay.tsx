@@ -364,7 +364,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
               </View>
             </Pressable>
             <Pressable onPress={enter} style={[s.enter, here && s.enterHere]}>
-              <Text style={s.enterTxt}>{here ? 'Stay in ecoregion' : visited ? 'Return to ecoregion' : 'Explore ecoregion'}</Text>
+              <Text style={[s.enterTxt, here && s.enterTxtHere]}>{here ? 'Stay in ecoregion' : visited ? 'Return to ecoregion' : 'Explore ecoregion'}</Text>
             </Pressable>
           </>
         ) : (
@@ -384,7 +384,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
             </View>
             {current ? (
               <Pressable onPress={() => pushState(true)} style={[s.enter, s.enterHere]}>
-                <Text style={s.enterTxt} numberOfLines={1}>Back to camp · {current.name}</Text>
+                <Text style={[s.enterTxt, s.enterTxtHere]} numberOfLines={1}>Back to camp · {current.name}</Text>
               </Pressable>
             ) : null}
           </>
@@ -431,6 +431,8 @@ const s = StyleSheet.create({
   credit: { fontFamily: F.sans, fontSize: 9.5, color: '#666', marginTop: 2 },
   wikiLink: { fontFamily: F.sansBold, color: C.greenSoft },
   enter: { paddingVertical: 12, borderRadius: 24, backgroundColor: '#2E7D32', alignItems: 'center' },
-  enterHere: { backgroundColor: '#1f3a22', borderWidth: 1, borderColor: 'rgba(129,199,132,0.35)' },
+  // "Stay in ecoregion" (and Back to camp) in the camp's YELLOW (user, 2026-09-30; was a quiet dark green)
+  enterHere: { backgroundColor: '#ffe14d' },
+  enterTxtHere: { color: '#1a1a1a' },
   enterTxt: { fontFamily: F.display, fontSize: 14, color: C.text },
 });
