@@ -7,6 +7,10 @@ import { useEffect, useState } from 'react';
 
 const KEY = 'polygrove.daily.v1';
 export const RESET_MS = 24 * 60 * 60 * 1000;
+// ALWAYS OPEN (user, 2026-10-02: "make it so daily packs always open"): the
+// 24-hour wait is off — the pack is ready again the moment it's opened. The
+// timer code stays; flip this to false to bring the daily rule back.
+export const ALWAYS_OPEN = true;
 let _lastAt = 0;
 let _loaded: Promise<void> | null = null;
 
@@ -21,7 +25,7 @@ export function loadDaily() {
 }
 
 export const nextDiscoveryAt = () => _lastAt + RESET_MS;
-export const discoveryReady = () => Date.now() >= nextDiscoveryAt();
+export const discoveryReady = () => ALWAYS_OPEN || Date.now() >= nextDiscoveryAt();
 
 export function markDiscoveryOpened() {
   _lastAt = Date.now();
@@ -43,6 +47,7 @@ export function useDiscoveryCountdown(): { ready: boolean; label: string } {
     return () => clearInterval(t);
   }, []);
   const ms = nextDiscoveryAt() - now;
+  if (ALWAYS_OPEN) return { ready: true, label: 'Open as many as you like' };
   if (ms <= 0) return { ready: true, label: 'Resets every 24 hours' };
   const mins = Math.ceil(ms / 60_000);   // whole minutes first, so it never reads "23h 60m"
   const h = Math.floor(mins / 60), m = mins % 60;
