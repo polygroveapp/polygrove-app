@@ -159,10 +159,11 @@ export default function Sightings() {
               <>
                 <Text style={s.hint}>These need the iNaturalist community to agree on what they are. Tap one to see the card it could be.</Text>
                 {st.waiting.slice(0, SHOWN).map(w => (
-                  <Pressable key={w.obsId} onPress={() => preview('waiting', String(w.obsId))} style={s.lineRow}>
+                  <Pressable key={w.obsId} onPress={() => preview('waiting', String(w.obsId))} style={s.person}>
+                    <Hex photo={w.photo} cardId={w.cardId} />
                     <View style={{ flex: 1 }}>
-                      <Text style={s.lineName} numberOfLines={1}>{w.name}</Text>
-                      <Text style={s.lineMeta} numberOfLines={1}>{w.cardId ? 'a card once confirmed' : 'not a card yet'}{w.date ? ` · ${niceDate(w.date)}` : ''}</Text>
+                      <Text style={s.pName} numberOfLines={1}>{w.name}</Text>
+                      <Text style={s.pMeta} numberOfLines={1}>{w.cardId ? 'a card once confirmed' : 'not a card yet'}{w.date ? ` · ${niceDate(w.date)}` : ''}</Text>
                     </View>
                     <Text style={s.chev}>›</Text>
                   </Pressable>
@@ -180,10 +181,11 @@ export default function Sightings() {
               <>
                 <Text style={s.hint}>You’ve seen these, but the game can’t make the card yet. Tap one to see it as it could be, with what’s missing.</Text>
                 {st.potential.slice(0, SHOWN).map(p => (
-                  <Pressable key={p.key} onPress={() => preview('potential', p.key)} style={s.lineRow}>
+                  <Pressable key={p.key} onPress={() => preview('potential', p.key)} style={s.person}>
+                    <Hex photo={p.obs.photo} cardId={p.cardId} />
                     <View style={{ flex: 1 }}>
-                      <Text style={s.lineName} numberOfLines={1}>{p.name}{p.seen > 1 ? `  ×${p.seen}` : ''}</Text>
-                      <Text style={s.lineMeta} numberOfLines={2}><Text style={{ fontStyle: 'italic' }}>{p.sci}</Text> · {p.why}</Text>
+                      <Text style={s.pName} numberOfLines={1}>{p.name}{p.seen > 1 ? `  ×${p.seen}` : ''}</Text>
+                      <Text style={s.pMeta} numberOfLines={2}><Text style={{ fontStyle: 'italic' }}>{p.sci}</Text> · {p.why}</Text>
                     </View>
                     <Text style={s.chev}>›</Text>
                   </Pressable>
@@ -224,6 +226,17 @@ function Person({ p, onPress }: { p: Naturalist; onPress?: () => void }) {
       {onPress ? <Text style={s.chev}>›</Text> : null}
     </Pressable>
   );
+}
+
+// the hexagon thumbnail on a waiting or potential row (user, 2026-10-05): your
+// photo; the game's photo when the species is a card and you shared none;
+// the border is the card's feeding colour, or grey for a species that is no
+// card yet
+function Hex({ photo, cardId }: { photo?: string | null; cardId: string | null }) {
+  const card = cardId ? cardById(cardId) : undefined;
+  const tc = card ? TROPHIC_COLOR[card.trophic] || C.greenSoft : '#666';
+  const uri = photo || (cardId ? photoFor(cardId, 250) : undefined);
+  return <HexPhoto uri={uri} frame={photo || !cardId ? undefined : framingFor(cardId)} width={46} height={52} borderColor={tc} borderWidth={2.5} />;
 }
 
 function EarnedRow({ e, onPress }: { e: Earned; onPress: () => void }) {
@@ -310,9 +323,6 @@ const s = StyleSheet.create({
   pName: { fontFamily: F.sansBold, fontSize: 14, color: C.text },
   pMeta: { fontFamily: F.sans, fontSize: 11.5, color: '#888', marginTop: 1 },
   chev: { fontFamily: F.sansBold, fontSize: 18, color: '#555' },
-  lineRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, marginBottom: 6, backgroundColor: '#141414', borderWidth: 1, borderColor: '#242424' },
-  lineName: { fontFamily: F.sansBold, fontSize: 13, color: C.text },
-  lineMeta: { fontFamily: F.sans, fontSize: 11, color: '#888', marginTop: 1, lineHeight: 15 },
   about: { alignItems: 'center', marginTop: 30 },
   aboutTxt: { fontFamily: F.sans, fontSize: 11.5, color: '#666' },
 });
