@@ -42,10 +42,14 @@ export function loadCatalog(onStage?: (s: string) => void) {
   // (home retry, queue top-up when signal returns) refetches
   _inflight ||= (async () => {
     onStage?.('Downloading the deck…');
-    const cards: Card[] = await fetch(`${BASE}/catalog.json`).then(r => {
-      if (!r.ok) throw new Error(`catalog ${r.status}`);
-      return r.json();
-    });
+    // the Q3/Q4 quiz payloads live in quiz.json beside the catalog (2026-10-05:
+    // the catalog outgrew Cloudflare Pages' 25 MiB file cap); they go back on
+    // each card here, so the rest of the app sees one shape
+    const [cards, quiz] = await Promise.all([
+      fetch(`${BASE}/catalog.json`).then(r => { if (!r.ok) throw new Error(`catalog ${r.status}`); return r.json() as Promise<Card[]>; }),
+      fetch(`${BASE}/quiz.json`).then(r => (r.ok ? r.json() : {})).catch(() => ({})) as Promise<Record<string, Partial<Card>>>,
+    ]);
+    for (const c of cards) { const q = quiz[c.id]; if (q) Object.assign(c, q); }
     onStage?.('Fetching photos…');
     const photos: Record<string, string> = await fetch(`${BASE}/photos.json`)
       .then(r => (r.ok ? r.json() : {}))
