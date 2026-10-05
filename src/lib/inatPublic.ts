@@ -93,8 +93,11 @@ export async function feed(userIds: number[], perPage = 40): Promise<Sighting[]>
 // species or a hidden one that is a deliberately blurred spot (or none).
 // 'research' = the community has confirmed the identification; 'needs_id' =
 // still waiting for that.
-// photo: only when it carries a licence, as everywhere in this file — the
-// account is "yours" on trust, so an all-rights-reserved photo is not shown
+// photo: YOUR OWN observation's photo, whatever its licence (user, 2026-10-05:
+// "make sure every card has the custom photo") — these are the account
+// holder's own pictures, shown back to them; the credit line still carries
+// iNaturalist's attribution text. (The parked Social feed, which showed OTHER
+// people's photos, kept the licensed-only rule above.)
 export type Spot = {
   id: number; uri: string; date: string | null; name: string; sci: string | null; lng: number | null; lat: number | null;
   place: string | null; photo: string | null; credit: string | null; agree: number;
@@ -104,7 +107,7 @@ export async function gradedOf(userId: number, grade: 'research' | 'needs_id', p
     `/observations?user_id=${userId}&quality_grade=${grade}&per_page=${perPage}&page=${page}&order=asc&order_by=id`);
   const list = (j.results ?? []).map((o): Spot => {
     const c = o.geojson?.coordinates;
-    const ph = o.photos?.find(x => x.url && x.license_code) ?? null;
+    const ph = o.photos?.find(x => x.url) ?? null;
     return {
       place: o.place_guess ?? null, photo: ph?.url ? ph.url.replace('/square.', '/medium.') : null,
       credit: ph?.attribution ?? null, agree: o.num_identification_agreements ?? 0,
