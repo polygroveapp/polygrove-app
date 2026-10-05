@@ -33,6 +33,7 @@ import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
 import { C, F, getLevel, MASTERY } from '../constants/polygrove';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
+import { loadSightings, syncSightings, useSightings } from '../lib/sightings';
 import { loadCatalog } from '../lib/catalog';
 import { collectedEcoregions, loadCollection } from '../lib/collection';
 import { cleanLead, ecoDeckSize, ecoMembers, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco, wikiUrl } from '../lib/ecoregions';
@@ -99,6 +100,18 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // also when the page becomes ready: with no camp chosen yet nothing else
   // sends the padding, and the page would read the pin at the screen's centre
   const masteryVersion = useMastery();   // re-send when a quiz is won
+  // YOUR SIGHTINGS as yellow ✕ marks (user, 2026-10-05): the spots go to the
+  // page whenever they change; and when the map comes forward with an old
+  // check (or none), your sightings are looked up again
+  const sightings = useSightings();
+  const marks = sightings.marks, meId = sightings.me?.id, checkedAt = sightings.checkedAt;
+  useEffect(() => {
+    if (pageReady) web.current?.injectJavaScript(`window.polygroveSetMarks && window.polygroveSetMarks(${JSON.stringify(marks ?? [])}); true;`);
+  }, [pageReady, marks]);
+  useEffect(() => {
+    if (!visible) return;
+    loadSightings().then(() => { if (meId != null && Date.now() - checkedAt > 10 * 60 * 1000) syncSightings(); });
+  }, [visible, meId, checkedAt]);
   useEffect(() => { if (pageReady) pushState(false); }, [pageReady, collected, catalogReady, current?.eid, padTop, padBottom, masteryVersion]);   // eslint-disable-line react-hooks/exhaustive-deps
   // fly to your camp whenever it isn't the one the map last flew to — on
   // launch (whichever arrives last, the page's ready or the stored camp) and

@@ -57,9 +57,14 @@ type State = {
   unplaced: number;            // confirmed sightings of cards with no ecoregion at that spot
   confirmed: number;           // confirmed observations in all
   checkedAt: number;
+  // WHERE you saw things — [lng, lat] of every sighting with a public spot,
+  // confirmed or waiting — for the map's yellow ✕ marks (user, 2026-10-05).
+  // On the phone only, like everything else here.
+  marks: [number, number][];
 };
-const V = 2;   // 2: sightings carry their photo and stats, lists carry facts
-const EMPTY: State = { v: V, me: null, earned: [], waiting: [], waitingTotal: 0, potential: [], potentialTotal: 0, already: 0, unplaced: 0, confirmed: 0, checkedAt: 0 };
+const V = 3;   // 2: sightings carry their photo and stats, lists carry facts · 3: marks
+const MAX_MARKS = 4000;
+const EMPTY: State = { v: V, me: null, earned: [], waiting: [], waitingTotal: 0, potential: [], potentialTotal: 0, already: 0, unplaced: 0, confirmed: 0, checkedAt: 0, marks: [] };
 type Run = { busy: boolean; step: string | null; fresh: Earned[] | null; err: string | null };
 
 const KEY = 'polygrove.sightings.v1';
@@ -172,6 +177,8 @@ export function syncSightings(): Promise<void> {
         if (!p.obs.photo && o.photo) p.obs = info(o);
       };
       let unplaced = 0, confirmed = 0, done = 0;
+      const marks: [number, number][] = [];
+      const mark = (o: Spot) => { if (o.lng != null && o.lat != null && marks.length < MAX_MARKS) marks.push([+o.lng.toFixed(4), +o.lat.toFixed(4)]); };
 
       for (let page = 1; page <= MAX_PAGES; page++) {
         const { list, total } = await gradedOf(me.id, 'research', page, PAGE);
@@ -180,6 +187,7 @@ export function syncSightings(): Promise<void> {
           done += 1;
           if (done % 40 === 0) { run({ step: `Placing sightings… ${done} of ${Math.min(total, PAGE * MAX_PAGES)}` }); await pause(); }
           if (_s.me?.id !== me.id) return;   // the account was changed mid-check
+          mark(o);
           if (!o.sci) continue;              // not identified to a species
           const card = bySci.get(o.sci.toLowerCase());
           if (!card) { bump(o.sci.toLowerCase(), o, o.sci, undefined, ''); continue; }
@@ -202,6 +210,7 @@ export function syncSightings(): Promise<void> {
 
       run({ step: 'Checking what is still waiting…' });
       const w = await gradedOf(me.id, 'needs_id', 1, PAGE);
+      w.list.forEach(mark);
       const waiting: Waiting[] = w.list.filter(o => o.sci).reverse().map(o => {
         const card = bySci.get((o.sci as string).toLowerCase());
         return { ...info(o, { pending: true }), name: card?.name ?? o.name, sci: o.sci as string, cardId: card?.id ?? null, facts: null };
@@ -223,7 +232,7 @@ export function syncSightings(): Promise<void> {
         earned: [...[...fresh].reverse(), ..._s.earned].map(dress),
         waiting, waitingTotal: w.total,
         potential: potential.slice(0, KEEP), potentialTotal: potential.length,
-        already: had.size, unplaced, confirmed, checkedAt: Date.now(),
+        already: had.size, unplaced, confirmed, checkedAt: Date.now(), marks,
       });
       run({ fresh });
     } catch {

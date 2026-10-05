@@ -13,7 +13,7 @@ import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, photoCommonsPage, photoFor, framingFor } from '../lib/catalog';
 import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
-import { FACT_LABEL, FactKey, SightingInfo, niceDate } from '../lib/sightings';
+import { FactKey, SightingInfo, niceDate } from '../lib/sightings';
 import FwGraph from './FwGraph';
 import HexPhoto from './HexPhoto';
 
@@ -153,17 +153,11 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
         <View style={{ borderTopWidth: 2, borderTopColor: tc, marginHorizontal: -16, marginBottom: 7 }} />
         <Text style={[s.name, { fontSize: 18 }]} numberOfLines={1}>{card.name}</Text>
         <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
-        <Text style={{ fontSize: 12.5, marginTop: 6, marginBottom: missing?.length ? 3 : 10, fontFamily: F.sans }}>
+        <Text style={{ fontSize: 12.5, marginTop: 6, marginBottom: 10, fontFamily: F.sans }}>
           {lacks('feeding') ? <Text style={{ color: MISSING_RED, fontFamily: F.sansBold }}>feeding role missing</Text>
             : <Text style={{ color: tc, fontFamily: F.sansBold }}>{card.trophic || '?'}</Text>}
           <Text style={{ color: '#888888' }}>{card.group ? ` · ${card.group}` : ''}</Text>
         </Text>
-        {/* an incomplete card says so on its face, in red (user, 2026-10-05) */}
-        {missing?.length ? (
-          <Text style={{ fontSize: 12, marginBottom: 8, fontFamily: F.sansBold, color: MISSING_RED }} numberOfLines={1}>
-            Missing: {missing.map(k => FACT_LABEL[k]).join(', ')}
-          </Text>
-        ) : null}
         {/* the demo's faint section line above the field note (user, 2026-09-26) */}
         <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', marginHorizontal: -16, marginBottom: 10 }} />
         {sighting ? <SightingNote tc={tc} s={sighting} /> : <FieldNote tc={tc} note={note} sci={card.sci} />}
