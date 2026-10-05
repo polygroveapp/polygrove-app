@@ -45,7 +45,7 @@ export default function RootLayout() {
           // else slides in from the right
           // Field Notes RISES FROM THE BOTTOM (user, 2026-09-29), like the web pages
           animation: (route.params as { tab?: string } | undefined)?.tab ? 'none'
-            : route.name === 'deck' || route.name === 'custom/[id]' ? 'slide_from_bottom' : 'slide_from_right',
+            : route.name === 'deck' || route.name === 'custom/[id]' || route.name === 'preview' ? 'slide_from_bottom' : 'slide_from_right',
         })}
       />
       {/* the map lives here, always loaded, shown on the Map tab */}

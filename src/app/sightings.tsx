@@ -18,7 +18,7 @@ import HexPhoto from '../components/HexPhoto';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { cardById, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { Naturalist, searchNaturalists } from '../lib/inatPublic';
-import { Earned, chooseMe, forgetMe, loadSightings, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
+import { Earned, chooseMe, forgetMe, loadSightings, niceDate, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
 import { openWeb } from '../lib/web';
 
 const STALE_MS = 10 * 60 * 1000;   // coming back to the tab re-checks after ten minutes
@@ -59,7 +59,9 @@ export default function Sightings() {
     if (ready && meId != null && Date.now() - checkedAt > STALE_MS) syncSightings();
   }, [ready, meId, checkedAt]));
 
-  const openCard = (e: Earned) => router.push({ pathname: '/gallery', params: { ids: e.cardId, start: '0' } });
+  const openCard = (e: Earned) => router.push({ pathname: '/gallery', params: { ids: e.cardId, start: '0', eid: String(e.eid) } });
+  // waiting and potential sightings open "as they could be" (user, 2026-10-05)
+  const preview = (kind: 'waiting' | 'potential', key: string) => router.push({ pathname: '/preview', params: { kind, key } });
   const me = st.me;
 
   return (
@@ -115,7 +117,7 @@ export default function Sightings() {
             <View style={s.stats}>
               <Stat n={st.earned.length} label="Cards earned" />
               <Stat n={st.waitingTotal} label="Waiting" />
-              <Stat n={st.potential.length} label="Potential" />
+              <Stat n={st.potentialTotal} label="Potential" />
             </View>
 
             <Pressable onPress={() => syncSightings()} disabled={run.busy} style={[s.check, run.busy && { opacity: 0.6 }]}>
@@ -149,11 +151,14 @@ export default function Sightings() {
             <Text style={[s.section, { marginTop: 22 }]}>Waiting to be confirmed · {st.waitingTotal}</Text>
             {st.waiting.length === 0 ? <Text style={s.empty}>Nothing waiting.</Text> : (
               <>
-                <Text style={s.hint}>These need the iNaturalist community to agree on what they are. Tap one to see it there.</Text>
+                <Text style={s.hint}>These need the iNaturalist community to agree on what they are. Tap one to see the card it could be.</Text>
                 {st.waiting.slice(0, SHOWN).map(w => (
-                  <Pressable key={w.obsId} onPress={() => openWeb(w.uri)} style={s.line}>
-                    <Text style={s.lineName} numberOfLines={1}>{w.name}</Text>
-                    <Text style={s.lineMeta} numberOfLines={1}>{w.card ? 'a card once confirmed' : 'not a card yet'}{w.date ? ` · ${w.date}` : ''}</Text>
+                  <Pressable key={w.obsId} onPress={() => preview('waiting', String(w.obsId))} style={s.lineRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.lineName} numberOfLines={1}>{w.name}</Text>
+                      <Text style={s.lineMeta} numberOfLines={1}>{w.cardId ? 'a card once confirmed' : 'not a card yet'}{w.date ? ` · ${niceDate(w.date)}` : ''}</Text>
+                    </View>
+                    <Text style={s.chev}>›</Text>
                   </Pressable>
                 ))}
                 {/* the list holds only sightings named down to a species; the rest of the count has not got that far */}
@@ -164,17 +169,20 @@ export default function Sightings() {
               </>
             )}
 
-            <Text style={[s.section, { marginTop: 22 }]}>Potential cards · {st.potential.length}</Text>
+            <Text style={[s.section, { marginTop: 22 }]}>Potential cards · {st.potentialTotal}</Text>
             {st.potential.length === 0 ? <Text style={s.empty}>Nothing here — everything you’ve had confirmed is a card.</Text> : (
               <>
-                <Text style={s.hint}>You’ve seen these, but the game can’t make the card yet. Here’s what each is missing.</Text>
+                <Text style={s.hint}>You’ve seen these, but the game can’t make the card yet. Tap one to see it as it could be, with what’s missing.</Text>
                 {st.potential.slice(0, SHOWN).map(p => (
-                  <View key={p.key} style={s.line}>
-                    <Text style={s.lineName} numberOfLines={1}>{p.name}{p.seen > 1 ? `  ×${p.seen}` : ''}</Text>
-                    <Text style={s.lineMeta} numberOfLines={2}><Text style={{ fontStyle: 'italic' }}>{p.sci}</Text> · {p.why}</Text>
-                  </View>
+                  <Pressable key={p.key} onPress={() => preview('potential', p.key)} style={s.lineRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.lineName} numberOfLines={1}>{p.name}{p.seen > 1 ? `  ×${p.seen}` : ''}</Text>
+                      <Text style={s.lineMeta} numberOfLines={2}><Text style={{ fontStyle: 'italic' }}>{p.sci}</Text> · {p.why}</Text>
+                    </View>
+                    <Text style={s.chev}>›</Text>
+                  </Pressable>
                 ))}
-                {st.potential.length > SHOWN ? <Text style={s.more}>and {st.potential.length - SHOWN} more</Text> : null}
+                {st.potentialTotal > Math.min(SHOWN, st.potential.length) ? <Text style={s.more}>and {st.potentialTotal - Math.min(SHOWN, st.potential.length)} more</Text> : null}
               </>
             )}
           </>
@@ -207,10 +215,10 @@ function EarnedRow({ e, onPress }: { e: Earned; onPress: () => void }) {
   const tc = card ? TROPHIC_COLOR[card.trophic] || C.greenSoft : C.greenSoft;
   return (
     <Pressable onPress={onPress} style={s.person}>
-      <HexPhoto uri={photoFor(e.cardId, 250)} frame={framingFor(e.cardId)} width={46} height={52} borderColor={tc} borderWidth={2.5} />
+      <HexPhoto uri={e.photo || photoFor(e.cardId, 250)} frame={e.photo ? undefined : framingFor(e.cardId)} width={46} height={52} borderColor={tc} borderWidth={2.5} />
       <View style={{ flex: 1 }}>
         <Text style={s.pName} numberOfLines={1}>{e.name}</Text>
-        <Text style={s.pMeta} numberOfLines={1}>Journaled in {e.eco}{e.date ? ` · seen ${e.date}` : ''}</Text>
+        <Text style={s.pMeta} numberOfLines={1}>Journaled in {e.eco}{e.date ? ` · seen ${niceDate(e.date)}` : ''}</Text>
       </View>
       <Text style={s.chev}>›</Text>
     </Pressable>
@@ -281,7 +289,7 @@ const s = StyleSheet.create({
   pName: { fontFamily: F.sansBold, fontSize: 14, color: C.text },
   pMeta: { fontFamily: F.sans, fontSize: 11.5, color: '#888', marginTop: 1 },
   chev: { fontFamily: F.sansBold, fontSize: 18, color: '#555' },
-  line: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, marginBottom: 6, backgroundColor: '#141414', borderWidth: 1, borderColor: '#242424' },
+  lineRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, marginBottom: 6, backgroundColor: '#141414', borderWidth: 1, borderColor: '#242424' },
   lineName: { fontFamily: F.sansBold, fontSize: 13, color: C.text },
   lineMeta: { fontFamily: F.sans, fontSize: 11, color: '#888', marginTop: 1, lineHeight: 15 },
   about: { alignItems: 'center', marginTop: 30 },

@@ -25,6 +25,7 @@ type RawObs = {
   photos?: { url?: string; license_code?: string | null; attribution?: string }[];
   user?: RawUser;
   geojson?: { coordinates?: [number, number] } | null;   // [lng, lat], as iNaturalist publishes it
+  num_identification_agreements?: number;
 };
 
 const person = (u: RawUser): Naturalist => ({
@@ -92,13 +93,21 @@ export async function feed(userIds: number[], perPage = 40): Promise<Sighting[]>
 // species or a hidden one that is a deliberately blurred spot (or none).
 // 'research' = the community has confirmed the identification; 'needs_id' =
 // still waiting for that.
-export type Spot = { id: number; uri: string; date: string | null; name: string; sci: string | null; lng: number | null; lat: number | null };
+// photo: only when it carries a licence, as everywhere in this file — the
+// account is "yours" on trust, so an all-rights-reserved photo is not shown
+export type Spot = {
+  id: number; uri: string; date: string | null; name: string; sci: string | null; lng: number | null; lat: number | null;
+  place: string | null; photo: string | null; credit: string | null; agree: number;
+};
 export async function gradedOf(userId: number, grade: 'research' | 'needs_id', page = 1, perPage = 200): Promise<{ list: Spot[]; total: number }> {
   const j = await get<{ results: RawObs[]; total_results: number }>(
     `/observations?user_id=${userId}&quality_grade=${grade}&per_page=${perPage}&page=${page}&order=asc&order_by=id`);
   const list = (j.results ?? []).map((o): Spot => {
     const c = o.geojson?.coordinates;
+    const ph = o.photos?.find(x => x.url && x.license_code) ?? null;
     return {
+      place: o.place_guess ?? null, photo: ph?.url ? ph.url.replace('/square.', '/medium.') : null,
+      credit: ph?.attribution ?? null, agree: o.num_identification_agreements ?? 0,
       id: o.id, uri: o.uri || `https://www.inaturalist.org/observations/${o.id}`, date: o.observed_on ?? null,
       name: o.taxon?.preferred_common_name || o.species_guess || o.taxon?.name || 'Unknown', sci: binomial(o.taxon),
       lng: c && Number.isFinite(c[0]) ? c[0] : null, lat: c && Number.isFinite(c[1]) ? c[1] : null,

@@ -13,6 +13,7 @@ import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, photoCommonsPage, photoFor, framingFor } from '../lib/catalog';
 import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
+import { FACT_LABEL, FactKey, SightingInfo, niceDate } from '../lib/sightings';
 import FwGraph from './FwGraph';
 import HexPhoto from './HexPhoto';
 
@@ -28,8 +29,17 @@ let _glowSeq = 0;
 // them apart; the note is still masked like an anonymous card.
 // demoFrame (pack opening, user 2026-09-29): the demo's card exactly — the
 // big 200×226 hexagon, the 3px border and the drop shadow.
-export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, nameAs, demoFrame = false }:
-  { card: Card; anonymous?: boolean; noteFrom?: Card; nameAs?: { name: string; sci: string }; demoFrame?: boolean }) {
+// sighting: a CUSTOM card (user, 2026-10-05) — one your own iNaturalist
+// observation gave you. It wears YOUR photo (when you shared it under a
+// licence) and its field note is the observation itself: when, where, how
+// many people agreed. The ⓘ opens the observation.
+// missing: an INCOMPLETE card, previewed "as it could be" — the facts the
+// database doesn't have yet are written in red.
+const MISSING_RED = '#E57373';
+export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, nameAs, demoFrame = false, sighting, missing }:
+  { card: Card; anonymous?: boolean; noteFrom?: Card; nameAs?: { name: string; sci: string }; demoFrame?: boolean;
+    sighting?: SightingInfo; missing?: FactKey[] }) {
+  const lacks = (k: FactKey) => !!missing?.includes(k);
   const card = nameAs ? { ...raw, name: `${nameAs.name}?`, sci: nameAs.sci } : anonymous ? { ...raw, name: '???', sci: '· · ·' } : raw;
   const hideNames = anonymous || !!nameAs;
   const noteCard = noteFrom ?? raw;
@@ -37,12 +47,14 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
   // not measured — the accent itself flags the uncertainty.
   const tc = card.provenance?.feeding?.confidence === 'inferred'
     ? '#c084fc' : TROPHIC_COLOR[card.trophic] || '#81C784';
-  const photo = photoFor(card.id, 500);
-  const commons = photoCommonsPage(card.id);
+  const own = sighting?.photo || undefined;             // your photo, uncropped by our framing data
+  const photo = own ?? photoFor(card.id, 500);
+  const frame = own ? undefined : framingFor(raw.id);
+  const commons = sighting ? sighting.uri : photoCommonsPage(card.id);
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => {
     let on = true;
-    fieldNote(noteCard.sci).then(n => on && setNote(hideNames && n ? maskName(n, noteCard) : n));
+    fieldNote(noteCard.sci).then(n => on && setNote(hideNames && n ? maskName(n, noteCard) : n)).catch(() => { /* no note */ });
     return () => { on = false; };
   }, [noteCard, hideNames]);
 
@@ -126,7 +138,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
             </Defs>
             <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
           </Svg>
-          <HexPhoto uri={photo} frame={framingFor(raw.id)} width={demoFrame ? 200 : 148} height={demoFrame ? 226 : 167} borderColor={tc} borderWidth={6} />
+          <HexPhoto uri={photo} frame={frame} width={demoFrame ? 200 : 148} height={demoFrame ? 226 : 167} borderColor={tc} borderWidth={6} />
           {/* ⓘ bottom-right → the Commons file page (user, 2026-09-26): the ONLY
               full-photo view — our hex crop is an edit, so the uncropped
               original is shown at its source, credited. Nested Pressable so
@@ -141,13 +153,20 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
         <View style={{ borderTopWidth: 2, borderTopColor: tc, marginHorizontal: -16, marginBottom: 7 }} />
         <Text style={[s.name, { fontSize: 18 }]} numberOfLines={1}>{card.name}</Text>
         <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
-        <Text style={{ fontSize: 12.5, marginTop: 6, marginBottom: 10, fontFamily: F.sans }}>
-          <Text style={{ color: tc, fontFamily: F.sansBold }}>{card.trophic || '?'}</Text>
-          <Text style={{ color: '#888888' }}> · {card.group}</Text>
+        <Text style={{ fontSize: 12.5, marginTop: 6, marginBottom: missing?.length ? 3 : 10, fontFamily: F.sans }}>
+          {lacks('feeding') ? <Text style={{ color: MISSING_RED, fontFamily: F.sansBold }}>feeding role missing</Text>
+            : <Text style={{ color: tc, fontFamily: F.sansBold }}>{card.trophic || '?'}</Text>}
+          <Text style={{ color: '#888888' }}>{card.group ? ` · ${card.group}` : ''}</Text>
         </Text>
+        {/* an incomplete card says so on its face, in red (user, 2026-10-05) */}
+        {missing?.length ? (
+          <Text style={{ fontSize: 12, marginBottom: 8, fontFamily: F.sansBold, color: MISSING_RED }} numberOfLines={1}>
+            Missing: {missing.map(k => FACT_LABEL[k]).join(', ')}
+          </Text>
+        ) : null}
         {/* the demo's faint section line above the field note (user, 2026-09-26) */}
         <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', marginHorizontal: -16, marginBottom: 10 }} />
-        <FieldNote tc={tc} note={note} sci={card.sci} />
+        {sighting ? <SightingNote tc={tc} s={sighting} /> : <FieldNote tc={tc} note={note} sci={card.sci} />}
         <View style={{ flex: 0, marginTop: 'auto' }} />
         <View style={s.pillRow}><View style={s.pill}><Text style={s.pillTxt}>Tap for details</Text></View></View>
       </Animated.View>
@@ -156,7 +175,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
       <Animated.View style={[s.phone, demoFrame && s.phoneDemo, backStyle]}
         onLayout={(e: LayoutChangeEvent) => { const { width, height } = e.nativeEvent.layout; setFace({ x: 0, y: 0, w: width, h: height }); }}>
         <View style={s.head}>
-          <HexPhoto uri={photoFor(card.id, 120)} frame={framingFor(raw.id)} width={46} height={52} borderColor={tc} borderWidth={4} />
+          <HexPhoto uri={own ?? photoFor(card.id, 120)} frame={frame} width={46} height={52} borderColor={tc} borderWidth={4} />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.name} numberOfLines={1}>{card.name}</Text>
             <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
@@ -164,21 +183,24 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
           <Text style={s.ico}>☆</Text>
         </View>
         <View style={s.row}>
-          <Box k="Trophic level" v={card.trophic || '?'} vColor={tc}
+          <Box k="Trophic level" v={card.trophic || '?'} vColor={tc} missing={lacks('feeding')}
             onPress={() => showSource('Trophic level', 'feeding')} />
           <Box k="Group" v={card.group}
             onPress={() => showSource('Group', 'taxonomy')} />
         </View>
         <View style={s.row}>
-          <Box k="Size" v={card.size || '—'}
+          <Box k="Size" v={card.size || '—'} missing={lacks('size')}
             onPress={() => showSource('Size', 'size')} />
-          <Box k={slot5label} v={slot5val}
+          <Box k={slot5label} v={slot5val} missing={lacks('slot5') || (!card.habitat && !card.origin && lacks('biome'))}
             onPress={() => showSource(slot5label, 'slot5')} />
         </View>
-        <FieldNote tc={tc} note={note} sci={card.sci} />
+        {/* a custom card's BACK keeps the species' field note when there is one
+            (user, 2026-10-05); the sighting is on the front, and stands in here
+            only when no note exists */}
+        {sighting && !note ? <SightingNote tc={tc} s={sighting} /> : <FieldNote tc={tc} note={note} sci={card.sci} />}
         <View style={s.fwLabelRow}>
           <View style={s.fwLine} />
-          <Text style={s.fwLabel}>FOOD WEB</Text>
+          <Text style={[s.fwLabel, lacks('foodweb') && { color: MISSING_RED }]}>{lacks('foodweb') ? 'FOOD WEB · MISSING' : 'FOOD WEB'}</Text>
           <View style={s.fwLine} />
         </View>
         <MiniWeb card={card} onExpand={openWeb}
@@ -268,6 +290,25 @@ function maskName(note: string, c: Card): string {
     .replace(/^this species/, 'This species');
 }
 
+// a custom card's note: the observation itself, in the field note's place.
+// Tap opens it on iNaturalist; the photo's credit always shows.
+function SightingNote({ tc, s: o }: { tc: string; s: SightingInfo }) {
+  const first = [niceDate(o.date), o.place].filter(Boolean).join(' · ') || 'No date or place given';
+  const second = [
+    o.pending ? 'waiting for the community to confirm it' : o.agree ? `${o.agree} ${o.agree === 1 ? 'person agrees' : 'people agree'} on what it is` : 'confirmed',
+    o.seen && o.seen > 1 ? `seen here ${o.seen} times` : null,
+  ].filter(Boolean).join(' · ');
+  return (
+    <Pressable style={[s.note, { borderLeftColor: tc, backgroundColor: `${tc}14` }]} disabled={!o.uri}
+      onPress={() => o.uri && openPage(o.uri)}>
+      <Text style={[s.noteK, { color: tc }]}>✦ {o.pending ? 'SIGHTING' : 'YOUR SIGHTING'}</Text>
+      <Text style={s.noteTxt} numberOfLines={2}>{first}</Text>
+      <Text style={[s.noteTxt, { color: '#aaa', marginTop: 1 }]} numberOfLines={1}>{second}</Text>
+      <Text style={s.noteSrc} numberOfLines={1}>— iNaturalist{o.photo && o.credit ? ` · photo ${o.credit}` : ''}</Text>
+    </Pressable>
+  );
+}
+
 function FieldNote({ tc, note, sci }: { tc: string; note: string | null; sci: string }) {
   // tap opens the article the note came from (user, 2026-09-26) — Wikipedia's
   // Go search resolves scientific names through redirects
@@ -284,11 +325,11 @@ function FieldNote({ tc, note, sci }: { tc: string; note: string | null; sci: st
   );
 }
 
-function Box({ k, v, vColor, onPress }: { k: string; v: string; vColor?: string; onPress?: () => void }) {
+function Box({ k, v, vColor, onPress, missing = false }: { k: string; v: string; vColor?: string; onPress?: () => void; missing?: boolean }) {
   return (
-    <Pressable style={s.box} onPress={onPress} disabled={!onPress}>
+    <Pressable style={[s.box, missing && { borderWidth: 1, borderColor: 'rgba(229,115,115,0.5)' }]} onPress={onPress} disabled={!onPress || missing}>
       <Text style={s.boxK}>{k}</Text>
-      <Text style={[s.boxV, vColor ? { color: vColor } : null]} numberOfLines={2}>{v}</Text>
+      <Text style={[s.boxV, vColor ? { color: vColor } : null, missing && { color: MISSING_RED }]} numberOfLines={2}>{missing ? 'missing' : v}</Text>
     </Pressable>
   );
 }

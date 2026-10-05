@@ -17,6 +17,7 @@ import { Card, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
 import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
+import { loadSightings, sightingIn, useSightings } from '../lib/sightings';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 export default function FieldNotes() {
@@ -25,6 +26,7 @@ export default function FieldNotes() {
   const eco = useCurrentEco();
   const owned = useCollection(eco?.eid);
   const masteryVersion = useMastery();   // tiers re-render as quizzes are won
+  const earned = useSightings().earned;  // custom cards wear your own photo (2026-10-05)
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // glow = the card that just went Solar (user, 2026-09-28): its tile is
@@ -33,7 +35,7 @@ export default function FieldNotes() {
   const list = useRef<SectionList<Card[]>>(null);
 
   const load = () =>
-    Promise.all([loadCatalog(), loadCollection(), loadCurrentEco(), loadMastery()])
+    Promise.all([loadCatalog(), loadCollection(), loadCurrentEco(), loadMastery(), loadSightings()])
       .then(() => setReady(true)).catch(e => setError(String(e)));
   useEffect(() => { load(); }, []);
   const retry = () => { setError(null); load(); };
@@ -187,7 +189,7 @@ export default function FieldNotes() {
       renderItem={({ item: row }) => (
         <View style={s.row}>
           {row.map(item => (
-            <Cell key={item.id} card={item} glow={item.id === glow}
+            <Cell key={item.id} card={item} glow={item.id === glow} own={sightingIn(earned, eco.eid, item.species_id)?.photo || undefined}
               onPress={() => {
                 // the demo's card gallery over the journaled cards, starting here
                 const j = rows.filter(c => owns(eco.eid, c.species_id));
@@ -243,7 +245,7 @@ function Chip({ label, count, on, color, onPress }: { label: string; count: numb
 // mastery level. Undiscovered = an empty hexagon with a ?. Mastery score is
 // 0 for everyone until the quiz lands.
 let _glowSeq = 0;
-function Cell({ card, onPress, glow = false }: { card: Card; onPress: () => void; glow?: boolean }) {
+function Cell({ card, onPress, glow = false, own }: { card: Card; onPress: () => void; glow?: boolean; own?: string }) {
   const journaled = true;   // only journaled cards are listed (user, 2026-09-26: no ? tiles)
   // the fresh Solar card: gold border + the demo's gold pulse around the tile
   const pulse = useSharedValue(0);
@@ -259,7 +261,7 @@ function Cell({ card, onPress, glow = false }: { card: Card; onPress: () => void
   const t = getTier(score);
   // the whole tile is themed by LEVEL (user, 2026-09-26): hexagon, glow, divider
   const tc = t.border;
-  const photo = journaled ? photoFor(card.id, 250) : undefined;
+  const photo = journaled ? own ?? photoFor(card.id, 250) : undefined;
   const [glowId] = useState(() => `fn${++_glowSeq}`);
   return (
     <Animated.View style={[s.cellWrap, glowStyle]}>
@@ -277,7 +279,7 @@ function Cell({ card, onPress, glow = false }: { card: Card; onPress: () => void
             <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
           </Svg>
         )}
-        <HexPhoto uri={photo} frame={framingFor(card.id)} width={58} height={66} borderColor={journaled ? tc : '#2a2a2a'} borderWidth={3} />
+        <HexPhoto uri={photo} frame={own ? undefined : framingFor(card.id)} width={58} height={66} borderColor={journaled ? tc : '#2a2a2a'} borderWidth={3} />
         {!journaled && <Text style={s.unknown}>?</Text>}
       </View>
       <View style={[s.divider, { backgroundColor: journaled ? t.border : '#262626' }]} />
