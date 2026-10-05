@@ -77,6 +77,7 @@ export default function Sightings() {
         contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: 20, paddingBottom: NAV_HEIGHT + insets.bottom + 24 }}>
         <View style={s.head}>
           <Text style={s.title}>Sightings</Text>
+          <Text style={s.beta}>(beta)</Text>
           <Text style={s.sub}>what you’ve seen on iNaturalist, as cards</Text>
         </View>
 
@@ -268,7 +269,8 @@ const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   head: { alignItems: 'center', marginBottom: 18 },
   title: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34 },
-  sub: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginTop: 2 },
+  beta: { fontFamily: F.sansBold, fontSize: 11, color: C.yellow, letterSpacing: 1.2, marginTop: -2 },   // (user, 2026-10-05)
+  sub: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginTop: 4 },
   search: {
     fontFamily: F.sans, fontSize: 14, color: C.text, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: '#333', marginBottom: 14,
