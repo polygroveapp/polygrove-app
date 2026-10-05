@@ -5,7 +5,7 @@
 // The phone talks to iNaturalist directly; nothing goes to a Polygrove server.
 // PHOTOS: an observation's photo is only shown when its owner gave it a
 // licence (CC…), and always with their credit line. All-rights-reserved
-// photos are never displayed — the card's own photo stands in.
+// photos are never displayed, and such a sighting cannot become a card.
 
 const API = 'https://api.inaturalist.org/v1';
 
@@ -14,6 +14,7 @@ export type Sighting = {
   id: number; uri: string; date: string | null; place: string | null; grade: string;
   name: string; sci: string | null;
   photo: string | null; credit: string | null;        // null when the photo is all-rights-reserved
+  license: string | null;                             // the photo's licence code as iNaturalist gives it ("cc-by-nc", "cc0"…)
   by: { id: number; login: string; icon: string | null };
 };
 
@@ -48,6 +49,7 @@ const sighting = (o: RawObs): Sighting => {
     sci: binomial(o.taxon),
     photo: p?.url ? p.url.replace('/square.', '/medium.') : null,
     credit: p?.attribution ?? null,
+    license: p?.license_code ?? null,
     by: { id: o.user?.id ?? 0, login: o.user?.login ?? '', icon: o.user?.icon_url ?? o.user?.icon ?? null },
   };
 };

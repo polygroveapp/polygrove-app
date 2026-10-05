@@ -10,11 +10,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
+import HexPhoto from '../components/HexPhoto';
+import { CUSTOM_ACCENT } from '../components/ObservationCard';
 import SightingRow from '../components/SightingRow';
 import { C, F } from '../constants/polygrove';
-import { loadCatalog } from '../lib/catalog';
-import { loadCollection } from '../lib/collection';
-import { loadCurrentEco, loadEcoMeta } from '../lib/ecoregions';
+import { loadCustom, useCustomCards } from '../lib/custom';
 import { loadFollows, useFollows } from '../lib/follows';
 import { Naturalist, Sighting, feed, searchNaturalists } from '../lib/inatPublic';
 import { loadSol, useSol } from '../lib/sol';
@@ -25,6 +25,7 @@ export default function Social() {
   const insets = useSafeAreaInsets();
   const follows = useFollows();
   const balance = useSol();
+  const cards = useCustomCards();
   const [ready, setReady] = useState(false);
   const [q, setQ] = useState('');
   const [found, setFound] = useState<{ q: string; list: Naturalist[] } | null>(null);
@@ -33,9 +34,7 @@ export default function Social() {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([loadFollows(), loadSol(), loadCollection(), loadCurrentEco()]).then(() => setReady(true));
-    loadCatalog().catch(() => { /* cards just can't be matched until it loads */ });
-    loadEcoMeta().catch(() => {});
+    Promise.all([loadFollows(), loadSol(), loadCustom()]).then(() => setReady(true));
   }, []);
 
   // search as you type, a beat after the last key
@@ -80,6 +79,22 @@ export default function Social() {
             : found.list.map(p => <Person key={p.id} p={p} onPress={() => open(p.login)} />)
         )}
 
+        {/* YOUR CARDS (2026-10-05): the custom cards you have bought, newest
+            first — each one an observation, not a card from the base game */}
+        {!found && ready && cards.length > 0 && (
+          <>
+            <Text style={s.section}>Your cards · {cards.length}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 6 }} style={{ marginBottom: 18 }}>
+              {cards.map(c => (
+                <Pressable key={c.id} onPress={() => router.push({ pathname: '/custom/[id]', params: { id: String(c.id) } })} style={s.mine}>
+                  <HexPhoto uri={c.photo} width={76} height={86} borderColor={CUSTOM_ACCENT} borderWidth={3} />
+                  <Text style={s.mineTxt} numberOfLines={1}>{c.name}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </>
+        )}
+
         {!found && (
           !ready ? <ActivityIndicator color={C.green} style={{ marginTop: 40 }} />
             : follows.length === 0 ? (
@@ -88,7 +103,7 @@ export default function Social() {
                 <Text style={s.cardTitle}>Follow a naturalist</Text>
                 <Text style={s.cardTxt}>
                   Search for anyone on iNaturalist and follow them. What they have seen shows up here, and any
-                  species that is a card in the deck can be bought for 10 Sol.
+                  sighting with a photo they shared for reuse can be bought for 10 Sol as a custom card.
                 </Text>
               </View>
             ) : (
@@ -163,6 +178,8 @@ const s = StyleSheet.create({
   chip: { alignItems: 'center', width: 70, gap: 5 },
   chipPic: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#1c2a1c', borderWidth: 2, borderColor: 'rgba(129,199,132,0.4)' },
   chipTxt: { fontFamily: F.sansMed, fontSize: 10, color: '#aaa', maxWidth: 70 },
+  mine: { alignItems: 'center', width: 84, gap: 5 },
+  mineTxt: { fontFamily: F.sansMed, fontSize: 10, color: '#aaa', maxWidth: 84 },
   about: { alignItems: 'center', marginTop: 30 },
   aboutTxt: { fontFamily: F.sans, fontSize: 11.5, color: '#666' },
 });

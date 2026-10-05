@@ -10,12 +10,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CloseX from '../../components/CloseX';
 import SightingRow from '../../components/SightingRow';
 import { C, F } from '../../constants/polygrove';
-import { loadCatalog } from '../../lib/catalog';
-import { loadCollection } from '../../lib/collection';
-import { loadCurrentEco, loadEcoMeta } from '../../lib/ecoregions';
+import { loadCustom, useCustomCards } from '../../lib/custom';
 import { follow, loadFollows, refreshFollowed, unfollow, useFollows } from '../../lib/follows';
 import { Naturalist, Sighting, naturalist, sightingsOf } from '../../lib/inatPublic';
-import { cardForSpecies } from '../../lib/shop';
 import { loadSol, useSol } from '../../lib/sol';
 import { openWeb } from '../../lib/web';
 import GreenBackdrop, { GREEN_BG } from '../../components/GreenBackdrop';
@@ -32,13 +29,11 @@ export default function Account() {
   const [page, setPage] = useState(0);        // pages loaded so far
   const [busy, setBusy] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [deckReady, setDeckReady] = useState(false);
+  const cards = useCustomCards();
 
   useEffect(() => {
     let live = true;
-    Promise.all([loadFollows(), loadSol(), loadCollection(), loadCurrentEco()]);
-    loadCatalog().then(() => { if (live) setDeckReady(true); }).catch(() => {});
-    loadEcoMeta().catch(() => {});
+    Promise.all([loadFollows(), loadSol(), loadCustom()]);
     (async () => {
       try {
         const p = await naturalist(String(login));
@@ -63,7 +58,7 @@ export default function Account() {
   };
 
   const following = !!who && follows.some(f => f.id === who.id);
-  const inDeck = deckReady ? list.filter(o => cardForSpecies(o.sci)).length : 0;
+  const yours = who ? cards.filter(c => c.by.id === who.id).length : 0;   // custom cards made from this person's sightings
   const close = () => (router.canGoBack() ? router.back() : router.replace('/social'));
 
   return (
@@ -88,12 +83,12 @@ export default function Account() {
                 <View style={s.stats}>
                   <Stat n={who.observations} label="Observations" />
                   {who.species != null && <Stat n={who.species} label="Species" />}
-                  <Stat n={inDeck} label="Cards here" />
+                  <Stat n={yours} label="Your cards" />
                 </View>
                 <Pressable onPress={() => (following ? unfollow(who.id) : follow(who))} style={[s.follow, following && s.following]}>
                   <Text style={[s.followTxt, following && { color: C.greenSoft }]}>{following ? '✓ Following' : 'Follow'}</Text>
                 </Pressable>
-                <Text style={s.sol}>{balance} Sol 🔆 · a card costs 10</Text>
+                <Text style={s.sol}>{balance} Sol 🔆 · a custom card of a sighting costs 10</Text>
               </>
             ) : err ? <Text style={s.err}>{err}</Text> : <ActivityIndicator color={C.green} style={{ marginTop: 60 }} />}
           </View>
