@@ -27,7 +27,9 @@ const TABS = [
   // the Earth itself, not the wireframe globe — and ONLY the globe is muted
   // (user, 2026-09-29; all three were for a moment): an emoji's colours can't
   // be changed, so it is drawn a little see-through
-  { id: 'social', icon: '🌎', label: 'Social', href: '/social', dim: 0.68 },
+  // SIGHTINGS (user, 2026-10-05; "Social" before): your own iNaturalist
+  // observations as cards. Social — following people, buying cards — is parked.
+  { id: 'sightings', icon: '🌎', label: 'Sightings', href: '/sightings', dim: 0.68 },
 ] as const;
 
 export type Tab = typeof TABS[number]['id'] | 'none';   // 'none' = no tab lit (Field Notes)

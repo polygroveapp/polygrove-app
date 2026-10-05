@@ -24,6 +24,7 @@ type RawObs = {
   species_guess?: string | null; taxon?: { name?: string; rank?: string; preferred_common_name?: string } | null;
   photos?: { url?: string; license_code?: string | null; attribution?: string }[];
   user?: RawUser;
+  geojson?: { coordinates?: [number, number] } | null;   // [lng, lat], as iNaturalist publishes it
 };
 
 const person = (u: RawUser): Naturalist => ({
@@ -84,4 +85,24 @@ export async function feed(userIds: number[], perPage = 40): Promise<Sighting[]>
   const j = await get<{ results: RawObs[] }>(
     `/observations?user_id=${userIds.slice(0, 50).join(',')}&per_page=${perPage}&order=desc&order_by=created_at`);
   return (j.results ?? []).map(sighting);
+}
+
+// YOUR SIGHTINGS (2026-10-05): one grade of someone's observations, oldest
+// first, with the location iNaturalist makes PUBLIC — for a threatened
+// species or a hidden one that is a deliberately blurred spot (or none).
+// 'research' = the community has confirmed the identification; 'needs_id' =
+// still waiting for that.
+export type Spot = { id: number; uri: string; date: string | null; name: string; sci: string | null; lng: number | null; lat: number | null };
+export async function gradedOf(userId: number, grade: 'research' | 'needs_id', page = 1, perPage = 200): Promise<{ list: Spot[]; total: number }> {
+  const j = await get<{ results: RawObs[]; total_results: number }>(
+    `/observations?user_id=${userId}&quality_grade=${grade}&per_page=${perPage}&page=${page}&order=asc&order_by=id`);
+  const list = (j.results ?? []).map((o): Spot => {
+    const c = o.geojson?.coordinates;
+    return {
+      id: o.id, uri: o.uri || `https://www.inaturalist.org/observations/${o.id}`, date: o.observed_on ?? null,
+      name: o.taxon?.preferred_common_name || o.species_guess || o.taxon?.name || 'Unknown', sci: binomial(o.taxon),
+      lng: c && Number.isFinite(c[0]) ? c[0] : null, lat: c && Number.isFinite(c[1]) ? c[1] : null,
+    };
+  });
+  return { list, total: j.total_results ?? 0 };
 }

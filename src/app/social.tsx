@@ -1,3 +1,8 @@
+// PARKED (user, 2026-10-05: "the whole social aspect we scrap for now"). The
+// tab is Sightings now (app/sightings.tsx) and nothing links here. Kept, with
+// lib/follows.ts, lib/custom.ts, components/SightingRow.tsx,
+// components/ObservationCard.tsx, app/naturalist/[login].tsx and
+// app/custom/[id].tsx, for when following people and custom cards come back.
 // SOCIAL (user, 2026-09-29) — iNaturalist without signing in: find accounts,
 // follow them, look at what they have seen, and BUY the card of anything in
 // the deck for 10 Sol. All from iNaturalist's public data; who you follow is
@@ -130,7 +135,7 @@ export default function Social() {
           <Text style={s.aboutTxt}>About Polygrove · sources and photo credits ›</Text>
         </Pressable>
       </ScrollView>
-      <BottomNav active="social" />
+      <BottomNav active="sightings" />
     </View>
   );
 }

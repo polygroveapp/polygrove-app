@@ -49,8 +49,8 @@ export default function About() {
         <Text style={s.foot}>content: polygrovedb.pages.dev · GBIF, Wikipedia & 25 open sources</Text>
       </ScrollView>
       {/* About is reached from Social now (2026-09-29), so that is the tab that stays lit */}
-      <CloseX onPress={() => (router.canGoBack() ? router.back() : router.replace('/social'))} />
-      <BottomNav active="social" />
+      <CloseX onPress={() => (router.canGoBack() ? router.back() : router.replace('/sightings'))} />
+      <BottomNav active="sightings" />
     </View>
   );
 }
