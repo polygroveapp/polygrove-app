@@ -29,7 +29,8 @@ const TABS = [
   // be changed, so it is drawn a little see-through
   // SIGHTINGS (user, 2026-10-05; "Social" before): your own iNaturalist
   // observations as cards. Social — following people, buying cards — is parked.
-  { id: 'sightings', icon: '🌎', label: 'Sightings', href: '/sightings', dim: 0.68 },
+  // A CAMERA (user, same day; the globe before), dimmed like the compass
+  { id: 'sightings', icon: '📷', label: 'Sightings', href: '/sightings', dim: 0.85 },
 ] as const;
 
 export type Tab = typeof TABS[number]['id'] | 'none';   // 'none' = no tab lit (Field Notes)

@@ -83,7 +83,7 @@ export default function Sightings() {
         {!ready ? <ActivityIndicator color={C.green} style={{ marginTop: 40 }} /> : !me ? (
           <>
             <View style={s.card}>
-              <Text style={s.globe}>🌎</Text>
+              <Text style={s.globe}>📷</Text>
               <Text style={s.cardTitle}>Which account is yours?</Text>
               <Text style={s.cardTxt}>
                 Find your iNaturalist account. Every species you’ve observed that the community has confirmed becomes a
