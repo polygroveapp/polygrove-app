@@ -432,7 +432,7 @@ const s = StyleSheet.create({
   wikiLink: { fontFamily: F.sansBold, color: C.greenSoft },
   enter: { paddingVertical: 12, borderRadius: 24, backgroundColor: '#2E7D32', alignItems: 'center' },
   // "Stay in ecoregion" (and Back to camp) in the camp's YELLOW (user, 2026-09-30; was a quiet dark green)
-  enterHere: { backgroundColor: '#ffe14d' },
+  enterHere: { backgroundColor: '#FF8C00' },   // the camp's ORANGE, with the map (user, 2026-10-05; yellow before — gold is for 100% decks only now)
   enterTxtHere: { color: '#1a1a1a' },
   enterTxt: { fontFamily: F.display, fontSize: 14, color: C.text },
 });
