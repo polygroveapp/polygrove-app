@@ -5,5 +5,5 @@
 import { View } from 'react-native';
 
 export default function MapRoute() {
-  return <View style={{ flex: 1, backgroundColor: '#0b1a29' }} />;
+  return <View style={{ flex: 1, backgroundColor: '#0d0d0d' }} />;
 }

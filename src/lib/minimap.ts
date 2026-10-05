@@ -6,7 +6,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useSyncExternalStore } from 'react';
 
-const KEY = (eid: number) => `polygrove.minimap.v1.${eid}`;
+// v2 (2026-10-05): the map went back to black and grey — pictures drawn in
+// the earth colours (v1) are left behind and redrawn on the next visit
+const KEY = (eid: number) => `polygrove.minimap.v2.${eid}`;
 const mem: Record<number, string | null> = {};   // null = looked, nothing stored
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());

@@ -237,7 +237,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   return (
     // hidden = transparent and untouchable, never unmounted
     <View style={[s.root, !visible && s.hidden]} pointerEvents={visible ? 'auto' : 'none'}>
-      <WebView ref={web} source={{ uri: PICKER_URL }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#0b1a29' }}
+      <WebView ref={web} source={{ uri: PICKER_URL }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#0d0d0d' }}
         onMessage={onMessage} onError={() => setErr('The map needs an internet connection.')}
         javaScriptEnabled domStorageEnabled allowsInlineMediaPlayback bounces={false} overScrollMode="never"
         setBuiltInZoomControls={false} scalesPageToFit={false} originWhitelist={['https://*']} />
@@ -398,7 +398,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
 const PIN_W = 20, PIN_H = 30;   // the pin body; the needle's tip (y=30 of the 33 viewBox) sits at pinY
 
 const s = StyleSheet.create({
-  root: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 5, backgroundColor: '#0b1a29' },
+  root: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 5, backgroundColor: '#0d0d0d' },
   hidden: { opacity: 0 },
   center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
   // no back button (user, 2026-09-29): the tab bar's Camp is the way home
@@ -432,7 +432,7 @@ const s = StyleSheet.create({
   wikiLink: { fontFamily: F.sansBold, color: C.greenSoft },
   enter: { paddingVertical: 12, borderRadius: 24, backgroundColor: '#2E7D32', alignItems: 'center' },
   // "Stay in ecoregion" (and Back to camp) in the camp's YELLOW (user, 2026-09-30; was a quiet dark green)
-  enterHere: { backgroundColor: '#FF8C00' },   // the camp's ORANGE, with the map (user, 2026-10-05; yellow before — gold is for 100% decks only now)
+  enterHere: { backgroundColor: '#4CAF50' },   // GREEN (user, 2026-10-05), the map's own green for where you are; orange and yellow before
   enterTxtHere: { color: '#1a1a1a' },
   enterTxt: { fontFamily: F.display, fontSize: 14, color: C.text },
 });
