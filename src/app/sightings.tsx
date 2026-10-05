@@ -38,8 +38,8 @@ export default function Sightings() {
   // other two closed
   const [open, setOpen] = useState<Record<'cards' | 'waiting' | 'potential', boolean>>({ cards: true, waiting: false, potential: false });
   const toggle = (k: keyof typeof open) => setOpen(o => ({ ...o, [k]: !o[k] }));
-  // cards in the order you saw them, oldest first (user, 2026-10-05)
-  const earned = [...st.earned].sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999') || a.at - b.at);
+  // cards in the order you saw them, NEWEST first (user, 2026-10-05; oldest first for a minute)
+  const earned = [...st.earned].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || b.at - a.at);
 
   useEffect(() => {
     loadSightings().then(() => setReady(true));
