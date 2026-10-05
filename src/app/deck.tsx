@@ -17,7 +17,7 @@ import { Card, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
 import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
-import { loadSightings, sightingIn, useSightings } from '../lib/sightings';
+import { loadSightings, sightingIn, smallPhoto, useSightings } from '../lib/sightings';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 export default function FieldNotes() {
@@ -189,7 +189,7 @@ export default function FieldNotes() {
       renderItem={({ item: row }) => (
         <View style={s.row}>
           {row.map(item => (
-            <Cell key={item.id} card={item} glow={item.id === glow} own={sightingIn(earned, eco.eid, item.species_id)?.photo || undefined}
+            <Cell key={item.id} card={item} glow={item.id === glow} own={smallPhoto(sightingIn(earned, eco.eid, item.species_id)?.photo)}
               onPress={() => {
                 // the demo's card gallery over the journaled cards, starting here
                 const j = rows.filter(c => owns(eco.eid, c.species_id));

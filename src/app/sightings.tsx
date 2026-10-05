@@ -18,7 +18,7 @@ import HexPhoto from '../components/HexPhoto';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { cardById, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { Naturalist, searchNaturalists } from '../lib/inatPublic';
-import { Earned, chooseMe, forgetMe, loadSightings, niceDate, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
+import { Earned, chooseMe, forgetMe, loadSightings, niceDate, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
 import { openWeb } from '../lib/web';
 
 const STALE_MS = 10 * 60 * 1000;   // coming back to the tab re-checks after ten minutes
@@ -235,7 +235,7 @@ function Person({ p, onPress }: { p: Naturalist; onPress?: () => void }) {
 function Hex({ photo, cardId }: { photo?: string | null; cardId: string | null }) {
   const card = cardId ? cardById(cardId) : undefined;
   const tc = card ? TROPHIC_COLOR[card.trophic] || C.greenSoft : '#666';
-  const uri = photo || (cardId ? photoFor(cardId, 250) : undefined);
+  const uri = smallPhoto(photo) || (cardId ? photoFor(cardId, 250) : undefined);
   return <HexPhoto uri={uri} frame={photo || !cardId ? undefined : framingFor(cardId)} width={46} height={52} borderColor={tc} borderWidth={2.5} />;
 }
 
@@ -244,7 +244,7 @@ function EarnedRow({ e, onPress }: { e: Earned; onPress: () => void }) {
   const tc = card ? TROPHIC_COLOR[card.trophic] || C.greenSoft : C.greenSoft;
   return (
     <Pressable onPress={onPress} style={s.person}>
-      <HexPhoto uri={e.photo || photoFor(e.cardId, 250)} frame={e.photo ? undefined : framingFor(e.cardId)} width={46} height={52} borderColor={tc} borderWidth={2.5} />
+      <HexPhoto uri={smallPhoto(e.photo) || photoFor(e.cardId, 250)} frame={e.photo ? undefined : framingFor(e.cardId)} width={46} height={52} borderColor={tc} borderWidth={2.5} />
       <View style={{ flex: 1 }}>
         <Text style={s.pName} numberOfLines={1}>{e.name}</Text>
         <Text style={s.pMeta} numberOfLines={1}>Journaled in {e.eco}{e.date ? ` · seen ${niceDate(e.date)}` : ''}</Text>

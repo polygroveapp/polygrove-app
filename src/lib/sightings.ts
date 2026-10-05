@@ -107,6 +107,12 @@ export const sightingIn = (earned: Earned[], eid: number | null | undefined, spe
 export function chooseMe(p: Naturalist) { _s = { ...EMPTY, me: p }; _run = { busy: _run.busy, step: null, fresh: null, err: null }; emit(); save(); }
 export function forgetMe() { _s = EMPTY; _run = { busy: _run.busy, step: null, fresh: null, err: null }; emit(); save(); }
 
+// iNaturalist serves each photo at several sizes; the lists use the small one
+// (240 px). The medium (500 px) one on every row of a long list, drawn through
+// SVG which does not downsample, was enough to have iOS kill the app for
+// memory (user, 2026-10-05: "the app just crashed").
+export const smallPhoto = (url: string | null | undefined) => (url ? url.replace('/medium.', '/small.') : undefined);
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 // "2025-10-31" → "31 Oct 2025"
 export function niceDate(d: string | null | undefined): string | null {
