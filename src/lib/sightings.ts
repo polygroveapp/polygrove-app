@@ -161,8 +161,14 @@ export function syncSightings(): Promise<void> {
   _syncing = (async () => {
     run({ busy: true, step: 'Asking iNaturalist…', err: null });
     const fresh: Earned[] = [];
+    const startEarned = _s.earned;
     // pairs (ecoregion:species) your sightings gave you on earlier checks
-    const mine = new Set(_s.earned.map(e => `${e.eid}:${e.speciesId}`));
+    const mine = new Set(startEarned.map(e => `${e.eid}:${e.speciesId}`));
+    const marks: [number, number, number][] = [];
+    // what is known so far is SAVED AS WE GO — after every page, and if the
+    // check dies — so a long account (2,000 sightings, 2026-10-05) that fails
+    // on page eight still has its cards and its ✕ marks on the map
+    const partial = () => set({ earned: [...[...fresh].reverse(), ...startEarned].map(dress), marks: [...marks] });
     const seenAs = new Map<string, Spot[]>();   // every confirmed sighting behind each of those pairs
     // what the sighting says on its card: the one that earned it when it has a
     // photo to show, else the first that does
@@ -183,8 +189,7 @@ export function syncSightings(): Promise<void> {
         p.seen += 1;
         if (!p.obs.photo && o.photo) p.obs = info(o);
       };
-      let unplaced = 0, confirmed = 0, done = 0;
-      const marks: [number, number, number][] = [];
+      let unplaced = 0, confirmed = 0, done = 0, skipped = 0;
       const mark = (o: Spot, ok: 0 | 1) => { if (o.lng != null && o.lat != null && marks.length < MAX_MARKS) marks.push([+o.lng.toFixed(4), +o.lat.toFixed(4), ok]); };
 
       for (let page = 1; page <= MAX_PAGES; page++) {
@@ -198,7 +203,13 @@ export function syncSightings(): Promise<void> {
           if (!o.sci) continue;              // not identified to a species
           const card = bySci.get(o.sci.toLowerCase());
           if (!card) { bump(o.sci.toLowerCase(), o, o.sci, undefined, ''); continue; }
-          const eid = o.lng != null && o.lat != null ? await ecoregionAt(o.lng, o.lat) : null;
+          let eid: number | null = null;
+          if (o.lng != null && o.lat != null) {
+            // an outline that will not download skips THIS sighting (it is
+            // looked at again next check) rather than ending the whole check
+            try { eid = await ecoregionAt(o.lng, o.lat); }
+            catch { skipped += 1; continue; }
+          }
           if (eid == null) { unplaced += 1; continue; }
           const eco = meta[String(eid)]?.name ?? 'that ecoregion';
           const inDeck = ((card.ecoregions as number[] | undefined) ?? []).includes(eid) && !!photoFor(card.id);
@@ -212,6 +223,7 @@ export function syncSightings(): Promise<void> {
           snapshotStashed({ card, note: null, globi: [], photoUrl: photoRemote(card.id, 500), frame: framingFor(card.id) });
           fresh.push({ ...info(o), cardId: card.id, speciesId: card.species_id, name: card.name, eid, eco, at: Date.now() });
         }
+        partial();
         if (list.length < PAGE) break;
       }
 
@@ -241,11 +253,14 @@ export function syncSightings(): Promise<void> {
         potential: potential.slice(0, KEEP), potentialTotal: potential.length,
         already: had.size, unplaced, confirmed, checkedAt: Date.now(), marks,
       });
-      run({ fresh });
-    } catch {
-      // cards journaled before the connection dropped are kept and listed
-      if (fresh.length && _s.me?.id === me.id) { set({ earned: [...[...fresh].reverse(), ..._s.earned].map(dress) }); run({ fresh }); }
-      run({ err: 'iNaturalist or the map data can’t be reached right now — try again in a bit.' });
+      run({ fresh, err: skipped ? `${skipped} sighting${skipped === 1 ? '' : 's'} couldn’t be placed this time — they’ll be tried again on the next check.` : null });
+    } catch (e) {
+      // cards journaled before the connection dropped are kept and listed, and so are the marks
+      if (_s.me?.id === me.id) { partial(); if (fresh.length) run({ fresh }); }
+      const msg = String((e as Error)?.message ?? '');
+      run({ err: /iNaturalist answered 429/.test(msg) ? 'iNaturalist is asking us to slow down — wait a minute, then check again.'
+        : /iNaturalist/.test(msg) ? 'iNaturalist can’t be reached right now — try again in a bit.'
+        : 'The map data can’t be reached right now — try again in a bit.' });
     } finally {
       run({ busy: false, step: null });
       _syncing = null;

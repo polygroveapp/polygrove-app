@@ -33,7 +33,15 @@ function polysOf(eid: number): Promise<Poly[]> {
   if (have) return Promise.resolve(have);
   let p = _inflight.get(eid);
   if (!p) {
-    p = fetch(HD(eid)).then(async r => {
+    // three tries: a dropped connection mid-sync must not fail the whole check
+    const load = async (): Promise<Response> => {
+      for (let attempt = 0; ; attempt++) {
+        try { const r = await fetch(HD(eid)); if (r.ok || r.status === 404 || attempt >= 2) return r; }
+        catch (e) { if (attempt >= 2) throw e; }
+        await new Promise(res => setTimeout(res, 1200 * (attempt + 1)));
+      }
+    };
+    p = load().then(async r => {
       if (r.status === 404) return [] as Poly[];
       if (!r.ok) throw new Error(`outline ${eid}: ${r.status}`);
       const fc = await r.json();
@@ -46,7 +54,7 @@ function polysOf(eid: number): Promise<Poly[]> {
       return out;
     }).then(polys => {
       _polys.set(eid, polys);
-      if (_polys.size > 60) _polys.delete(_polys.keys().next().value as number);   // oldest out
+      if (_polys.size > 160) _polys.delete(_polys.keys().next().value as number);   // oldest out (a world traveller's account touches a lot of regions)
       return polys;
     }).finally(() => { _inflight.delete(eid); });
     _inflight.set(eid, p);

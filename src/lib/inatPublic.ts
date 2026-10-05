@@ -56,10 +56,28 @@ const sighting = (o: RawObs): Sighting => {
   };
 };
 
+// iNaturalist asks for no more than ~1 request a second and answers 429 when
+// pushed; a 2,000-observation account is ten pages plus the lookups behind
+// them, which hit that (2026-10-05 stress test). So: a beat between requests,
+// and on 429 / 5xx / a dropped connection wait and try again, up to five
+// times, honouring Retry-After. Only a persistent failure throws.
+let _last = 0;
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 async function get<T>(path: string): Promise<T> {
-  const r = await fetch(`${API}${path}`, { headers: { Accept: 'application/json' } });
-  if (!r.ok) throw new Error(`iNaturalist answered ${r.status}`);
-  return r.json();
+  let wait = 1500;
+  for (let attempt = 0; ; attempt++) {
+    const gap = 1100 - (Date.now() - _last);
+    if (gap > 0) await sleep(gap);
+    _last = Date.now();
+    let r: Response | null = null;
+    try { r = await fetch(`${API}${path}`, { headers: { Accept: 'application/json' } }); } catch { /* no connection: retry below */ }
+    if (r?.ok) return r.json();
+    if (r && r.status < 500 && r.status !== 429) throw new Error(`iNaturalist answered ${r.status}`);
+    if (attempt >= 4) throw new Error(r ? `iNaturalist answered ${r.status}` : 'iNaturalist could not be reached');
+    const after = Number(r?.headers.get('retry-after')) * 1000;
+    await sleep(after > 0 ? Math.min(after, 60000) : wait);
+    wait = Math.min(wait * 2, 20000);
+  }
 }
 
 export async function searchNaturalists(q: string): Promise<Naturalist[]> {
