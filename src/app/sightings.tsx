@@ -34,6 +34,12 @@ export default function Sightings() {
   const [found, setFound] = useState<{ q: string; list: Naturalist[] } | null>(null);
   const [searching, setSearching] = useState(false);
   const [pick, setPick] = useState<Naturalist | null>(null);   // the account being confirmed
+  // the three lists FOLD (user, 2026-10-05): your cards start open, the
+  // other two closed
+  const [open, setOpen] = useState<Record<'cards' | 'waiting' | 'potential', boolean>>({ cards: true, waiting: false, potential: false });
+  const toggle = (k: keyof typeof open) => setOpen(o => ({ ...o, [k]: !o[k] }));
+  // cards in the order you saw them, oldest first (user, 2026-10-05)
+  const earned = [...st.earned].sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999') || a.at - b.at);
 
   useEffect(() => {
     loadSightings().then(() => setReady(true));
@@ -140,16 +146,16 @@ export default function Sightings() {
               </View>
             ) : null}
 
-            <Text style={s.section}>Cards from your sightings · {st.earned.length}</Text>
-            {st.earned.length === 0 ? (
+            <Fold label="Cards from your sightings" n={earned.length} open={open.cards} onPress={() => toggle('cards')} />
+            {open.cards && (earned.length === 0 ? (
               <Text style={s.empty}>
                 {st.checkedAt === 0 ? 'Checking your sightings…' : 'None yet. A confirmed sighting of a species in the game becomes a card here.'}
               </Text>
-            ) : st.earned.slice(0, SHOWN).map(e => <EarnedRow key={`${e.eid}:${e.speciesId}`} e={e} onPress={() => openCard(e)} />)}
-            {st.earned.length > SHOWN ? <Text style={s.more}>and {st.earned.length - SHOWN} more, in their ecoregions’ journals</Text> : null}
+            ) : earned.slice(0, SHOWN).map(e => <EarnedRow key={`${e.eid}:${e.speciesId}`} e={e} onPress={() => openCard(e)} />))}
+            {open.cards && earned.length > SHOWN ? <Text style={s.more}>and {earned.length - SHOWN} more, in their ecoregions’ journals</Text> : null}
 
-            <Text style={[s.section, { marginTop: 22 }]}>Waiting to be confirmed · {st.waitingTotal}</Text>
-            {st.waiting.length === 0 ? <Text style={s.empty}>Nothing waiting.</Text> : (
+            <Fold label="Waiting to be confirmed" n={st.waitingTotal} open={open.waiting} onPress={() => toggle('waiting')} />
+            {open.waiting && (st.waiting.length === 0 ? <Text style={s.empty}>Nothing waiting.</Text> : (
               <>
                 <Text style={s.hint}>These need the iNaturalist community to agree on what they are. Tap one to see the card it could be.</Text>
                 {st.waiting.slice(0, SHOWN).map(w => (
@@ -167,10 +173,10 @@ export default function Sightings() {
                   <Text style={s.more}>{st.waitingTotal - st.waiting.length} more aren’t identified down to a species yet</Text>
                 ) : null}
               </>
-            )}
+            ))}
 
-            <Text style={[s.section, { marginTop: 22 }]}>Potential cards · {st.potentialTotal}</Text>
-            {st.potential.length === 0 ? <Text style={s.empty}>Nothing here — everything you’ve had confirmed is a card.</Text> : (
+            <Fold label="Potential cards" n={st.potentialTotal} open={open.potential} onPress={() => toggle('potential')} />
+            {open.potential && (st.potential.length === 0 ? <Text style={s.empty}>Nothing here — everything you’ve had confirmed is a card.</Text> : (
               <>
                 <Text style={s.hint}>You’ve seen these, but the game can’t make the card yet. Tap one to see it as it could be, with what’s missing.</Text>
                 {st.potential.slice(0, SHOWN).map(p => (
@@ -184,7 +190,7 @@ export default function Sightings() {
                 ))}
                 {st.potentialTotal > Math.min(SHOWN, st.potential.length) ? <Text style={s.more}>and {st.potentialTotal - Math.min(SHOWN, st.potential.length)} more</Text> : null}
               </>
-            )}
+            ))}
           </>
         )}
 
@@ -194,6 +200,16 @@ export default function Sightings() {
       </ScrollView>
       <BottomNav active="sightings" />
     </View>
+  );
+}
+
+// a list's fold-up header: name, count, and a chevron that turns
+function Fold({ label, n, open, onPress }: { label: string; n: number; open: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={s.fold} hitSlop={6}>
+      <Text style={s.section}>{label} · {n.toLocaleString()}</Text>
+      <Text style={[s.foldChev, open && { transform: [{ rotate: '90deg' }] }]}>›</Text>
+    </Pressable>
   );
 }
 
@@ -277,7 +293,12 @@ const s = StyleSheet.create({
   note: { fontFamily: F.sans, fontSize: 11, color: '#666', textAlign: 'center', marginTop: 8, lineHeight: 16 },
   fresh: { marginTop: 10, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12, backgroundColor: 'rgba(255,225,77,0.12)', borderWidth: 1, borderColor: 'rgba(255,225,77,0.4)' },
   freshTxt: { fontFamily: F.sansBold, fontSize: 12.5, color: C.yellow, textAlign: 'center' },
-  section: { fontFamily: F.sansBold, fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, marginTop: 20 },
+  section: { fontFamily: F.sansBold, fontSize: 11, color: '#777', textTransform: 'uppercase', letterSpacing: 1 },
+  fold: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, marginBottom: 10,
+    paddingVertical: 11, paddingHorizontal: 14, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.25)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.22)',
+  },
+  foldChev: { fontFamily: F.sansBold, fontSize: 18, color: '#777', lineHeight: 20 },
   hint: { fontFamily: F.sans, fontSize: 11.5, color: '#777', lineHeight: 16.5, marginBottom: 8 },
   empty: { fontFamily: F.sans, fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 19, paddingVertical: 14 },
   more: { fontFamily: F.sans, fontSize: 11.5, color: '#666', textAlign: 'center', paddingVertical: 6 },
