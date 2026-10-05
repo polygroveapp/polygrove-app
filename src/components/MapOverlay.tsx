@@ -205,10 +205,11 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
         if (!m.rotation) return;
         const b = deg(m.rotation.beta), g = deg(m.rotation.gamma);
         base = base ? [base[0] + (b - base[0]) * 0.02, base[1] + (g - base[1]) * 0.02] : [b, g];
-        // 3× the first cut (user, 2026-09-30: "make the map tilt by gyro 3
-        // times as much"): gains ×3, caps widened to match
-        const pitch = clamp(TILT_REST + (b - base[0]) * 1.1, 0, 32);   // "a little less" up and down (user, 2026-09-30)
-        const bearing = clamp((g - base[1]) * 0.9, -15, 15);
+        // TONED DOWN BY TWO-THIRDS (user, 2026-10-05): a third of the tripled
+        // cut from 2026-09-30 — pitch 1.1 → 0.37, bearing 0.9 → 0.3, with the
+        // caps back to a gentle ±9° of pitch and ±5° of turn
+        const pitch = clamp(TILT_REST + (b - base[0]) * 0.37, 0, TILT_REST * 2);
+        const bearing = clamp((g - base[1]) * 0.3, -5, 5);
         out = [out[0] + (pitch - out[0]) * 0.25, out[1] + (bearing - out[1]) * 0.25];
         if (Math.abs(out[0] - sent[0]) < 0.15 && Math.abs(out[1] - sent[1]) < 0.15) return;
         sent = [out[0], out[1]];
