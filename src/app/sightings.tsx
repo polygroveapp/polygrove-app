@@ -14,7 +14,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
-import HexPhoto from '../components/HexPhoto';
+import Honeycomb, { Comb } from '../components/Honeycomb';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { cardById, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { Naturalist, searchNaturalists } from '../lib/inatPublic';
@@ -154,23 +154,16 @@ export default function Sightings() {
               <Text style={s.empty}>
                 {st.checkedAt === 0 ? 'Checking your sightings…' : 'None yet. A confirmed sighting of a species in the game becomes a card here.'}
               </Text>
-            ) : earned.slice(0, SHOWN).map(e => <EarnedRow key={`${e.eid}:${e.speciesId}`} e={e} onPress={() => openCard(e)} />))}
+            ) : <Honeycomb cells={earned.slice(0, SHOWN).map(e => combOf(e.photo, e.cardId, { key: `${e.eid}:${e.speciesId}`, name: e.name,
+                  sub: cardById(e.cardId)?.sci, meta: `Journaled in ${e.eco}${e.date ? ` · seen ${niceDate(e.date)}` : ''}`, onOpen: () => openCard(e) }))} />)}
             {open.cards && earned.length > SHOWN ? <Text style={s.more}>and {earned.length - SHOWN} more, in their ecoregions’ journals</Text> : null}
 
             <Fold label="Waiting to be confirmed" n={st.waitingTotal} open={open.waiting} onPress={() => toggle('waiting')} />
             {open.waiting && (st.waiting.length === 0 ? <Text style={s.empty}>Nothing waiting.</Text> : (
               <>
-                <Text style={s.hint}>These need the iNaturalist community to agree on what they are. Tap one to see the card it could be.</Text>
-                {st.waiting.slice(0, SHOWN).map(w => (
-                  <Pressable key={w.obsId} onPress={() => preview('waiting', String(w.obsId))} style={s.person}>
-                    <Hex photo={w.photo} cardId={w.cardId} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.pName} numberOfLines={1}>{w.name}</Text>
-                      <Text style={s.pMeta} numberOfLines={1}>{w.cardId ? 'a card once confirmed' : 'not a card yet'}{w.date ? ` · ${niceDate(w.date)}` : ''}</Text>
-                    </View>
-                    <Text style={s.chev}>›</Text>
-                  </Pressable>
-                ))}
+                <Text style={s.hint}>These need the iNaturalist community to agree on what they are. Tap one to see what it is, again to see the card it could be.</Text>
+                <Honeycomb cells={st.waiting.slice(0, SHOWN).map(w => combOf(w.photo, w.cardId, { key: String(w.obsId), name: w.name, sub: w.sci,
+                  meta: `${w.cardId ? 'a card once confirmed' : 'not a card yet'}${w.date ? ` · ${niceDate(w.date)}` : ''}`, onOpen: () => preview('waiting', String(w.obsId)) }))} />
                 {/* the list holds only sightings named down to a species; the rest of the count has not got that far */}
                 {st.waiting.length > SHOWN ? <Text style={s.more}>and {st.waiting.length - SHOWN} more</Text> : null}
                 {st.waitingTotal > st.waiting.length ? (
@@ -182,17 +175,9 @@ export default function Sightings() {
             <Fold label="Potential cards" n={st.potentialTotal} open={open.potential} onPress={() => toggle('potential')} />
             {open.potential && (st.potential.length === 0 ? <Text style={s.empty}>Nothing here — everything you’ve had confirmed is a card.</Text> : (
               <>
-                <Text style={s.hint}>You’ve seen these, but the game can’t make the card yet. Tap one to see it as it could be, with what’s missing.</Text>
-                {st.potential.slice(0, SHOWN).map(p => (
-                  <Pressable key={p.key} onPress={() => preview('potential', p.key)} style={s.person}>
-                    <Hex photo={p.obs.photo} cardId={p.cardId} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.pName} numberOfLines={1}>{p.name}{p.seen > 1 ? `  ×${p.seen}` : ''}</Text>
-                      <Text style={s.pMeta} numberOfLines={2}><Text style={{ fontStyle: 'italic' }}>{p.sci}</Text> · {p.why}</Text>
-                    </View>
-                    <Text style={s.chev}>›</Text>
-                  </Pressable>
-                ))}
+                <Text style={s.hint}>You’ve seen these, but the game can’t make the card yet. Tap one to see what it is, again to see it as it could be.</Text>
+                <Honeycomb cells={st.potential.slice(0, SHOWN).map(p => combOf(p.obs.photo, p.cardId, { key: p.key, name: p.name + (p.seen > 1 ? `  ×${p.seen}` : ''), sub: p.sci,
+                  meta: p.why, onOpen: () => preview('potential', p.key) }))} />
                 {st.potentialTotal > Math.min(SHOWN, st.potential.length) ? <Text style={s.more}>and {st.potentialTotal - Math.min(SHOWN, st.potential.length)} more</Text> : null}
               </>
             ))}
@@ -231,30 +216,14 @@ function Person({ p, onPress }: { p: Naturalist; onPress?: () => void }) {
   );
 }
 
-// the hexagon thumbnail on a waiting or potential row (user, 2026-10-05): your
-// photo; the game's photo when the species is a card and you shared none;
-// the border is the card's feeding colour, or grey for a species that is no
-// card yet
-function Hex({ photo, cardId }: { photo?: string | null; cardId: string | null }) {
+// one honeycomb cell (user, 2026-10-05): your photo; the game's photo when the
+// species is a card and you shared none; the border is the card's feeding
+// colour, or grey for a species that is no card yet
+function combOf(photo: string | null | undefined, cardId: string | null, rest: Omit<Comb, 'uri' | 'frame' | 'border' | 'fallback'>): Comb {
   const card = cardId ? cardById(cardId) : undefined;
-  const tc = card ? TROPHIC_COLOR[card.trophic] || C.greenSoft : '#666';
+  const border = card ? TROPHIC_COLOR[card.trophic] || C.greenSoft : '#666';
   const uri = smallPhoto(photo) || (cardId ? photoFor(cardId, 250) : undefined);
-  return <HexPhoto uri={uri} frame={photo || !cardId ? undefined : framingFor(cardId)} width={46} height={52} borderColor={tc} borderWidth={2.5} />;
-}
-
-function EarnedRow({ e, onPress }: { e: Earned; onPress: () => void }) {
-  const card = cardById(e.cardId);
-  const tc = card ? TROPHIC_COLOR[card.trophic] || C.greenSoft : C.greenSoft;
-  return (
-    <Pressable onPress={onPress} style={s.person}>
-      <HexPhoto uri={smallPhoto(e.photo) || photoFor(e.cardId, 250)} frame={e.photo ? undefined : framingFor(e.cardId)} width={46} height={52} borderColor={tc} borderWidth={2.5} />
-      <View style={{ flex: 1 }}>
-        <Text style={s.pName} numberOfLines={1}>{e.name}</Text>
-        <Text style={s.pMeta} numberOfLines={1}>Journaled in {e.eco}{e.date ? ` · seen ${niceDate(e.date)}` : ''}</Text>
-      </View>
-      <Text style={s.chev}>›</Text>
-    </Pressable>
-  );
+  return { ...rest, uri, frame: photo || !cardId ? undefined : framingFor(cardId), border, fallback: '🌿' };
 }
 
 function Stat({ n, label }: { n: number; label: string }) {
