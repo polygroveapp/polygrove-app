@@ -25,7 +25,7 @@ import { ALL_FACTS, Earned, chooseMe, forgetMe, loadSightings, niceDate, partial
 import PolygroveCard from '../components/PolygroveCard';
 import { openWeb } from '../lib/web';
 
-const STALE_MS = 10 * 60 * 1000;   // coming back to the tab re-checks after ten minutes
+const STALE_MS = 60 * 60 * 1000;   // coming back to the tab probes for new sightings after an hour (a probe is two tiny requests; a full pass only if the counts moved)
 
 export default function Sightings() {
   const router = useRouter();
@@ -148,7 +148,7 @@ export default function Sightings() {
               <Stat n={st.potentialTotal} label="Potential" />
             </View>
 
-            <Pressable onPress={() => syncSightings()} disabled={run.busy} style={[s.check, run.busy && { opacity: 0.6 }]}>
+            <Pressable onPress={() => syncSightings(true)} disabled={run.busy} style={[s.check, run.busy && { opacity: 0.6 }]}>
               {run.busy ? <ActivityIndicator color={C.text} size="small" /> : null}
               <Text style={s.checkTxt}>{run.busy ? run.step ?? 'Checking…' : 'Check for new sightings'}</Text>
             </Pressable>

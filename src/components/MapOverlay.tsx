@@ -158,7 +158,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   }, [pageReady, marks]);
   useEffect(() => {
     if (!visible) return;
-    loadSightings().then(() => { if (meId != null && Date.now() - checkedAt > 10 * 60 * 1000) syncSightings(); });
+    loadSightings().then(() => { if (meId != null && Date.now() - checkedAt > 60 * 60 * 1000) syncSightings(); });   // an hour; a cheap probe unless something changed
   }, [visible, meId, checkedAt]);
   useEffect(() => { if (pageReady) pushState(false); }, [pageReady, collected, catalogReady, current?.eid, padTop, padBottom, masteryVersion]);   // eslint-disable-line react-hooks/exhaustive-deps
   // fly to your camp whenever it isn't the one the map last flew to — on

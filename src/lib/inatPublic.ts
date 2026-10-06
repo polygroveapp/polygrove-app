@@ -132,6 +132,13 @@ const spotOf = (o: RawObs): Spot => {
       lng: c && Number.isFinite(c[0]) ? c[0] : null, lat: c && Number.isFinite(c[1]) ? c[1] : null,
     };
 };
+// just the count of one grade — one tiny request (per_page=0), to tell whether a
+// full pass is worth it (2026-10-06: the app re-checked a 4,500-sighting
+// account every ten minutes, two minutes a time)
+export async function countOf(userId: number, grade: Grade): Promise<number> {
+  const j = await get<{ total_results: number }>(`/observations?user_id=${userId}&quality_grade=${grade}&per_page=0`);
+  return j.total_results ?? 0;
+}
 export async function gradedOf(userId: number, grade: Grade, page = 1, perPage = 200, order: 'asc' | 'desc' = 'asc'): Promise<{ list: Spot[]; total: number }> {
   const j = await get<{ results: RawObs[]; total_results: number }>(
     `/observations?user_id=${userId}&quality_grade=${grade}&per_page=${perPage}&page=${page}&order=${order}&order_by=id`);

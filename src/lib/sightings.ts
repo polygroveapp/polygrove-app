@@ -26,7 +26,7 @@ import { useSyncExternalStore } from 'react';
 import { Card, framingFor, getCards, loadCatalog, photoFor, photoRemote } from './catalog';
 import { addToCollection, loadCollection, owns } from './collection';
 import { loadEcoMeta } from './ecoregions';
-import { Naturalist, Spot, gradedOf } from './inatPublic';
+import { Naturalist, Spot, countOf, gradedOf } from './inatPublic';
 import { ecoregionAt } from './locate';
 import { snapshotStashed } from './offline';
 
@@ -172,11 +172,21 @@ const info = (o: Spot, extra?: Partial<SightingInfo>): SightingInfo =>
 const pause = () => new Promise<void>(r => setTimeout(r, 0));
 
 let _syncing: Promise<void> | null = null;
-export function syncSightings(): Promise<void> {
+// force: a full pass regardless ("Check for new sightings"). Otherwise a
+// quiet probe first — two tiny requests for the confirmed and waiting counts;
+// if neither has changed since the last full pass, nothing else happens and
+// nothing shows as loading (user, 2026-10-06: "it's loading all the time")
+export function syncSightings(force = false): Promise<void> {
   if (_syncing) return _syncing;
   const me = _s.me;
   if (!me) return Promise.resolve();
   _syncing = (async () => {
+    if (!force && _s.checkedAt > 0) {
+      try {
+        const [c, w] = await Promise.all([countOf(me.id, 'research'), countOf(me.id, 'needs_id')]);
+        if (c === _s.confirmed && w === _s.waitingTotal) { set({ checkedAt: Date.now() }); _syncing = null; return; }
+      } catch { _syncing = null; return; }   // offline: leave what we have, try again later
+    }
     run({ busy: true, step: 'Asking iNaturalist…', err: null });
     const fresh: Earned[] = [];
     const startEarned = _s.earned;
