@@ -80,13 +80,15 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   const [obsCache, setObsCache] = useState<Record<number, (Spot & { grade: string }) | null>>({});
   const fetching = useRef(new Set<number>());
   useEffect(() => {
-    for (const u of under.slice(0, 12)) {
-      if (u.id in obsCache || fetching.current.has(u.id)) continue;   // the first few are fetched ahead, so stepping is instant
+    // the shown one and its neighbours are fetched ahead, so stepping is instant; the rest as you reach them
+    const at = Math.min(underAt, Math.max(0, under.length - 1));
+    for (const u of under.slice(Math.max(0, at - 1), at + 4)) {
+      if (u.id in obsCache || fetching.current.has(u.id)) continue;
       fetching.current.add(u.id);
       observation(u.id).then(o => setObsCache(c => ({ ...c, [u.id]: o }))).catch(() => setObsCache(c => ({ ...c, [u.id]: null })))
         .finally(() => fetching.current.delete(u.id));
     }
-  }, [under, obsCache]);
+  }, [under, underAt, obsCache]);
   // a tap on a ✕ puts those marks at the head of the list
   const onMark = (ids: number[], ok: number) => {
     if (!ids.length) return;
