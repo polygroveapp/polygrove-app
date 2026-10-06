@@ -16,27 +16,11 @@ import CloseX from '../components/CloseX';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 import PolygroveCard from '../components/PolygroveCard';
 import { C, F } from '../constants/polygrove';
-import { Card, cardById, loadCatalog } from '../lib/catalog';
-import { FACT_LABEL, FactKey, Facts, SightingInfo, loadSightings, useSightings } from '../lib/sightings';
+import { cardById, loadCatalog } from '../lib/catalog';
+import { ALL_FACTS as ALL, FACT_LABEL, Facts, SightingInfo, loadSightings, partialCard, useSightings } from '../lib/sightings';
 import { openWeb } from '../lib/web';
 
-const ALL: FactKey[] = ['feeding', 'size', 'foodweb', 'slot5', 'biome'];
 const listOf = (a: string[]) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`);
-
-// the card the database could make today: what it knows, nothing invented
-function partialCard(name: string, sci: string, f: Facts | null): Card {
-  const edge = f?.edge ?? '';
-  const link = (n: string) => [{ name: n, evidence: 1, card: false, inSet: false }];
-  return {
-    id: `potential:${sci}`, species_id: 0, name, sci, levels: f ? ALL.length - f.missing.length : 0,
-    group: f?.group ?? '', trophic: f?.trophic ?? '', size: f?.size ?? null,
-    habitat: f?.habitat ?? null, origin: f?.origin ?? null, biome: f?.biome ?? null,
-    foodweb: {
-      eats: edge.startsWith('eats ') ? link(edge.slice(5)) : [],
-      eatenBy: edge.startsWith('eaten by ') ? link(edge.slice(9)) : [],
-    },
-  };
-}
 
 export default function Preview() {
   const router = useRouter();

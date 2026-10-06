@@ -64,7 +64,7 @@ type State = {
   marks: [number, number, number, number][];   // [lng, lat, confirmed 1|0, observation id]
 };
 const V = 5;   // 2: sightings carry their photo and stats, lists carry facts · 3: marks · 4: marks say confirmed or waiting · 5: marks carry the observation id
-const MAX_MARKS = 4000;
+const MAX_MARKS = 12000;   // 4,000 cut a 4,532-sighting account's waiting marks (2026-10-06); clusters keep the map light
 const EMPTY: State = { v: V, me: null, earned: [], waiting: [], waitingTotal: 0, potential: [], potentialTotal: 0, already: 0, unplaced: 0, confirmed: 0, checkedAt: 0, marks: [] };
 type Run = { busy: boolean; step: string | null; fresh: Earned[] | null; err: string | null };
 
@@ -135,6 +135,23 @@ function loadPool() {
   return _pool;
 }
 const BITS: [number, FactKey, string][] = [[16, 'feeding', 'feeding role'], [8, 'size', 'size'], [4, 'foodweb', 'food web'], [2, 'slot5', 'habitat or origin'], [1, 'biome', 'biome']];
+export const ALL_FACTS: FactKey[] = ['feeding', 'size', 'foodweb', 'slot5', 'biome'];
+// the card the database could make today for a species that is no card yet:
+// what it knows, nothing invented — the preview and the combs show it with
+// the missing facts in red
+export function partialCard(name: string, sci: string, f: Facts | null): Card {
+  const edge = f?.edge ?? '';
+  const link = (n: string) => [{ name: n, evidence: 1, card: false, inSet: false }];
+  return {
+    id: `potential:${sci}`, species_id: 0, name, sci, levels: f ? ALL_FACTS.length - f.missing.length : 0,
+    group: f?.group ?? '', trophic: f?.trophic ?? '', size: f?.size ?? null,
+    habitat: f?.habitat ?? null, origin: f?.origin ?? null, biome: f?.biome ?? null,
+    foodweb: {
+      eats: edge.startsWith('eats ') ? link(edge.slice(5)) : [],
+      eatenBy: edge.startsWith('eaten by ') ? link(edge.slice(9)) : [],
+    },
+  };
+}
 export const FACT_LABEL: Record<FactKey, string> = { feeding: 'feeding role', size: 'size', foodweb: 'food web', slot5: 'habitat or origin', biome: 'biome' };
 const listOf = (a: string[]) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`);
 const NOTHING: Facts = { group: '', trophic: null, size: null, habitat: null, origin: null, biome: null, edge: null, missing: BITS.map(b => b[1]) };

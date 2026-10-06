@@ -14,11 +14,15 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
-import Honeycomb, { Comb } from '../components/Honeycomb';
+import HexPhoto from '../components/HexPhoto';
+import Honeycomb, { Comb, ShownCard } from '../components/Honeycomb';
+import ViewToggle from '../components/ViewToggle';
+import { ViewMode, useViewMode } from '../lib/viewmode';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { cardById, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { Naturalist, searchNaturalists } from '../lib/inatPublic';
-import { Earned, chooseMe, forgetMe, loadSightings, niceDate, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
+import { ALL_FACTS, Earned, chooseMe, forgetMe, loadSightings, niceDate, partialCard, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
+import PolygroveCard from '../components/PolygroveCard';
 import { openWeb } from '../lib/web';
 
 const STALE_MS = 10 * 60 * 1000;   // coming back to the tab re-checks after ten minutes
@@ -36,6 +40,11 @@ export default function Sightings() {
   // the three lists FOLD (user, 2026-10-05): your cards start open, the
   // other two closed
   const [open, setOpen] = useState<Record<'cards' | 'waiting' | 'potential', boolean>>({ cards: true, waiting: false, potential: false });
+  // ONE card shown at a time, above the combs (user, 2026-10-06): the picked
+  // cell from whichever comb; the key is unique across the three
+  const [shown, setShown] = useState<string | null>(null);
+  // HEXES OR THE LIST (user, 2026-10-06): a switch above the combs, remembered
+  const [view, setView] = useViewMode('sightings', 'hex');
   const toggle = (k: keyof typeof open) => setOpen(o => ({ ...o, [k]: !o[k] }));
   // cards in the order you saw them, NEWEST first (user, 2026-10-05; oldest first for a minute)
   const earned = [...st.earned].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || b.at - a.at);
@@ -70,6 +79,17 @@ export default function Sightings() {
   // waiting and potential sightings open "as they could be" (user, 2026-10-05)
   const preview = (kind: 'waiting' | 'potential', key: string) => router.push({ pathname: '/preview', params: { kind, key } });
   const me = st.me;
+  const earnedCombs: Comb[] = earned.map(e => combOf(e.photo, e.cardId, { key: `${e.eid}:${e.speciesId}`, name: e.name,
+                  sub: cardById(e.cardId)?.sci, meta: `Journaled in ${e.eco}${e.date ? ` · seen ${niceDate(e.date)}` : ''}`, onOpen: () => openCard(e),
+                  card: () => { const c = cardById(e.cardId); return c ? <PolygroveCard card={c} sighting={e} /> : null; } }));
+  const waitingCombs: Comb[] = st.waiting.map(w => combOf(w.photo, w.cardId, { key: String(w.obsId), name: w.name, sub: w.sci,
+                  meta: `${w.cardId ? 'a card once confirmed' : 'not a card yet'}${w.date ? ` · ${niceDate(w.date)}` : ''}`, onOpen: () => preview('waiting', String(w.obsId)),
+                  card: () => { const c = w.cardId ? cardById(w.cardId) : undefined; return <PolygroveCard card={c ?? partialCard(w.name, w.sci, w.facts)} sighting={w} missing={c ? undefined : w.facts?.missing ?? ALL_FACTS} />; } }));
+  const potentialCombs: Comb[] = st.potential.map(p => combOf(p.obs.photo, p.cardId, { key: p.key, name: p.name + (p.seen > 1 ? `  ×${p.seen}` : ''), sub: p.sci,
+                  meta: p.why, onOpen: () => preview('potential', p.key),
+                  card: () => { const c = p.cardId ? cardById(p.cardId) : undefined; return <PolygroveCard card={c ?? partialCard(p.name, p.sci, p.facts)} sighting={{ ...p.obs, seen: p.seen }} missing={c ? undefined : p.facts?.missing ?? ALL_FACTS} />; } }));
+  const allCombs = [earnedCombs, waitingCombs, potentialCombs];
+  const shownIn = allCombs.find(cs => cs.some(c => c.key === shown));
 
   return (
     <View style={s.root}>
@@ -148,20 +168,20 @@ export default function Sightings() {
               </View>
             ) : null}
 
+            <View style={{ alignItems: 'center', marginTop: 16 }}><ViewToggle mode={view} onChange={setView} /></View>
+            {view === 'hex' && shownIn ? <ShownCard cells={shownIn} picked={shown} onPick={setShown} /> : null}
             <Fold label="Cards from your sightings" n={earned.length} open={open.cards} onPress={() => toggle('cards')} />
             {open.cards && (earned.length === 0 ? (
               <Text style={s.empty}>
                 {st.checkedAt === 0 ? 'Checking your sightings…' : 'None yet. A confirmed sighting of a species in the game becomes a card here.'}
               </Text>
-            ) : <Honeycomb cells={earned.map(e => combOf(e.photo, e.cardId, { key: `${e.eid}:${e.speciesId}`, name: e.name,
-                  sub: cardById(e.cardId)?.sci, meta: `Journaled in ${e.eco}${e.date ? ` · seen ${niceDate(e.date)}` : ''}`, onOpen: () => openCard(e) }))} />)}
+            ) : <Cells cells={earnedCombs} view={view} picked={shown} onPick={setShown} />)}
 
             <Fold label="Waiting to be confirmed" n={st.waitingTotal} open={open.waiting} onPress={() => toggle('waiting')} />
             {open.waiting && (st.waiting.length === 0 ? <Text style={s.empty}>Nothing waiting.</Text> : (
               <>
                 <Text style={s.hint}>These need the iNaturalist community to agree on what they are. Tap one to see what it is, again to see the card it could be.</Text>
-                <Honeycomb cells={st.waiting.map(w => combOf(w.photo, w.cardId, { key: String(w.obsId), name: w.name, sub: w.sci,
-                  meta: `${w.cardId ? 'a card once confirmed' : 'not a card yet'}${w.date ? ` · ${niceDate(w.date)}` : ''}`, onOpen: () => preview('waiting', String(w.obsId)) }))} />
+                <Cells cells={waitingCombs} view={view} picked={shown} onPick={setShown} />
                 {/* the comb holds the newest 200 named down to a species; the rest of the count has not got that far */}
                 {st.waitingTotal > st.waiting.length ? (
                   <Text style={s.more}>{st.waitingTotal - st.waiting.length} more aren’t identified down to a species yet</Text>
@@ -173,8 +193,7 @@ export default function Sightings() {
             {open.potential && (st.potential.length === 0 ? <Text style={s.empty}>Nothing here — everything you’ve had confirmed is a card.</Text> : (
               <>
                 <Text style={s.hint}>You’ve seen these, but the game can’t make the card yet. Tap one to see what it is, again to see it as it could be.</Text>
-                <Honeycomb cells={st.potential.map(p => combOf(p.obs.photo, p.cardId, { key: p.key, name: p.name + (p.seen > 1 ? `  ×${p.seen}` : ''), sub: p.sci,
-                  meta: p.why, onOpen: () => preview('potential', p.key) }))} />
+                <Cells cells={potentialCombs} view={view} picked={shown} onPick={setShown} />
                 {st.potentialTotal > st.potential.length ? <Text style={s.more}>and {st.potentialTotal - st.potential.length} more</Text> : null}
               </>
             ))}
@@ -210,6 +229,28 @@ function Person({ p, onPress }: { p: Naturalist; onPress?: () => void }) {
       </View>
       {onPress ? <Text style={s.chev}>›</Text> : null}
     </Pressable>
+  );
+}
+
+// a category's cards, as the comb or as the list rows the tab had before
+// (user, 2026-10-06: "switch between the hexes and the previous way")
+function Cells({ cells, view, picked, onPick }: { cells: Comb[]; view: ViewMode; picked: string | null; onPick: (k: string | null) => void }) {
+  if (view === 'hex') return <Honeycomb cells={cells} picked={picked} onPick={onPick} />;
+  return (
+    <>
+      {cells.slice(0, 60).map(c => (
+        <Pressable key={c.key} onPress={c.onOpen} style={s.person}>
+          <HexPhoto uri={c.uri} frame={c.frame} width={46} height={52} borderColor={c.border} borderWidth={2.5} />
+          <View style={{ flex: 1 }}>
+            <Text style={s.pName} numberOfLines={1}>{c.name}</Text>
+            {c.sub ? <Text style={[s.pMeta, { fontStyle: 'italic' }]} numberOfLines={1}>{c.sub}</Text> : null}
+            {c.meta ? <Text style={s.pMeta} numberOfLines={2}>{c.meta}</Text> : null}
+          </View>
+          <Text style={s.chev}>›</Text>
+        </Pressable>
+      ))}
+      {cells.length > 60 ? <Text style={s.more}>and {cells.length - 60} more — the hexes show them all</Text> : null}
+    </>
   );
 }
 

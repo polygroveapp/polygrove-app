@@ -7,11 +7,16 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, SectionList, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
+import HexPhoto from '../components/HexPhoto';
+import ViewToggle from '../components/ViewToggle';
+import { useViewMode } from '../lib/viewmode';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import Honeycomb, { Comb } from '../components/Honeycomb';
-import { C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getTier } from '../constants/polygrove';
+import PolygroveCard from '../components/PolygroveCard';
+import { C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
 import { Card, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
 import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
@@ -26,6 +31,10 @@ export default function FieldNotes() {
   const masteryVersion = useMastery();   // tiers re-render as quizzes are won
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // HEXES OR THE TILE GRID (user, 2026-10-06: "for the field notes do it
+  // vertically like you had before, but have both options") — a switch in
+  // the filter bar, remembered
+  const [view, setView] = useViewMode('deck', 'hex');
   // glow = the card that just went Solar (user, 2026-09-28): its tile is
   // scrolled into view and haloed gold
   const { glow } = useLocalSearchParams<{ glow?: string }>();
@@ -78,16 +87,19 @@ export default function FieldNotes() {
     const j = rows.filter(c => owns(eco!.eid, c.species_id));
     router.push({ pathname: '/gallery', params: { ids: j.map(c => c.id).join(','), start: String(j.findIndex(c => c.id === item.id)) } });
   };
+  const triples = useMemo(() => { const out: Card[][] = []; for (let i = 0; i < rows.length; i += 3) out.push(rows.slice(i, i + 3)); return out; }, [rows]);
   const combs = useMemo<Comb[]>(() => rows.map(c => {
     const t = getTier(scoreOf(c.species_id));
     return { key: c.id, uri: photoFor(c.id, 250), frame: framingFor(c.id), border: t.border, name: c.name, sub: c.sci,
-      meta: `${t.label} level · ${c.trophic || '?'} · ${c.group}`, fallback: '🌿', onOpen: () => openAt(c) };
+      meta: `${t.label} level · ${c.trophic || '?'} · ${c.group}`, fallback: '🌿', onOpen: () => openAt(c), card: () => <PolygroveCard card={c} /> };
   }), [rows, masteryVersion]);   // eslint-disable-line react-hooks/exhaustive-deps
   // the fresh Solar card: the comb opens with it picked and pulsing gold; the
   // list scrolls to the comb's top
   const scrollToGlow = (retry = true) => {
-    if (!rows.some(c => c.id === glow)) return;
-    try { list.current?.scrollToLocation({ sectionIndex: 0, itemIndex: 1, viewPosition: 0, animated: true }); }
+    const r = rows.findIndex(c => c.id === glow);
+    if (r < 0) return;
+    const item = view === 'hex' ? 1 : Math.floor(r / 3) + 1;   // the comb is one item; the grid is rows of three (item 0 is the header)
+    try { list.current?.scrollToLocation({ sectionIndex: 0, itemIndex: item, viewPosition: view === 'hex' ? 0 : 0.35, animated: true }); }
     catch { if (retry) setTimeout(() => scrollToGlow(false), 300); }
   };
   useEffect(() => {
@@ -108,6 +120,7 @@ export default function FieldNotes() {
 
   const filterBar = (
     <View style={s.filters}>
+      <View style={{ alignItems: 'center', marginBottom: 8 }}><ViewToggle mode={view} onChange={setView} /></View>
       <Animated.View pointerEvents="none"
         style={[{ position: 'absolute', left: 0, top: -insets.top, width: win.width, height: win.height }, sliceStyle]}>
         <GreenBackdrop />
@@ -173,8 +186,8 @@ export default function FieldNotes() {
   else body = (
     <SectionList
       ref={list}
-      sections={[{ data: rows.length ? [combs as unknown as Card[]] : [] }]}
-      keyExtractor={(_, i) => `comb${i}`}
+      sections={[{ data: view === 'hex' ? (rows.length ? [combs as unknown as Card[]] : []) : triples }]}
+      keyExtractor={(r, i) => (view === 'hex' ? `comb${i}` : r.map(c => c.id).join('|'))}
       stickySectionHeadersEnabled
       onScroll={e => { scrollY.value = e.nativeEvent.contentOffset.y; }}
       scrollEventThrottle={16}
@@ -193,11 +206,16 @@ export default function FieldNotes() {
           <Text style={s.msg}>{cards.length === 0 ? 'Nothing journaled here yet — open a pack.' : 'No journaled cards match these filters.'}</Text>
         </View>
       }
-      renderItem={({ item }) => (
+      renderItem={({ item }) => (view === 'hex' ? (
         <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
-          <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} rows={7} />
+          <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} />
         </View>
-      )}
+      ) : (
+        <View style={s.row}>
+          {item.map(c => <Cell key={c.id} card={c} glow={c.id === glow} onPress={() => openAt(c)} />)}
+          {item.length < 3 && Array.from({ length: 3 - item.length }).map((_, i) => <View key={`pad${i}`} style={s.cellWrap} />)}
+        </View>
+      ))}
     />
   );
 
@@ -239,7 +257,80 @@ function Chip({ label, count, on, color, onPress }: { label: string; count: numb
   );
 }
 
+// one grid tile — a miniature of the pack card (user, 2026-09-26): the card
+// body, the hexagon photo on the black glow field, the name, then the
+// mastery level. Undiscovered = an empty hexagon with a ?. Mastery score is
+// 0 for everyone until the quiz lands.
+let _glowSeq = 0;
+function Cell({ card, onPress, glow = false }: { card: Card; onPress: () => void; glow?: boolean }) {
+  const journaled = true;   // only journaled cards are listed (user, 2026-09-26: no ? tiles)
+  // the fresh Solar card: gold border + the demo's gold pulse around the tile
+  const pulse = useSharedValue(0);
+  useEffect(() => {
+    if (glow) pulse.value = withRepeat(withSequence(withTiming(1, { duration: 900 }), withTiming(0, { duration: 900 })), -1, false);
+  }, [glow, pulse]);
+  const glowStyle = useAnimatedStyle(() => ({
+    shadowColor: '#FFD700', shadowOpacity: glow ? 0.55 + 0.45 * pulse.value : 0,
+    shadowRadius: 10 + 12 * pulse.value, shadowOffset: { width: 0, height: 0 },
+    transform: [{ scale: glow ? 1 + 0.02 * pulse.value : 1 }],
+  }));
+  const score = scoreOf(card.species_id);
+  const t = getTier(score);
+  // the whole tile is themed by LEVEL (user, 2026-09-26): hexagon, glow, divider
+  const tc = t.border;
+  const photo = journaled ? photoFor(card.id, 250) : undefined;
+  const [glowId] = useState(() => `fn${++_glowSeq}`);
+  return (
+    <Animated.View style={[s.cellWrap, glowStyle]}>
+    <Pressable onPress={onPress} disabled={!journaled}
+      style={[s.cell, !journaled && { opacity: 0.45 }, glow && s.cellGold]}>
+      <View style={s.photoWrap}>
+        {journaled && (
+          <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+            <Defs>
+              <RadialGradient id={glowId} cx="50%" cy="50%" rx="62%" ry="56%">
+                <Stop offset="0" stopColor={tc} stopOpacity={0.21} />
+                <Stop offset="0.7" stopColor={tc} stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
+          </Svg>
+        )}
+        <HexPhoto uri={photo} frame={framingFor(card.id)} width={58} height={66} borderColor={journaled ? tc : '#2a2a2a'} borderWidth={3} />
+        {!journaled && <Text style={s.unknown}>?</Text>}
+      </View>
+      <View style={[s.divider, { backgroundColor: journaled ? t.border : '#262626' }]} />
+      <Text style={s.name} numberOfLines={2}>{journaled ? card.name : '???'}</Text>
+      <View style={s.foot}>
+        <Text style={[s.tier, { color: journaled ? t.border : '#333333' }]} numberOfLines={1}>
+          {journaled ? `${t.label} LEVEL` : '???'}
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 2 }}>
+          {MASTERY.map((m, i) => (
+            <View key={m.key} style={[s.dot, { backgroundColor: journaled && i <= getLevel(score) ? m.border : '#222222' }]} />
+          ))}
+        </View>
+      </View>
+    </Pressable>
+    </Animated.View>
+  );
+}
+
 const s = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 10, paddingHorizontal: 20 },
+  cellWrap: { flex: 1, marginBottom: 10 },
+  cellGold: { borderWidth: 2, borderColor: '#FFD700' },
+  photoWrap: { flex: 1, backgroundColor: '#111111', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  divider: { height: 1.5 },
+  name: { fontFamily: F.display, fontSize: 8.5, color: C.text, lineHeight: 11, paddingHorizontal: 6, paddingTop: 5, minHeight: 27 },
+  unknown: { position: 'absolute', fontFamily: F.display, fontSize: 20, color: '#3a3a3a' },
+  foot: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 6, paddingTop: 2, paddingBottom: 5 },
+  tier: { fontFamily: F.sansBold, fontSize: 7, textTransform: 'uppercase', flexShrink: 1 },
+  dot: { width: 4, height: 4, borderRadius: 2 },
+  cell: {
+    aspectRatio: 3 / 4, borderRadius: 12, borderWidth: 1,
+    borderColor: '#333333', backgroundColor: '#1a1a1a', overflow: 'hidden',
+  },
   root: { flex: 1, backgroundColor: GREEN_BG },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   msg: { fontFamily: F.sans, fontSize: 13, color: C.dim, textAlign: 'center' },

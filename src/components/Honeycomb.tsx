@@ -1,18 +1,18 @@
 // A HONEYCOMB of cards (user, 2026-10-05: "a honeycomb based selector so it's
-// just the photos with the borders on the select screen. then you tap on it
-// and it shows the name and stuff. then you click on it to go to the next
-// screen"). Hexagon photos packed in offset rows; one tap picks a cell and a
-// strip under the comb names it; a second tap on that cell — or on the strip
-// — opens it.
-// A FIXED HEIGHT, SWIPED SIDEWAYS (user, same day: "this height, but make it
-// horizontal swipe to see the rest"): the comb is `rows` deep and grows to
-// the right, column by column, in a horizontal list that only mounts the
-// columns on screen — so hundreds of cards cost a screenful of photos.
+// just the photos with the borders on the select screen"). Hexagon photos
+// packed in offset rows, a fixed number deep, growing to the right in a
+// horizontal list that only mounts the columns on screen.
+// THE CARD ABOVE THE COMB (user, 2026-10-06: "3 hexes tall, if you click on
+// a hex it shows the card above the honeycomb. you can swipe to move right
+// or left in the list"): a tap on a cell shows that card, full size, above
+// the comb; a tap on the shown card opens it; swiping the card left or right
+// steps to the next or previous cell, and the comb follows.
 
-import { useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
-import { C, F } from '../constants/polygrove';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { F } from '../constants/polygrove';
 import { Frame } from '../lib/catalog';
 import HexPhoto from './HexPhoto';
 
@@ -21,16 +21,63 @@ export type Comb = {
   uri?: string; frame?: Frame;
   border: string;
   name: string; sub?: string; meta?: string;
-  fallback?: string;   // an emoji for a cell with no photo
+  fallback?: string;        // an emoji for a cell with no photo
+  card?: () => ReactNode;   // the card to show above the comb (fills its box)
   onOpen: () => void;
 };
 
 const W = 66, H = 74, GAP = 6;   // one cell; rows overlap by a quarter so the comb packs
 const PITCH = H * 0.75 + GAP / 2, STEP = W + GAP;
 
-// glowKey: the fresh Solar card (the journal's gold pulse) — picked at the start
-export default function Honeycomb({ cells, label, glowKey, rows = 9 }: { cells: Comb[]; label?: string; glowKey?: string | null; rows?: number }) {
-  const [picked, setPicked] = useState<string | null>(glowKey ?? null);
+// THE SHOWN CARD: the picked cell's card, full size; swipe it sideways to
+// step through its comb. A screen with several combs renders ONE of these
+// above them all, controlling each comb's pick (user, 2026-10-06: "put this
+// above cards from your sightings. only one can be displayed at once").
+export function ShownCard({ cells, picked, onPick }: { cells: Comb[]; picked: string | null; onPick: (key: string | null) => void }) {
+  const win = useWindowDimensions();
+  const idx = cells.findIndex(c => c.key === picked);
+  const cur = idx >= 0 ? cells[idx] : null;
+  const tx = useSharedValue(0);
+  const step = (d: number) => {
+    const n = cells.findIndex(c => c.key === picked) + d;
+    if (n >= 0 && n < cells.length) onPick(cells[n].key);
+  };
+  const pan = Gesture.Pan()
+    .activeOffsetX([-14, 14])
+    .onChange(e => { tx.value = e.translationX; })
+    .onEnd(() => {
+      const d = tx.value < -50 ? 1 : tx.value > 50 ? -1 : 0;
+      if (d !== 0) runOnJS(step)(d);
+      tx.value = withSpring(0, { damping: 18, stiffness: 170 });
+    });
+  const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
+  const cardSize = { width: Math.min(win.width - 48, 340), height: Math.min(520, Math.round(win.height * 0.56)) };
+  if (!cur) return null;
+  return (
+    <View style={s.cardWrap}>
+      {cur.card ? (
+        <GestureDetector gesture={pan}>
+          <Animated.View style={[cardSize, dragStyle]}>
+            {cur.card()}
+          </Animated.View>
+        </GestureDetector>
+      ) : null}
+      <Text style={s.hint}>{idx + 1} of {cells.length}{cur.meta ? ` · ${cur.meta}` : ''}</Text>
+      <Text style={s.hint}>swipe the card for the next · tap its hex again to open it</Text>
+    </View>
+  );
+}
+
+// glowKey: the fresh Solar card (the journal's gold pulse) — picked at the start.
+// picked/onPick: a screen that shows the card itself (ShownCard) controls the
+// pick from outside; left out, the comb keeps its own pick and shows the card
+// above itself.
+export default function Honeycomb({ cells, label, glowKey, rows = 3, picked: pickedProp, onPick }:
+  { cells: Comb[]; label?: string; glowKey?: string | null; rows?: number; picked?: string | null; onPick?: (key: string | null) => void }) {
+  const [pickedOwn, setPickedOwn] = useState<string | null>(glowKey ?? null);
+  const controlled = onPick !== undefined;
+  const picked = controlled ? pickedProp ?? null : pickedOwn;
+  const setPicked = (k: string | null) => (controlled ? onPick!(k) : setPickedOwn(k));
   const pulse = useSharedValue(0);
   useEffect(() => {
     if (glowKey) pulse.value = withRepeat(withSequence(withTiming(1, { duration: 900 }), withTiming(0, { duration: 900 })), -1, false);
@@ -43,28 +90,22 @@ export default function Honeycomb({ cells, label, glowKey, rows = 9 }: { cells: 
   const cols: Comb[][] = [];
   for (let i = 0; i < cells.length; i += R) cols.push(cells.slice(i, i + R));
   const height = (R - 1) * PITCH + H;
-  const cur = cells.find(c => c.key === picked) ?? null;
-  // open on the glowing card's column
+  const idx = cells.findIndex(c => c.key === picked);
+  const cur = idx >= 0 ? cells[idx] : null;
   const list = useRef<FlatList<Comb[]>>(null);
-  const glowCol = glowKey ? Math.floor(Math.max(0, cells.findIndex(c => c.key === glowKey)) / R) : 0;
+  // the comb follows the pick: whenever the picked cell changes, its column scrolls into view
   useEffect(() => {
-    if (glowKey && glowCol > 0) setTimeout(() => { try { list.current?.scrollToIndex({ index: glowCol, viewPosition: 0.5, animated: true }); } catch { /* not yet laid out */ } }, 300);
-  }, [glowKey, glowCol]);
+    if (idx < 0) return;
+    const t = setTimeout(() => { try { list.current?.scrollToIndex({ index: Math.floor(idx / R), viewPosition: 0.5, animated: true }); } catch { /* not yet laid out */ } }, 60);
+    return () => clearTimeout(t);
+  }, [idx, R]);
+
 
   return (
     <View>
       {label ? <Text style={s.label}>{label}</Text> : null}
-      {/* the name strip sits ABOVE the comb so it is always in view, however deep the comb */}
-      {cur ? (
-        <Pressable onPress={cur.onOpen} style={[s.strip, { borderColor: `${cur.border}88` }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.name} numberOfLines={1}>{cur.name}</Text>
-            {cur.sub ? <Text style={s.sub} numberOfLines={1}>{cur.sub}</Text> : null}
-            {cur.meta ? <Text style={s.meta} numberOfLines={2}>{cur.meta}</Text> : null}
-          </View>
-          <Text style={s.chev}>›</Text>
-        </Pressable>
-      ) : cells.length ? <Text style={s.hint}>{cols.length > 1 ? 'swipe sideways for more · ' : ''}tap a card to see what it is · tap again to open it</Text> : null}
+      {!controlled && cur ? <ShownCard cells={cells} picked={picked} onPick={setPicked} /> : null}
+      {!cur && cells.length ? <Text style={s.hint}>{cols.length > 1 ? 'swipe sideways for more · ' : ''}tap a card to see it</Text> : null}
       <FlatList
         ref={list}
         horizontal
@@ -76,7 +117,7 @@ export default function Honeycomb({ cells, label, glowKey, rows = 9 }: { cells: 
         windowSize={5}
         extraData={picked}
         style={{ height, overflow: 'visible' }}
-        contentContainerStyle={{ paddingRight: STEP / 2 }}   // room for the odd rows' half-step
+        contentContainerStyle={{ paddingRight: STEP / 2 }}   // room for the stepped-in rows' half-step
         renderItem={({ item: col }) => (
           <View style={{ width: STEP, height, overflow: 'visible' }}>
             {col.map((c, r) => {
@@ -90,7 +131,7 @@ export default function Honeycomb({ cells, label, glowKey, rows = 9 }: { cells: 
                 </Pressable>
               );
               return (
-                <View key={c.key} style={{ position: 'absolute', top: r * PITCH, left: r % 2 ? STEP / 2 : 0, zIndex: on || gold ? 3 : 1 }}>
+                <View key={c.key} style={{ position: 'absolute', top: r * PITCH, left: r % 2 ? 0 : STEP / 2, zIndex: on || gold ? 3 : 1 }}>
                   {gold ? <Animated.View style={glowStyle}>{cell}</Animated.View> : cell}
                 </View>
               );
@@ -104,16 +145,9 @@ export default function Honeycomb({ cells, label, glowKey, rows = 9 }: { cells: 
 
 const s = StyleSheet.create({
   label: { fontFamily: F.sansBold, fontSize: 11, color: '#777', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+  cardWrap: { alignItems: 'center', marginBottom: 12, gap: 6 },
   cell: { width: W, height: H, alignItems: 'center', justifyContent: 'center' },
   cellOn: { transform: [{ scale: 1.08 }] },
   fallback: { position: 'absolute', fontSize: 22 },
-  strip: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10, padding: 10, borderRadius: 14,
-    backgroundColor: '#141414', borderWidth: 1,
-  },
-  name: { fontFamily: F.sansBold, fontSize: 14, color: C.text },
-  sub: { fontFamily: F.sans, fontSize: 11.5, color: '#888', fontStyle: 'italic', marginTop: 1 },
-  meta: { fontFamily: F.sans, fontSize: 11, color: '#999', marginTop: 2, lineHeight: 15 },
-  chev: { fontFamily: F.sansBold, fontSize: 18, color: '#555' },
   hint: { fontFamily: F.sans, fontSize: 11, color: '#666', textAlign: 'center', marginBottom: 8 },
 });
