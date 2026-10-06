@@ -84,10 +84,10 @@ export default function Sightings() {
                   card: () => { const c = cardById(e.cardId); return c ? <PolygroveCard card={c} sighting={e} /> : null; } }));
   const waitingCombs: Comb[] = st.waiting.map(w => combOf(w.photo, w.cardId, { key: String(w.obsId), name: w.name, sub: w.sci,
                   meta: `${w.cardId ? 'a card once confirmed' : 'not a card yet'}${w.date ? ` · ${niceDate(w.date)}` : ''}`, onOpen: () => preview('waiting', String(w.obsId)),
-                  card: () => { const c = w.cardId ? cardById(w.cardId) : undefined; return <PolygroveCard card={c ?? partialCard(w.name, w.sci, w.facts)} sighting={w} missing={c ? undefined : w.facts?.missing ?? ALL_FACTS} />; } }));
+                  card: () => { const c = w.cardId ? cardById(w.cardId) : undefined; return <PolygroveCard card={c ?? partialCard(w.name, w.sci, w.facts)} sighting={w} missing={c ? undefined : w.facts?.missing ?? ALL_FACTS} />; } }, w.facts?.trophic));
   const potentialCombs: Comb[] = st.potential.map(p => combOf(p.obs.photo, p.cardId, { key: p.key, name: p.name + (p.seen > 1 ? `  ×${p.seen}` : ''), sub: p.sci,
                   meta: p.why, onOpen: () => preview('potential', p.key),
-                  card: () => { const c = p.cardId ? cardById(p.cardId) : undefined; return <PolygroveCard card={c ?? partialCard(p.name, p.sci, p.facts)} sighting={{ ...p.obs, seen: p.seen }} missing={c ? undefined : p.facts?.missing ?? ALL_FACTS} />; } }));
+                  card: () => { const c = p.cardId ? cardById(p.cardId) : undefined; return <PolygroveCard card={c ?? partialCard(p.name, p.sci, p.facts)} sighting={{ ...p.obs, seen: p.seen }} missing={c ? undefined : p.facts?.missing ?? ALL_FACTS} />; } }, p.facts?.trophic));
   const allCombs = [earnedCombs, waitingCombs, potentialCombs];
   const shownIn = allCombs.find(cs => cs.some(c => c.key === shown));
 
@@ -257,9 +257,14 @@ function Cells({ cells, view, picked, onPick }: { cells: Comb[]; view: ViewMode;
 // one honeycomb cell (user, 2026-10-05): your photo; the game's photo when the
 // species is a card and you shared none; the border is the card's feeding
 // colour, or grey for a species that is no card yet
-function combOf(photo: string | null | undefined, cardId: string | null, rest: Omit<Comb, 'uri' | 'frame' | 'border' | 'fallback'>): Comb {
+// the border is the TROPHIC colour whenever the role is known — from the deck
+// card, or from the database's facts for a species that is no card yet (a
+// paintbrush is a Producer whether or not it has a size); grey ONLY when the
+// role itself is unknown (user, 2026-10-06)
+function combOf(photo: string | null | undefined, cardId: string | null, rest: Omit<Comb, 'uri' | 'frame' | 'border' | 'fallback'>, trophic?: string | null): Comb {
   const card = cardId ? cardById(cardId) : undefined;
-  const border = card ? TROPHIC_COLOR[card.trophic] || C.greenSoft : '#666';
+  const role = card?.trophic || trophic || '';
+  const border = role ? TROPHIC_COLOR[role] || C.greenSoft : '#666';
   const uri = smallPhoto(photo) || (cardId ? photoFor(cardId, 250) : undefined);
   return { ...rest, uri, frame: photo || !cardId ? undefined : framingFor(cardId), border, fallback: '🌿' };
 }
