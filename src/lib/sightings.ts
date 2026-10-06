@@ -33,7 +33,7 @@ import { snapshotStashed } from './offline';
 // one observation, as a card shows it
 export type SightingInfo = {
   obsId: number; uri?: string; date: string | null; place?: string | null;
-  photo?: string | null; credit?: string | null; agree?: number;
+  photo?: string | null; credit?: string | null; agree?: number; iconic?: string | null;
   seen?: number;          // confirmed sightings of this species in this ecoregion
   pending?: boolean;      // not confirmed yet
 };
@@ -64,7 +64,7 @@ type State = {
   // On the phone only, like everything else here.
   marks: [number, number, number, number][];
 };
-const V = 6;   // 6: marks tell potential (2) from confirmed (1) · 2: sightings carry their photo and stats, lists carry facts · 3: marks · 4: marks say confirmed or waiting · 5: marks carry the observation id
+const V = 7;   // 7: waiting holds only would-be cards; plants/fungi get their role by taxonomy · 6: marks tell potential (2) from confirmed (1) · 2: sightings carry their photo and stats, lists carry facts · 3: marks · 4: marks say confirmed or waiting · 5: marks carry the observation id
 const MAX_MARKS = 12000;   // 4,000 cut a 4,532-sighting account's waiting marks (2026-10-06); clusters keep the map light
 const EMPTY: State = { v: V, me: null, earned: [], waiting: [], waitingTotal: 0, potential: [], potentialTotal: 0, already: 0, unplaced: 0, confirmed: 0, checkedAt: 0, marks: [] };
 type Run = { busy: boolean; step: string | null; fresh: Earned[] | null; err: string | null };
@@ -156,19 +156,26 @@ export function partialCard(name: string, sci: string, f: Facts | null): Card {
 export const FACT_LABEL: Record<FactKey, string> = { feeding: 'feeding role', size: 'size', foodweb: 'food web', slot5: 'habitat or origin', biome: 'biome' };
 const listOf = (a: string[]) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`);
 const NOTHING: Facts = { group: '', trophic: null, size: null, habitat: null, origin: null, biome: null, edge: null, missing: BITS.map(b => b[1]) };
-function factsOf(row: PoolRow | undefined): Facts {
-  if (!row) return NOTHING;
+// a role the taxonomy settles without a database row (user, 2026-10-06: a
+// puffball was grey — "that shouldn't be"): every plant is a Producer, every
+// fungus a Decomposer. Animals need a record.
+const roleByIconic = (iconic: string | null | undefined) => (iconic === 'Plantae' ? 'Producer' : iconic === 'Fungi' ? 'Decomposer' : null);
+function factsOf(row: PoolRow | undefined, iconic?: string | null): Facts {
+  const fallback = roleByIconic(iconic);
+  if (!row) return { ...NOTHING, trophic: fallback, missing: fallback ? NOTHING.missing.filter(k => k !== 'feeding') : NOTHING.missing };
   const mask = Number(row[2]) || 0;
+  const trophic = row[3] ?? fallback;
   return {
-    group: row[1] || '', trophic: row[3] ?? null, size: row[4] ?? null, habitat: row[5] ?? null, origin: row[6] ?? null,
-    biome: row[7] ?? null, edge: row[8] ?? null, missing: BITS.filter(([bit]) => !(mask & bit)).map(b => b[1]),
+    group: row[1] || '', trophic, size: row[4] ?? null, habitat: row[5] ?? null, origin: row[6] ?? null,
+    biome: row[7] ?? null, edge: row[8] ?? null,
+    missing: BITS.filter(([bit, key]) => !(mask & bit) && !(key === 'feeding' && trophic)).map(b => b[1]),
   };
 }
 const whyOf = (row: PoolRow | undefined, f: Facts) =>
   (!row ? 'not enough is known about it yet' : f.missing.length ? `needs its ${listOf(f.missing.map(k => FACT_LABEL[k]))}` : 'has its facts — still needs a photo or a check');
 
 const info = (o: Spot, extra?: Partial<SightingInfo>): SightingInfo =>
-  ({ obsId: o.id, uri: o.uri, date: o.date, place: o.place, photo: o.photo, credit: o.credit, agree: o.agree, ...extra });
+  ({ obsId: o.id, uri: o.uri, date: o.date, place: o.place, photo: o.photo, credit: o.credit, agree: o.agree, iconic: o.iconic, ...extra });
 const pause = () => new Promise<void>(r => setTimeout(r, 0));
 
 let _syncing: Promise<void> | null = null;
@@ -274,20 +281,37 @@ export function syncSightings(force = false): Promise<void> {
       }
 
       // what each non-card has, and why it isn't one yet
+      // WAITING holds only sightings that WOULD be a card once confirmed (user,
+      // 2026-10-06: "cards that can't become cards even with confirmation
+      // should always be in potential"). An unconfirmed sighting of a species
+      // the game can't make a card of goes to POTENTIAL — confirmation would
+      // change nothing for it. Its ✕ stays green on the map (it is, after
+      // all, still waiting), but the list says what is really missing.
       const blankP = [...pot.values()].filter(p => !p.cardId), blankW = waiting.filter(x => !x.cardId);
       if (blankP.length || blankW.length) {
         try {
           const pool = await loadPool();
-          for (const p of blankP) { const row = pool.get(p.sci.toLowerCase()); p.facts = factsOf(row); p.why = whyOf(row, p.facts); }
-          for (const x of blankW) x.facts = factsOf(pool.get(x.sci.toLowerCase()));
+          for (const p of blankP) { const row = pool.get(p.sci.toLowerCase()); p.facts = factsOf(row, p.obs.iconic); p.why = whyOf(row, p.facts); }
+          for (const x of blankW) x.facts = factsOf(pool.get(x.sci.toLowerCase()), x.iconic);
         } catch { for (const p of blankP) p.why = 'not a card yet'; }
+      }
+      let waitingKept = waiting;
+      if (blankW.length) {
+        const pool = await loadPool().catch(() => null);
+        for (const x of blankW) {
+          const key = x.sci.toLowerCase(), row = pool?.get(key);
+          const p = pot.get(key);
+          if (p) { p.seen += 1; if (!p.obs.photo && x.photo) p.obs = { ...x }; }
+          else pot.set(key, { key, name: x.name, sci: x.sci, seen: 1, why: `${whyOf(row, x.facts ?? factsOf(row, x.iconic))} · not confirmed yet either`, cardId: null, facts: x.facts, obs: { ...x } });
+        }
+        waitingKept = waiting.filter(x => !!x.cardId);
       }
 
       if (_s.me?.id !== me.id) return;
       const potential = [...pot.values()].sort((a, b) => b.seen - a.seen || a.name.localeCompare(b.name));
       set({
         earned: [...[...fresh].reverse(), ..._s.earned].map(dress),
-        waiting, waitingTotal: w.total,
+        waiting: waitingKept, waitingTotal: w.total - (waiting.length - waitingKept.length),
         potential: potential.slice(0, KEEP), potentialTotal: potential.length,
         already: had.size, unplaced, confirmed, checkedAt: Date.now(), marks,
       });

@@ -21,7 +21,7 @@ export type Sighting = {
 type RawUser = { id: number; login: string; name?: string | null; icon_url?: string | null; icon?: string | null; observations_count?: number; species_count?: number };
 type RawObs = {
   id: number; uri?: string; observed_on?: string | null; place_guess?: string | null; quality_grade?: string;
-  species_guess?: string | null; taxon?: { name?: string; rank?: string; preferred_common_name?: string } | null;
+  species_guess?: string | null; taxon?: { name?: string; rank?: string; preferred_common_name?: string; iconic_taxon_name?: string | null } | null;
   photos?: { url?: string; license_code?: string | null; attribution?: string }[];
   user?: RawUser;
   geojson?: { coordinates?: [number, number] } | null;   // [lng, lat], as iNaturalist publishes it
@@ -119,6 +119,7 @@ export async function feed(userIds: number[], perPage = 40): Promise<Sighting[]>
 export type Spot = {
   id: number; uri: string; date: string | null; name: string; sci: string | null; lng: number | null; lat: number | null;
   place: string | null; photo: string | null; credit: string | null; agree: number;
+  iconic: string | null;   // iNaturalist's broad group — Plantae, Fungi, Aves, Insecta… — for a role when the database has none
 };
 export type Grade = 'research' | 'needs_id';
 const spotOf = (o: RawObs): Spot => {
@@ -126,7 +127,7 @@ const spotOf = (o: RawObs): Spot => {
   const ph = o.photos?.find(x => x.url) ?? null;
   return {
       place: o.place_guess ?? null, photo: ph?.url ? ph.url.replace('/square.', '/medium.') : null,
-      credit: ph?.attribution ?? null, agree: o.num_identification_agreements ?? 0,
+      credit: ph?.attribution ?? null, agree: o.num_identification_agreements ?? 0, iconic: o.taxon?.iconic_taxon_name ?? null,
       id: o.id, uri: o.uri || `https://www.inaturalist.org/observations/${o.id}`, date: o.observed_on ?? null,
       name: o.taxon?.preferred_common_name || o.species_guess || o.taxon?.name || 'Unknown', sci: binomial(o.taxon),
       lng: c && Number.isFinite(c[0]) ? c[0] : null, lat: c && Number.isFinite(c[1]) ? c[1] : null,
