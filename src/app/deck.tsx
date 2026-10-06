@@ -188,7 +188,11 @@ export default function FieldNotes() {
       ref={list}
       sections={[{ data: view === 'hex' ? (rows.length ? [combs as unknown as Card[]] : []) : triples }]}
       keyExtractor={(r, i) => (view === 'hex' ? `comb${i}` : r.map(c => c.id).join('|'))}
-      stickySectionHeadersEnabled
+      // the filter bar sticks only for the tile grid; with the hexes it scrolls
+      // away like the header (user, 2026-10-06: "the all all all disappear when
+      // you scroll for the hexagons") — the comb is one fixed-height item, so a
+      // bar pinned over it only took room
+      stickySectionHeadersEnabled={view !== 'hex'}
       onScroll={e => { scrollY.value = e.nativeEvent.contentOffset.y; }}
       scrollEventThrottle={16}
       renderSectionHeader={() => filterBar}
