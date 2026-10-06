@@ -45,6 +45,9 @@ export type Facts = {
   missing: FactKey[];
 };
 export type Earned = SightingInfo & { cardId: string; speciesId: number; name: string; eid: number; eco: string; at: number };
+// one entry per (ecoregion, species), first one wins — a check interrupted and
+// re-run could list a pair twice (duplicate-key error in the comb, 2026-10-06)
+const uniqEarned = (list: Earned[]) => { const seen = new Set<string>(); return list.filter(e => { const k = `${e.eid}:${e.speciesId}`; if (seen.has(k)) return false; seen.add(k); return true; }); };
 export type Waiting = SightingInfo & { name: string; sci: string; cardId: string | null; facts: Facts | null };
 export type Potential = { key: string; name: string; sci: string; seen: number; why: string; cardId: string | null; facts: Facts | null; obs: SightingInfo };
 type State = {
@@ -91,6 +94,7 @@ export function loadSightings() {
         // an older shape: keep who you are and what you earned, and look
         // everything else up again (checkedAt 0 = check on the next visit)
         _s = old.v === V ? { ...EMPTY, ...old } : { ...EMPTY, me: old.me ?? null, earned: old.earned ?? [] };
+        _s.earned = uniqEarned(_s.earned);
       }
     } catch { /* fresh start */ }
     emit();
@@ -203,7 +207,7 @@ export function syncSightings(force = false): Promise<void> {
     // what is known so far is SAVED AS WE GO — after every page, and if the
     // check dies — so a long account (2,000 sightings, 2026-10-05) that fails
     // on page eight still has its cards and its ✕ marks on the map
-    const partial = () => set({ earned: [...[...fresh].reverse(), ...startEarned].map(dress), marks: [...marks] });
+    const partial = () => set({ earned: uniqEarned([...[...fresh].reverse(), ...startEarned]).map(dress), marks: [...marks] });
     const seenAs = new Map<string, Spot[]>();   // every confirmed sighting behind each of those pairs
     // what the sighting says on its card: the one that earned it when it has a
     // photo to show, else the first that does
@@ -310,7 +314,7 @@ export function syncSightings(force = false): Promise<void> {
       if (_s.me?.id !== me.id) return;
       const potential = [...pot.values()].sort((a, b) => b.seen - a.seen || a.name.localeCompare(b.name));
       set({
-        earned: [...[...fresh].reverse(), ..._s.earned].map(dress),
+        earned: uniqEarned([...[...fresh].reverse(), ..._s.earned]).map(dress),
         waiting: waitingKept, waitingTotal: w.total - (waiting.length - waitingKept.length),
         potential: potential.slice(0, KEEP), potentialTotal: potential.length,
         already: had.size, unplaced, confirmed, checkedAt: Date.now(), marks,

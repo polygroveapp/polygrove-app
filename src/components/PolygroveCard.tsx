@@ -161,7 +161,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
           <Text style={{ color: '#888888' }}>{card.group ? ` · ${card.group}` : ''}</Text>
         </Text>
         {/* the animal's SOUND, between the role line and the field note (user, 2026-10-06) */}
-        {sound ? <SoundButton sound={sound} color={tc} /> : null}
+        {sound ? <SoundButton sound={sound} /> : null}
         {/* the demo's faint section line above the field note (user, 2026-09-26) */}
         <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', marginHorizontal: -16, marginBottom: 10 }} />
         {sighting ? <SightingNote tc={tc} s={sighting} /> : <FieldNote tc={tc} note={note} sci={card.sci} />}
