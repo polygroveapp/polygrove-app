@@ -14,7 +14,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { F } from '../constants/polygrove';
 import { Frame } from '../lib/catalog';
-import HexPhoto from './HexPhoto';
+import HexThumb from './HexThumb';
 
 export type Comb = {
   key: string;
@@ -116,6 +116,7 @@ export default function Honeycomb({ cells, label, glowKey, rows = 3, picked: pic
         extraData={picked}
         style={{ height, overflow: 'visible' }}
         contentContainerStyle={{ paddingRight: STEP / 2 }}   // room for the stepped-in rows' half-step
+        removeClippedSubviews
         renderItem={({ item: col }) => (
           <View style={{ width: STEP, height, overflow: 'visible' }}>
             {col.map((c, r) => {
@@ -123,8 +124,7 @@ export default function Honeycomb({ cells, label, glowKey, rows = 3, picked: pic
               const ring = gold ? '#FFD700' : on ? '#ffffff' : c.border;
               const cell = (
                 <Pressable onPress={() => (on ? c.onOpen() : setPicked(c.key))} hitSlop={2} style={[s.cell, on && !gold && s.cellOn]}>
-                  {c.uri ? <HexPhoto uri={c.uri} frame={c.frame} width={W} height={H} borderColor={ring} borderWidth={on || gold ? 4 : 3} />
-                    : <HexPhoto width={W} height={H} borderColor={ring} borderWidth={on || gold ? 4 : 3} />}
+                  <HexThumb uri={c.uri} width={W} height={H} borderColor={ring} borderWidth={on || gold ? 4 : 3} />
                   {!c.uri && c.fallback ? <Text style={s.fallback}>{c.fallback}</Text> : null}
                 </Pressable>
               );

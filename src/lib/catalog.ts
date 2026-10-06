@@ -81,7 +81,13 @@ export const framingFor = (id: string): Frame | undefined => _framing[id] ?? _ex
 export function unregisterLocalPhoto(id: string) { delete _localPhoto[id]; }
 
 export const getCards = () => _cards ?? [];
-export const cardById = (id: string) => _cards?.find(c => c.id === id) ?? _extra[id];
+// indexed (2026-10-06): the Sightings combs call this thousands of times a
+// render; a scan of 14,713 cards each time made the screen crawl
+let _byId: Record<string, Card> = {}, _byIdOf: Card[] | null = null;
+export const cardById = (id: string) => {
+  if (_byIdOf !== _cards) { _byId = Object.fromEntries((_cards ?? []).map(c => [c.id, c])); _byIdOf = _cards ?? null; }
+  return _byId[id] ?? _extra[id];
+};
 export const cardByName = (n: string) => _byName[n.toLowerCase()];
 
 // Wikimedia thumb URLs are resizable by rewriting the /NNNpx- segment — but the
