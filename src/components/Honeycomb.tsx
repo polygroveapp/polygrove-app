@@ -62,8 +62,6 @@ export function ShownCard({ cells, picked, onPick }: { cells: Comb[]; picked: st
           </Animated.View>
         </GestureDetector>
       ) : null}
-      <Text style={s.hint}>{idx + 1} of {cells.length}{cur.meta ? ` · ${cur.meta}` : ''}</Text>
-      <Text style={s.hint}>swipe the card for the next · tap its hex again to open it</Text>
     </View>
   );
 }
