@@ -67,17 +67,32 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // your photo, what it is, when and where, and what it is in the game.
   // Tapping that opens your card (in the ecoregion where you saw it), or the
   // preview of the card it could be.
-  type Tapped = { ids: number[]; ok: number; obs?: Spot & { grade: string }; busy: boolean; failed?: boolean };
-  const [tapped, setTapped] = useState<Tapped | null>(null);
+  // THE LIST UNDER THE PIN (user, 2026-10-06: "the preview is to the left of
+  // the − and + and it is a list of all the x's under the pin"): the page
+  // sends the marks within reach of the pin as the map settles; each is
+  // fetched from iNaturalist once (cached) and listed, nearest first, in a
+  // strip beside the zoom buttons. Tapping a row opens its card or preview.
+  type Under = { id: number; kind: number };
+  const [under, setUnder] = useState<Under[]>([]);
+  // ONE AT A TIME (user, 2026-10-06): the strip shows one sighting with ‹ › to
+  // step through the rest under the pin
+  const [underAt, setUnderAt] = useState(0);
+  const [obsCache, setObsCache] = useState<Record<number, (Spot & { grade: string }) | null>>({});
+  const fetching = useRef(new Set<number>());
+  useEffect(() => {
+    for (const u of under.slice(0, 12)) {
+      if (u.id in obsCache || fetching.current.has(u.id)) continue;   // the first few are fetched ahead, so stepping is instant
+      fetching.current.add(u.id);
+      observation(u.id).then(o => setObsCache(c => ({ ...c, [u.id]: o }))).catch(() => setObsCache(c => ({ ...c, [u.id]: null })))
+        .finally(() => fetching.current.delete(u.id));
+    }
+  }, [under, obsCache]);
+  // a tap on a ✕ puts those marks at the head of the list
   const onMark = (ids: number[], ok: number) => {
     if (!ids.length) return;
-    setTapped({ ids, ok, busy: true });
-    observation(ids[0]).then(o => setTapped(t => (t && t.ids[0] === ids[0] ? { ...t, obs: o ?? undefined, busy: false, failed: !o } : t)))
-      .catch(() => setTapped(t => (t && t.ids[0] === ids[0] ? { ...t, busy: false, failed: true } : t)));
+    setUnder(prev => [...ids.map(id => ({ id, kind: ok })), ...prev.filter(u => !ids.includes(u.id))]); setUnderAt(0);
   };
-  const openTapped = async () => {
-    const o = tapped?.obs; if (!o) return;
-    setTapped(null);
+  const openObs = async (o: Spot & { grade: string }) => {
     const sci = o.sci?.toLowerCase();
     const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
     if (card) {
@@ -233,12 +248,13 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   }));
 
   const onMessage = (e: WebViewMessageEvent) => {
-    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox']; dx?: number; dy?: number; ids?: unknown[]; ok?: number };
+    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox']; dx?: number; dy?: number; ids?: unknown[]; ok?: number; marks?: unknown[] };
     try { m = JSON.parse(e.nativeEvent.data); } catch { return; }
     if (m.type === 'ready') setPageReady(true);
     if (m.type === 'center') setPick(m.eid != null && m.name && m.bbox ? { eid: m.eid, name: m.name, bbox: m.bbox } : null);
     if (m.type === 'pan' && typeof m.dx === 'number' && typeof m.dy === 'number') onPan(m.dx, m.dy);
     if (m.type === 'mark' && Array.isArray(m.ids)) onMark(m.ids.map(Number).filter(Boolean), Number(m.ok ?? 1));
+    if (m.type === 'under' && Array.isArray(m.marks)) { setUnder((m.marks as { id: number; kind: number }[]).filter(u => u && Number.isFinite(u.id))); setUnderAt(0); }
   };
 
   // SUBTLE MOTION (user, 2026-09-29: "as much as the new Photos widget
@@ -391,35 +407,36 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
       )}
 
 
-      {/* the tapped ✕: the sighting, over the map, just above the sheet */}
-      {tapped && (
-        <Pressable onPress={openTapped} disabled={!tapped.obs}
-          style={[s.markPop, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 68 }]}>
-          {tapped.obs?.photo ? <Image source={{ uri: smallPhoto(tapped.obs.photo) }} style={s.markPhoto} contentFit="cover" transition={150} />
-            : <View style={[s.markPhoto, s.center]}><Text style={{ fontSize: 22 }}>{tapped.busy ? '…' : '🌿'}</Text></View>}
-          <View style={{ flex: 1, gap: 2 }}>
-            {tapped.busy ? <Text style={s.markName}>Fetching your sighting…</Text>
-              : tapped.failed || !tapped.obs ? <Text style={s.markName}>iNaturalist can’t be reached right now.</Text>
-              : (() => {
-                const o = tapped.obs;
-                const sci = o.sci?.toLowerCase();
-                const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
-                const have = card ? sightings.earned.find(e => e.speciesId === card.species_id && (e.obsId === o.id || true)) : undefined;
-                const status = o.grade !== 'research' ? 'waiting to be confirmed' : card ? (have ? `your card · ${have.eco}` : 'a card you can preview') : 'potential card · see what’s missing';
-                return (
-                  <>
-                    <Text style={s.markName} numberOfLines={1}>{card?.name ?? o.name}</Text>
-                    <Text style={s.markMeta} numberOfLines={1}>{[niceDate(o.date), o.place].filter(Boolean).join(' · ')}</Text>
-                    <Text style={[s.markStatus, { color: o.grade !== 'research' ? '#5fe35a' : card && have ? C.yellow : '#aaaaaa' }]} numberOfLines={1}>
-                      {status}{tapped.ids.length > 1 ? ` · +${tapped.ids.length - 1} more here` : ''}
-                    </Text>
-                  </>
-                );
-              })()}
+      {/* the ✕ mark under the pin, to the LEFT of − and +: one at a time, ‹ › for the others */}
+      {under.length > 0 && (() => {
+        const at = Math.min(underAt, under.length - 1), u = under[at];
+        const o = obsCache[u.id];
+        const sci = o?.sci?.toLowerCase();
+        const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
+        const color = u.kind === 0 ? '#5fe35a' : u.kind === 2 ? '#aaaaaa' : C.yellow;
+        return (
+          <View style={[s.underWrap, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
+            <View style={s.under}>
+              <Pressable onPress={() => setUnderAt(a => Math.max(0, a - 1))} disabled={at === 0} hitSlop={8} style={s.underArrow}>
+                <Text style={[s.underArrowTxt, at === 0 && { opacity: 0.25 }]}>‹</Text>
+              </Pressable>
+              <Pressable onPress={() => o && openObs(o)} disabled={!o} style={s.underRow}>
+                {o?.photo ? <Image source={{ uri: smallPhoto(o.photo) }} style={[s.underPhoto, { borderColor: color }]} contentFit="cover" transition={150} />
+                  : <View style={[s.underPhoto, s.center, { borderColor: color }]}><Text style={{ fontSize: 16 }}>{o === undefined ? '…' : '🌿'}</Text></View>}
+                <View style={{ flex: 1 }}>
+                  <Text style={s.underName} numberOfLines={1}>{o === undefined ? 'Loading…' : o === null ? 'Unavailable' : card?.name ?? o.name}</Text>
+                  <Text style={[s.underMeta, { color }]} numberOfLines={1}>
+                    {u.kind === 0 ? 'waiting' : u.kind === 2 ? 'potential' : 'confirmed'}{o?.date ? ` · ${niceDate(o.date)}` : ''}{under.length > 1 ? ` · ${at + 1}/${under.length}` : ''}
+                  </Text>
+                </View>
+              </Pressable>
+              <Pressable onPress={() => setUnderAt(a => Math.min(under.length - 1, a + 1))} disabled={at >= under.length - 1} hitSlop={8} style={s.underArrow}>
+                <Text style={[s.underArrowTxt, at >= under.length - 1 && { opacity: 0.25 }]}>›</Text>
+              </Pressable>
+            </View>
           </View>
-          <Pressable onPress={() => setTapped(null)} hitSlop={10} style={s.markClose}><Text style={s.markCloseTxt}>✕</Text></Pressable>
-        </Pressable>
-      )}
+        );
+      })()}
 
       {/* the preview sheet sits above the tab bar */}
       <View style={[s.sheet, { bottom: 0, height: SHEET_H + NAV_HEIGHT + insets.bottom, paddingBottom: NAV_HEIGHT + insets.bottom + 12 }]}>
@@ -492,16 +509,15 @@ const s = StyleSheet.create({
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#ffffff' },   // white (user, 2026-09-30; was grey)
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
   zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row' },
-  markPop: {
-    position: 'absolute', left: 14, right: 70, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10,
-    borderRadius: 16, backgroundColor: 'rgba(10,15,10,0.94)', borderWidth: 1, borderColor: 'rgba(255,225,77,0.45)',
-  },
-  markPhoto: { width: 56, height: 56, borderRadius: 10, backgroundColor: '#1c2a1c' },
-  markName: { fontFamily: F.display, fontSize: 13.5, color: C.text },
-  markMeta: { fontFamily: F.sans, fontSize: 11, color: '#aaa' },
-  markStatus: { fontFamily: F.sansBold, fontSize: 10.5 },
-  markClose: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)' },
-  markCloseTxt: { color: '#ccc', fontSize: 12 },
+  // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
+  underWrap: { position: 'absolute', left: 14, right: 118, alignItems: 'flex-start', justifyContent: 'flex-end' },
+  under: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 4, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
+  underRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
+  underPhoto: { width: 36, height: 36, borderRadius: 8, backgroundColor: '#1c2a1c', borderWidth: 2 },
+  underName: { fontFamily: F.sansBold, fontSize: 12.5, color: C.text },
+  underMeta: { fontFamily: F.sans, fontSize: 10.5 },
+  underArrow: { width: 26, height: 36, alignItems: 'center', justifyContent: 'center' },
+  underArrowTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
 
   // the + / − green (user, 2026-09-30: brown for a minute, then "green again")
   zoomBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(10,15,10,0.85)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
