@@ -120,19 +120,26 @@ export type Spot = {
   id: number; uri: string; date: string | null; name: string; sci: string | null; lng: number | null; lat: number | null;
   place: string | null; photo: string | null; credit: string | null; agree: number;
 };
-export async function gradedOf(userId: number, grade: 'research' | 'needs_id', page = 1, perPage = 200): Promise<{ list: Spot[]; total: number }> {
-  const j = await get<{ results: RawObs[]; total_results: number }>(
-    `/observations?user_id=${userId}&quality_grade=${grade}&per_page=${perPage}&page=${page}&order=asc&order_by=id`);
-  const list = (j.results ?? []).map((o): Spot => {
-    const c = o.geojson?.coordinates;
-    const ph = o.photos?.find(x => x.url) ?? null;
-    return {
+export type Grade = 'research' | 'needs_id';
+const spotOf = (o: RawObs): Spot => {
+  const c = o.geojson?.coordinates;
+  const ph = o.photos?.find(x => x.url) ?? null;
+  return {
       place: o.place_guess ?? null, photo: ph?.url ? ph.url.replace('/square.', '/medium.') : null,
       credit: ph?.attribution ?? null, agree: o.num_identification_agreements ?? 0,
       id: o.id, uri: o.uri || `https://www.inaturalist.org/observations/${o.id}`, date: o.observed_on ?? null,
       name: o.taxon?.preferred_common_name || o.species_guess || o.taxon?.name || 'Unknown', sci: binomial(o.taxon),
       lng: c && Number.isFinite(c[0]) ? c[0] : null, lat: c && Number.isFinite(c[1]) ? c[1] : null,
     };
-  });
-  return { list, total: j.total_results ?? 0 };
+};
+export async function gradedOf(userId: number, grade: Grade, page = 1, perPage = 200, order: 'asc' | 'desc' = 'asc'): Promise<{ list: Spot[]; total: number }> {
+  const j = await get<{ results: RawObs[]; total_results: number }>(
+    `/observations?user_id=${userId}&quality_grade=${grade}&per_page=${perPage}&page=${page}&order=${order}&order_by=id`);
+  return { list: (j.results ?? []).map(spotOf), total: j.total_results ?? 0 };
+}
+// one observation, for the map's ✕ popup (2026-10-05)
+export async function observation(id: number): Promise<(Spot & { grade: string }) | null> {
+  const j = await get<{ results: RawObs[] }>(`/observations/${id}`);
+  const o = j.results?.[0];
+  return o ? { ...spotOf(o), grade: o.quality_grade ?? 'casual' } : null;
 }

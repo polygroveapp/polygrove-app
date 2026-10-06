@@ -61,9 +61,9 @@ type State = {
   // public spot — for the map's ✕ marks (user, 2026-10-05): yellow when the
   // community has confirmed it, green while it waits.
   // On the phone only, like everything else here.
-  marks: [number, number, number][];
+  marks: [number, number, number, number][];   // [lng, lat, confirmed 1|0, observation id]
 };
-const V = 4;   // 2: sightings carry their photo and stats, lists carry facts · 3: marks · 4: marks say confirmed or waiting
+const V = 5;   // 2: sightings carry their photo and stats, lists carry facts · 3: marks · 4: marks say confirmed or waiting · 5: marks carry the observation id
 const MAX_MARKS = 4000;
 const EMPTY: State = { v: V, me: null, earned: [], waiting: [], waitingTotal: 0, potential: [], potentialTotal: 0, already: 0, unplaced: 0, confirmed: 0, checkedAt: 0, marks: [] };
 type Run = { busy: boolean; step: string | null; fresh: Earned[] | null; err: string | null };
@@ -164,7 +164,7 @@ export function syncSightings(): Promise<void> {
     const startEarned = _s.earned;
     // pairs (ecoregion:species) your sightings gave you on earlier checks
     const mine = new Set(startEarned.map(e => `${e.eid}:${e.speciesId}`));
-    const marks: [number, number, number][] = [];
+    const marks: [number, number, number, number][] = [];
     // what is known so far is SAVED AS WE GO — after every page, and if the
     // check dies — so a long account (2,000 sightings, 2026-10-05) that fails
     // on page eight still has its cards and its ✕ marks on the map
@@ -190,7 +190,7 @@ export function syncSightings(): Promise<void> {
         if (!p.obs.photo && o.photo) p.obs = info(o);
       };
       let unplaced = 0, confirmed = 0, done = 0, skipped = 0;
-      const mark = (o: Spot, ok: 0 | 1) => { if (o.lng != null && o.lat != null && marks.length < MAX_MARKS) marks.push([+o.lng.toFixed(4), +o.lat.toFixed(4), ok]); };
+      const mark = (o: Spot, ok: 0 | 1) => { if (o.lng != null && o.lat != null && marks.length < MAX_MARKS) marks.push([+o.lng.toFixed(4), +o.lat.toFixed(4), ok, o.id]); };
 
       for (let page = 1; page <= MAX_PAGES; page++) {
         const { list, total } = await gradedOf(me.id, 'research', page, PAGE);
@@ -227,13 +227,23 @@ export function syncSightings(): Promise<void> {
         if (list.length < PAGE) break;
       }
 
+      // WAITING: newest first; every page is read so each one gets its green ✕
+      // (one page of the OLDEST 200 was read before — a 2,000-sighting account
+      // showed no green marks, 2026-10-05), the list keeps the newest 200
       run({ step: 'Checking what is still waiting…' });
-      const w = await gradedOf(me.id, 'needs_id', 1, PAGE);
+      const w = await gradedOf(me.id, 'needs_id', 1, PAGE, 'desc');
       w.list.forEach(o => mark(o, 0));
-      const waiting: Waiting[] = w.list.filter(o => o.sci).reverse().map(o => {
+      const waiting: Waiting[] = w.list.filter(o => o.sci).map(o => {
         const card = bySci.get((o.sci as string).toLowerCase());
         return { ...info(o, { pending: true }), name: card?.name ?? o.name, sci: o.sci as string, cardId: card?.id ?? null, facts: null };
       });
+      for (let page = 2; page <= MAX_PAGES && (page - 1) * PAGE < w.total && marks.length < MAX_MARKS; page++) {
+        run({ step: `Marking waiting sightings… ${Math.min((page - 1) * PAGE, w.total)} of ${w.total}` });
+        const more = await gradedOf(me.id, 'needs_id', page, PAGE, 'desc');
+        more.list.forEach(o => mark(o, 0));
+        if (more.list.length < PAGE) break;
+        partial();
+      }
 
       // what each non-card has, and why it isn't one yet
       const blankP = [...pot.values()].filter(p => !p.cardId), blankW = waiting.filter(x => !x.cardId);
