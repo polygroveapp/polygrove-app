@@ -33,7 +33,7 @@ import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
 import { C, F, getLevel, MASTERY } from '../constants/polygrove';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
-import { loadSightings, niceDate, smallPhoto, syncSightings, useSightings } from '../lib/sightings';
+import { loadSightings, niceDate, syncSightings, useSightings } from '../lib/sightings';
 import { Spot, observation } from '../lib/inatPublic';
 import { ecoregionAt } from '../lib/locate';
 import { getCards, loadCatalog } from '../lib/catalog';
@@ -422,9 +422,11 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
               <Pressable onPress={() => setUnderAt(a => Math.max(0, a - 1))} disabled={at === 0} hitSlop={8} style={s.underArrow}>
                 <Text style={[s.underArrowTxt, at === 0 && { opacity: 0.25 }]}>‹</Text>
               </Pressable>
+              {/* no photo here (user, 2026-10-06): the strip changes with every settle of the
+                  map, and a photo per settle was a steady drip of downloads while panning —
+                  a colour dot for the kind, the name, and the card one tap away */}
               <Pressable onPress={() => o && openObs(o)} disabled={!o} style={s.underRow}>
-                {o?.photo ? <Image source={{ uri: smallPhoto(o.photo) }} style={[s.underPhoto, { borderColor: color }]} contentFit="cover" transition={150} />
-                  : <View style={[s.underPhoto, s.center, { borderColor: color }]}><Text style={{ fontSize: 16 }}>{o === undefined ? '…' : '🌿'}</Text></View>}
+                <View style={[s.underDot, { backgroundColor: color }]} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.underName} numberOfLines={1}>{o === undefined ? 'Loading…' : o === null ? 'Unavailable' : card?.name ?? o.name}</Text>
                   <Text style={[s.underMeta, { color }]} numberOfLines={1}>
@@ -515,7 +517,7 @@ const s = StyleSheet.create({
   underWrap: { position: 'absolute', left: 14, right: 118, alignItems: 'flex-start', justifyContent: 'flex-end' },
   under: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 4, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   underRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
-  underPhoto: { width: 36, height: 36, borderRadius: 8, backgroundColor: '#1c2a1c', borderWidth: 2 },
+  underDot: { width: 10, height: 10, borderRadius: 5, marginLeft: 4 },
   underName: { fontFamily: F.sansBold, fontSize: 12.5, color: C.text },
   underMeta: { fontFamily: F.sans, fontSize: 10.5 },
   underArrow: { width: 26, height: 36, alignItems: 'center', justifyContent: 'center' },
