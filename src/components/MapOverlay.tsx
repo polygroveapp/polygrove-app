@@ -37,7 +37,7 @@ import { loadSightings, niceDate, smallPhoto, syncSightings, useSightings } from
 import { Spot, observation } from '../lib/inatPublic';
 import { ecoregionAt } from '../lib/locate';
 import { getCards, loadCatalog } from '../lib/catalog';
-import { collectedEcoregions, loadCollection, owns } from '../lib/collection';
+import { collectedEcoregions, loadCollection, owns, useCollection } from '../lib/collection';
 import { cleanLead, ecoDeckSize, ecoMembers, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco, wikiUrl } from '../lib/ecoregions';
 
 const PICKER_URL = 'https://polygrovedb.pages.dev/map';   // Pages serves map.html here
@@ -163,17 +163,22 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   const leanZ = useSharedValue(0), leanX = useSharedValue(0);
   const vel = useRef({ x: 0, y: 0 });
   const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clampDeg = (v: number, m: number) => Math.max(-m, Math.min(m, v));
   const onPan = (dx: number, dy: number) => {
     const v = vel.current;
     v.x = v.x * 0.55 + dx * 0.45; v.y = v.y * 0.55 + dy * 0.45;
     const follow = { damping: 16, stiffness: 260, mass: 0.5 };
-    // FLIPPED (user, 2026-09-30: "the pin's moving the opposite way"): it
-    // goes WITH the world — drag right, it tips right; drag down, it dips
-    // subtler (user, 2026-09-30: "make the tilts subtler" — about half the first cut)
-    leanZ.value = withSpring(clampDeg(v.x * 0.7, 16), follow);
-    // fore-aft: dragging UP brings the ball toward you (+), down sends it away
-    leanX.value = withSpring(clampDeg(-v.y * 1.2, 42), follow);
+    // 360° (user, 2026-10-05: "it's only up down right and left"): the drag
+    // is ONE vector — its length sets how far the pin leans, its angle where.
+    // The sideways share tips the pin around its tip (rotateZ); the fore-aft
+    // share slides the ball up or down the needle. A diagonal drag does both
+    // in proportion, so the pin leans along the drag, whatever its direction.
+    // It goes WITH the world (user, 2026-09-30): drag right, it tips right;
+    // drag down, the ball rides up the needle.
+    const mag = Math.hypot(v.x, v.y);
+    const lean = Math.min(mag * 0.8, 24);
+    const ux = mag > 0.01 ? v.x / mag : 0, uy = mag > 0.01 ? -v.y / mag : 0;
+    leanZ.value = withSpring(lean * ux * 0.75, follow);
+    leanX.value = withSpring(lean * uy * 1.6, follow);
     if (settle.current) clearTimeout(settle.current);
     settle.current = setTimeout(() => {
       v.x = 0; v.y = 0;
@@ -275,6 +280,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     router.replace({ pathname: '/', params: { tab: '1' } });
   };
 
+  const have = useCollection(pick?.eid).length;   // journaled there — "x / N species in deck" (user, 2026-10-05)
   if (Platform.OS === 'web') return null;
   const size = pick && catalogReady ? ecoDeckSize(pick.eid) : null;
   const meta = pick && metaReady ? ecoMeta(pick.eid) : undefined;
@@ -432,7 +438,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
                 <Text style={s.ecoName} numberOfLines={2}>{pick.name}</Text>
                 {/* one line always: the "here" note shortens the count rather than wrapping */}
                 <Text style={s.ecoMeta} numberOfLines={1}>
-                  {size != null ? `${size.toLocaleString()} species${here ? '' : ' in this deck'}` : 'ecoregion'}{here ? ' · you’re here now' : ''}
+                  {size != null ? `${have.toLocaleString()} / ${size.toLocaleString()} species in deck` : 'ecoregion'}{here ? ' · you’re here now' : ''}
                 </Text>
                 {meta?.lead ? <Text style={s.lead} numberOfLines={pick.name.length > 26 ? 2 : 3}>{cleanLead(meta.lead)}</Text> : null}
                 <Text style={s.credit} numberOfLines={1}>
