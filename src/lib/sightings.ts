@@ -57,13 +57,14 @@ type State = {
   unplaced: number;            // confirmed sightings of cards with no ecoregion at that spot
   confirmed: number;           // confirmed observations in all
   checkedAt: number;
-  // WHERE you saw things — [lng, lat, confirmed 1|0] of every sighting with a
-  // public spot — for the map's ✕ marks (user, 2026-10-05): yellow when the
-  // community has confirmed it, green while it waits.
+  // WHERE you saw things — [lng, lat, kind, observation id] of every sighting
+  // with a public spot — for the map's ✕ marks (user, 2026-10-05/06): kind 1 =
+  // CONFIRMED and a card (yellow), 0 = WAITING for the community (green), 2 =
+  // POTENTIAL — confirmed, but the game can't make the card yet (grey).
   // On the phone only, like everything else here.
-  marks: [number, number, number, number][];   // [lng, lat, confirmed 1|0, observation id]
+  marks: [number, number, number, number][];
 };
-const V = 5;   // 2: sightings carry their photo and stats, lists carry facts · 3: marks · 4: marks say confirmed or waiting · 5: marks carry the observation id
+const V = 6;   // 6: marks tell potential (2) from confirmed (1) · 2: sightings carry their photo and stats, lists carry facts · 3: marks · 4: marks say confirmed or waiting · 5: marks carry the observation id
 const MAX_MARKS = 12000;   // 4,000 cut a 4,532-sighting account's waiting marks (2026-10-06); clusters keep the map light
 const EMPTY: State = { v: V, me: null, earned: [], waiting: [], waitingTotal: 0, potential: [], potentialTotal: 0, already: 0, unplaced: 0, confirmed: 0, checkedAt: 0, marks: [] };
 type Run = { busy: boolean; step: string | null; fresh: Earned[] | null; err: string | null };
@@ -207,7 +208,7 @@ export function syncSightings(): Promise<void> {
         if (!p.obs.photo && o.photo) p.obs = info(o);
       };
       let unplaced = 0, confirmed = 0, done = 0, skipped = 0;
-      const mark = (o: Spot, ok: 0 | 1) => { if (o.lng != null && o.lat != null && marks.length < MAX_MARKS) marks.push([+o.lng.toFixed(4), +o.lat.toFixed(4), ok, o.id]); };
+      const mark = (o: Spot, kind: 0 | 1 | 2) => { if (o.lng != null && o.lat != null && marks.length < MAX_MARKS) marks.push([+o.lng.toFixed(4), +o.lat.toFixed(4), kind, o.id]); };
 
       for (let page = 1; page <= MAX_PAGES; page++) {
         const { list, total } = await gradedOf(me.id, 'research', page, PAGE);
@@ -216,10 +217,9 @@ export function syncSightings(): Promise<void> {
           done += 1;
           if (done % 40 === 0) { run({ step: `Placing sightings… ${done} of ${Math.min(total, PAGE * MAX_PAGES)}` }); await pause(); }
           if (_s.me?.id !== me.id) return;   // the account was changed mid-check
-          mark(o, 1);
-          if (!o.sci) continue;              // not identified to a species
+          if (!o.sci) { mark(o, 2); continue; }   // not identified to a species: no card from it
           const card = bySci.get(o.sci.toLowerCase());
-          if (!card) { bump(o.sci.toLowerCase(), o, o.sci, undefined, ''); continue; }
+          if (!card) { mark(o, 2); bump(o.sci.toLowerCase(), o, o.sci, undefined, ''); continue; }
           let eid: number | null = null;
           if (o.lng != null && o.lat != null) {
             // an outline that will not download skips THIS sighting (it is
@@ -227,10 +227,11 @@ export function syncSightings(): Promise<void> {
             try { eid = await ecoregionAt(o.lng, o.lat); }
             catch { skipped += 1; continue; }
           }
-          if (eid == null) { unplaced += 1; continue; }
+          if (eid == null) { mark(o, 2); unplaced += 1; continue; }
           const eco = meta[String(eid)]?.name ?? 'that ecoregion';
           const inDeck = ((card.ecoregions as number[] | undefined) ?? []).includes(eid) && !!photoFor(card.id);
-          if (!inDeck) { bump(`${card.species_id}@${eid}`, o, card.sci, card, `a card, but not in the deck for ${eco} yet`); continue; }
+          if (!inDeck) { mark(o, 2); bump(`${card.species_id}@${eid}`, o, card.sci, card, `a card, but not in the deck for ${eco} yet`); continue; }
+          mark(o, 1);
           const pair = `${eid}:${card.species_id}`;
           if (mine.has(pair)) { (seenAs.get(pair) ?? seenAs.set(pair, []).get(pair)!).push(o); continue; }   // a duplicate does nothing
           if (owns(eid, card.species_id)) { had.add(pair); continue; }                                       // …nor does one you had anyway

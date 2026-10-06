@@ -405,12 +405,12 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
                 const sci = o.sci?.toLowerCase();
                 const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
                 const have = card ? sightings.earned.find(e => e.speciesId === card.species_id && (e.obsId === o.id || true)) : undefined;
-                const status = o.grade !== 'research' ? 'waiting to be confirmed' : card ? (have ? `your card · ${have.eco}` : 'a card you can preview') : 'not a card yet · see what’s missing';
+                const status = o.grade !== 'research' ? 'waiting to be confirmed' : card ? (have ? `your card · ${have.eco}` : 'a card you can preview') : 'potential card · see what’s missing';
                 return (
                   <>
                     <Text style={s.markName} numberOfLines={1}>{card?.name ?? o.name}</Text>
                     <Text style={s.markMeta} numberOfLines={1}>{[niceDate(o.date), o.place].filter(Boolean).join(' · ')}</Text>
-                    <Text style={[s.markStatus, { color: o.grade === 'research' ? C.yellow : '#5fe35a' }]} numberOfLines={1}>
+                    <Text style={[s.markStatus, { color: o.grade !== 'research' ? '#5fe35a' : card && have ? C.yellow : '#aaaaaa' }]} numberOfLines={1}>
                       {status}{tapped.ids.length > 1 ? ` · +${tapped.ids.length - 1} more here` : ''}
                     </Text>
                   </>
