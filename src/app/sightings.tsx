@@ -65,7 +65,9 @@ export default function Sightings() {
     if (ready && meId != null && Date.now() - checkedAt > STALE_MS) syncSightings();
   }, [ready, meId, checkedAt]));
 
-  const openCard = (e: Earned) => router.push({ pathname: '/gallery', params: { ids: e.cardId, start: '0', eid: String(e.eid) } });
+  // your custom view of the card — your photo and the observation — with the
+  // journal's plain card one tap further (app/preview.tsx)
+  const openCard = (e: Earned) => router.push({ pathname: '/preview', params: { kind: 'earned', key: `${e.eid}:${e.speciesId}` } });
   // waiting and potential sightings open "as they could be" (user, 2026-10-05)
   const preview = (kind: 'waiting' | 'potential', key: string) => router.push({ pathname: '/preview', params: { kind, key } });
   const me = st.me;

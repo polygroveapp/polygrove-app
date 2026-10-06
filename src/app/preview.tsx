@@ -49,8 +49,12 @@ export default function Preview() {
   const close = () => (router.canGoBack() ? router.back() : router.replace('/sightings'));
 
   // the sighting, and what is known about its species
-  let found: { name: string; sci: string; cardId: string | null; facts: Facts | null; obs: SightingInfo; say: string } | null = null;
-  if (kind === 'waiting') {
+  let found: { name: string; sci: string; cardId: string | null; facts: Facts | null; obs: SightingInfo; say: string; eid?: number } | null = null;
+  if (kind === 'earned') {
+    const e = st.earned.find(x => `${x.eid}:${x.speciesId}` === key);
+    if (e) found = { name: e.name, sci: cardById(e.cardId)?.sci ?? '', cardId: e.cardId, facts: null, obs: e, eid: e.eid,
+      say: `Your sighting earned this card. It’s in the ${e.eco} journal${e.seen && e.seen > 1 ? ` — seen there ${e.seen} times` : ''}.` };
+  } else if (kind === 'waiting') {
     const w = st.waiting.find(x => String(x.obsId) === key);
     if (w) {
       const lacking = w.cardId ? [] : (w.facts?.missing ?? ALL);
@@ -88,16 +92,23 @@ export default function Preview() {
         : !found || !card ? <Text style={s.none}>That sighting isn’t in the list any more — check for new sightings.</Text>
         : (
           <>
-            <Text style={s.kind}>{real ? 'HOW YOUR CARD WOULD LOOK' : 'AN INCOMPLETE CARD'}</Text>
+            <Text style={s.kind}>{kind === 'earned' ? 'YOUR SIGHTING' : real ? 'HOW YOUR CARD WOULD LOOK' : 'AN INCOMPLETE CARD'}</Text>
             <Text style={s.say}>{found.say}</Text>
             <View style={cardSize}>
               <PolygroveCard card={card} sighting={found.obs} missing={missing} />
             </View>
-            {found.obs.uri ? (
-              <Pressable onPress={() => found && found.obs.uri && openWeb(found.obs.uri)} style={s.btn}>
-                <Text style={s.btnTxt}>See the sighting on iNaturalist ›</Text>
-              </Pressable>
-            ) : null}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {kind === 'earned' && found.cardId ? (
+                <Pressable onPress={() => found && router.push({ pathname: '/gallery', params: { ids: found.cardId as string, start: '0' } })} style={s.btn}>
+                  <Text style={s.btnTxt}>The card in your journal ›</Text>
+                </Pressable>
+              ) : null}
+              {found.obs.uri ? (
+                <Pressable onPress={() => found && found.obs.uri && openWeb(found.obs.uri)} style={[s.btn, s.btnQuiet]}>
+                  <Text style={[s.btnTxt, { color: '#ccc' }]}>On iNaturalist ›</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </>
         )}
     </View>
@@ -113,5 +124,6 @@ const s = StyleSheet.create({
     marginTop: 14, paddingVertical: 11, paddingHorizontal: 20, borderRadius: 22,
     backgroundColor: 'rgba(76,175,80,0.18)', borderWidth: 1, borderColor: 'rgba(76,175,80,0.45)',
   },
+  btnQuiet: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: '#333' },
   btnTxt: { fontFamily: F.display, fontSize: 12.5, color: C.green },
 });

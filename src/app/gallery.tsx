@@ -16,8 +16,6 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withSe
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CloseX from '../components/CloseX';
 import PolygroveCard from '../components/PolygroveCard';
-import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
-import { loadSightings, sightingIn, useSightings } from '../lib/sightings';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, cardById, getCards, loadCatalog } from '../lib/catalog';
 import { countsOf, isFullyLocked, loadMastery, useMastery } from '../lib/mastery';
@@ -32,15 +30,10 @@ export default function Gallery() {
   const win = useWindowDimensions();
   // glow = a card that just went Solar: it arrives with the demo's gold pulse
   // (highlightCard) for a couple of seconds (user, 2026-09-26)
-  const { ids, start, glow, pack, eid } = useLocalSearchParams<{ ids?: string; start?: string; glow?: string; pack?: string; eid?: string }>();
+  const { ids, start, glow, pack } = useLocalSearchParams<{ ids?: string; start?: string; glow?: string; pack?: string }>();
   const isPack = pack === '1';
-  // CUSTOM CARDS (2026-10-05): in the journal of the ecoregion being looked
-  // at — your camp's, unless the caller names another — a card one of your
-  // sightings gave you wears your photo and its observation. Not in a pack.
-  const camp = useCurrentEco();
-  const earned = useSightings().earned;
-  const inEco = eid ? Number(eid) : camp?.eid;
-  const sightingFor = (c: Card) => (isPack ? undefined : sightingIn(earned, inEco, c.species_id));
+  // a journaled card is the SAME card however it was earned (user, 2026-10-05):
+  // the custom view of a sighting lives in the Sightings tab (app/preview.tsx)
   const [glowing, setGlowing] = useState<string | null>(glow ?? null);
   const pulse = useSharedValue(0);
   useEffect(() => {
@@ -58,7 +51,7 @@ export default function Gallery() {
   const [ready, setReady] = useState(getCards().length > 0);
   useEffect(() => {
     if (!ready) Promise.allSettled([offlineReady(), loadCatalog()]).then(() => setReady(true));
-    loadMastery(); loadSightings(); loadCurrentEco();
+    loadMastery();
   }, [ready]);
   useMastery();   // the Quiz/Practice pill follows progress
 
@@ -119,8 +112,8 @@ export default function Gallery() {
                 <View key={c.id} pointerEvents={diff === 0 ? 'auto' : 'none'}
                   style={[cardSize, { position: 'absolute', top: 0, transform: [{ translateX: diff * step }] }]}>
                   {glowing === c.id ? (
-                    <Animated.View style={[{ flex: 1, borderRadius: 22 }, glowStyle]}><PolygroveCard card={c} sighting={sightingFor(c)} /></Animated.View>
-                  ) : <PolygroveCard card={c} sighting={sightingFor(c)} />}
+                    <Animated.View style={[{ flex: 1, borderRadius: 22 }, glowStyle]}><PolygroveCard card={c} /></Animated.View>
+                  ) : <PolygroveCard card={c} />}
                 </View>
               );
             })}

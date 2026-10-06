@@ -83,7 +83,8 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     if (card) {
       let eid: number | null = null;
       if (o.lng != null && o.lat != null) { try { eid = await ecoregionAt(o.lng, o.lat); } catch { /* no outline: fall through */ } }
-      if (eid != null && owns(eid, card.species_id)) { router.push({ pathname: '/gallery', params: { ids: card.id, start: '0', eid: String(eid) } }); return; }
+      if (eid != null && sightings.earned.some(e => e.eid === eid && e.speciesId === card.species_id)) { router.push({ pathname: '/preview', params: { kind: 'earned', key: `${eid}:${card.species_id}` } }); return; }
+      if (eid != null && owns(eid, card.species_id)) { router.push({ pathname: '/gallery', params: { ids: card.id, start: '0' } }); return; }
       // a card, but not yours there (not confirmed, or not in that deck): the preview knows which
       if (eid != null && sightings.potential.some(p => p.key === `${card.species_id}@${eid}`)) { router.push({ pathname: '/preview', params: { kind: 'potential', key: `${card.species_id}@${eid}` } }); return; }
     } else if (sci && sightings.potential.some(p => p.key === sci)) { router.push({ pathname: '/preview', params: { kind: 'potential', key: sci } }); return; }
