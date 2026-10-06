@@ -39,7 +39,8 @@
           "motionPermission": "Polygrove leans the map slightly as you tilt your phone. Motion never leaves the device."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

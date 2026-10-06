@@ -54,6 +54,10 @@ export function loadCatalog(onStage?: (s: string) => void) {
     const photos: Record<string, string> = await fetch(`${BASE}/photos.json`)
       .then(r => (r.ok ? r.json() : {}))
       .catch(() => ({}));
+    // SOUNDS (user, 2026-10-06): data/audio.json — up to three licensed recordings
+    // (CC0 / CC-BY, from iNaturalist and Cornell via GBIF) per species, by
+    // scientific name. Linked, never copied. A nicety like framing.
+    fetch(`${BASE}/audio.json`).then(r => (r.ok ? r.json() : {})).then((a: Record<string, Sound[]>) => { _audio = a || {}; }).catch(() => {});
     // framing is a nicety: without it photos fall back to the centre crop
     fetch(`${BASE}/framing.json`).then(r => (r.ok ? r.json() : {})).then((f: Record<string, Frame>) => { _framing = f || {}; }).catch(() => {});
     _cards = cards; _photos = photos;
@@ -80,6 +84,9 @@ export function registerOfflineCard(card: Card, localUri?: string, photoUrl?: st
 export const framingFor = (id: string): Frame | undefined => _framing[id] ?? _extraFrame[id];
 export function unregisterLocalPhoto(id: string) { delete _localPhoto[id]; }
 
+export type Sound = { url: string; by: string; lic: string; ds: string };
+let _audio: Record<string, Sound[]> = {};
+export const soundsFor = (sci: string): Sound[] => _audio[sci] ?? [];
 export const getCards = () => _cards ?? [];
 // indexed (2026-10-06): the Sightings combs call this thousands of times a
 // render; a scan of 14,713 cards each time made the screen crawl

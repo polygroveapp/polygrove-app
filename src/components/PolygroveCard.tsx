@@ -11,7 +11,8 @@ import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, View } from
 import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
-import { Card, photoCommonsPage, photoFor, framingFor } from '../lib/catalog';
+import { Card, photoCommonsPage, photoFor, framingFor, soundsFor } from '../lib/catalog';
+import SoundButton from './SoundButton';
 import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
 import { FactKey, SightingInfo, niceDate } from '../lib/sightings';
 import FwGraph from './FwGraph';
@@ -47,6 +48,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
   // not measured — the accent itself flags the uncertainty.
   const tc = card.provenance?.feeding?.confidence === 'inferred'
     ? '#c084fc' : TROPHIC_COLOR[card.trophic] || '#81C784';
+  const sound = hideNames ? undefined : soundsFor(raw.sci)[0];   // not on a quiz card: the call would give it away
   const own = sighting?.photo || undefined;             // your photo, uncropped by our framing data
   const photo = own ?? photoFor(card.id, 500);
   const frame = own ? undefined : framingFor(raw.id);
@@ -158,6 +160,8 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
             : <Text style={{ color: tc, fontFamily: F.sansBold }}>{card.trophic || '?'}</Text>}
           <Text style={{ color: '#888888' }}>{card.group ? ` · ${card.group}` : ''}</Text>
         </Text>
+        {/* the animal's SOUND, between the role line and the field note (user, 2026-10-06) */}
+        {sound ? <SoundButton sound={sound} color={tc} /> : null}
         {/* the demo's faint section line above the field note (user, 2026-09-26) */}
         <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', marginHorizontal: -16, marginBottom: 10 }} />
         {sighting ? <SightingNote tc={tc} s={sighting} /> : <FieldNote tc={tc} note={note} sci={card.sci} />}
