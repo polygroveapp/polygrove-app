@@ -22,7 +22,6 @@ import { Earned, chooseMe, forgetMe, loadSightings, niceDate, smallPhoto, syncSi
 import { openWeb } from '../lib/web';
 
 const STALE_MS = 10 * 60 * 1000;   // coming back to the tab re-checks after ten minutes
-const SHOWN = 40;                  // rows per list before "and N more"
 
 export default function Sightings() {
   const router = useRouter();
@@ -154,18 +153,16 @@ export default function Sightings() {
               <Text style={s.empty}>
                 {st.checkedAt === 0 ? 'Checking your sightings…' : 'None yet. A confirmed sighting of a species in the game becomes a card here.'}
               </Text>
-            ) : <Honeycomb cells={earned.slice(0, SHOWN).map(e => combOf(e.photo, e.cardId, { key: `${e.eid}:${e.speciesId}`, name: e.name,
+            ) : <Honeycomb cells={earned.map(e => combOf(e.photo, e.cardId, { key: `${e.eid}:${e.speciesId}`, name: e.name,
                   sub: cardById(e.cardId)?.sci, meta: `Journaled in ${e.eco}${e.date ? ` · seen ${niceDate(e.date)}` : ''}`, onOpen: () => openCard(e) }))} />)}
-            {open.cards && earned.length > SHOWN ? <Text style={s.more}>and {earned.length - SHOWN} more, in their ecoregions’ journals</Text> : null}
 
             <Fold label="Waiting to be confirmed" n={st.waitingTotal} open={open.waiting} onPress={() => toggle('waiting')} />
             {open.waiting && (st.waiting.length === 0 ? <Text style={s.empty}>Nothing waiting.</Text> : (
               <>
                 <Text style={s.hint}>These need the iNaturalist community to agree on what they are. Tap one to see what it is, again to see the card it could be.</Text>
-                <Honeycomb cells={st.waiting.slice(0, SHOWN).map(w => combOf(w.photo, w.cardId, { key: String(w.obsId), name: w.name, sub: w.sci,
+                <Honeycomb cells={st.waiting.map(w => combOf(w.photo, w.cardId, { key: String(w.obsId), name: w.name, sub: w.sci,
                   meta: `${w.cardId ? 'a card once confirmed' : 'not a card yet'}${w.date ? ` · ${niceDate(w.date)}` : ''}`, onOpen: () => preview('waiting', String(w.obsId)) }))} />
-                {/* the list holds only sightings named down to a species; the rest of the count has not got that far */}
-                {st.waiting.length > SHOWN ? <Text style={s.more}>and {st.waiting.length - SHOWN} more</Text> : null}
+                {/* the comb holds the newest 200 named down to a species; the rest of the count has not got that far */}
                 {st.waitingTotal > st.waiting.length ? (
                   <Text style={s.more}>{st.waitingTotal - st.waiting.length} more aren’t identified down to a species yet</Text>
                 ) : null}
@@ -176,9 +173,9 @@ export default function Sightings() {
             {open.potential && (st.potential.length === 0 ? <Text style={s.empty}>Nothing here — everything you’ve had confirmed is a card.</Text> : (
               <>
                 <Text style={s.hint}>You’ve seen these, but the game can’t make the card yet. Tap one to see what it is, again to see it as it could be.</Text>
-                <Honeycomb cells={st.potential.slice(0, SHOWN).map(p => combOf(p.obs.photo, p.cardId, { key: p.key, name: p.name + (p.seen > 1 ? `  ×${p.seen}` : ''), sub: p.sci,
+                <Honeycomb cells={st.potential.map(p => combOf(p.obs.photo, p.cardId, { key: p.key, name: p.name + (p.seen > 1 ? `  ×${p.seen}` : ''), sub: p.sci,
                   meta: p.why, onOpen: () => preview('potential', p.key) }))} />
-                {st.potentialTotal > Math.min(SHOWN, st.potential.length) ? <Text style={s.more}>and {st.potentialTotal - Math.min(SHOWN, st.potential.length)} more</Text> : null}
+                {st.potentialTotal > st.potential.length ? <Text style={s.more}>and {st.potentialTotal - st.potential.length} more</Text> : null}
               </>
             ))}
           </>
