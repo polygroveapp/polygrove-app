@@ -5,7 +5,7 @@
 // habitat|origin|biome T/F · Q6 "is this your card?" among look-alikes.
 // Deterministic per (card, attempt) so a retry re-rolls the T/F variants.
 
-import { Card, cardByName, getCards, photoFor } from './catalog';
+import { Card, cardByName, fmtImperial, fmtSize as niceMetric, getCards, parseSize as parseUnit, photoFor } from './catalog';
 
 export type Q =
   | { type: 'mc'; label: string; short: string; q: string; opts: string[]; a: string; explain?: string }
@@ -51,19 +51,14 @@ function sig2(v: number): string {
   return r >= 10 ? String(Math.round(r)) : String(parseFloat(r.toFixed(Math.max(0, 1 - mag))));
 }
 const fmtSize = (v: number, unit: string) => `${sig2(v)} ${unit}`.trim();
-// "45 cm" → "45 cm (18 in)" — metric first, imperial in parentheses (user,
-// 2026-09-28: "show both imperial and metric"); the unit word (wingspan)
-// stays with the metric figure
+// "2140.8 g" → "2.1 kg | 4.7 lb": the card's own relatable format (user,
+// 2026-10-06: "make these numbers relatable in general") — metric in a unit
+// that reads, the imperial twin after a bar; a wingspan keeps its word
 export function withImperial(size: string): string {
-  const p = parseSize(size);
-  if (!p || !(p.v > 0)) return size;
-  const u = p.unit.split(' ')[0];
-  const imp = u === 'g' ? (p.v >= 453.6 ? `${sig2(p.v / 453.6)} lb` : `${sig2(p.v / 28.35)} oz`)
-    : u === 'kg' ? `${sig2(p.v * 2.2046)} lb`
-    : u === 'cm' ? (p.v >= 30.48 ? `${sig2(p.v / 30.48)} ft` : `${sig2(p.v / 2.54)} in`)
-    : u === 'mm' ? `${sig2(p.v / 25.4)} in`
-    : u === 'm' ? `${sig2(p.v * 3.2808)} ft` : null;
-  return imp ? `${size} (${imp})` : size;
+  const p = parseUnit(size);
+  if (!p) return size;
+  const word = /wingspan/i.test(size) ? ' wingspan' : '';
+  return `${niceMetric(p.v, p.unit)}${word} | ${fmtImperial(p.v, p.unit)}`;
 }
 
 // six slots, null where the card can't ask that question (no look-alikes, say)

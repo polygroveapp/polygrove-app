@@ -437,7 +437,7 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', marginBottom: 9 },
   // .dc-row / .dc-box
   row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  box: { flex: 1, backgroundColor: '#222222', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center' },
+  box: { flex: 1, backgroundColor: '#222222', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },   // centred both ways: a box beside the taller Size box sat high (user, 2026-10-06)
   boxK: { fontSize: 9.5, letterSpacing: 1.3, textTransform: 'uppercase', color: '#888888', fontFamily: F.sans },
   boxV: { fontSize: 14, marginTop: 3, color: C.text, fontFamily: F.sans, textAlign: 'center' },
   // the size bar: a 3px track, the fill in the card's role colour, a dot at this species, tiny end labels
