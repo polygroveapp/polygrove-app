@@ -72,27 +72,33 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // sends the marks within reach of the pin as the map settles; each is
   // fetched from iNaturalist once (cached) and listed, nearest first, in a
   // strip beside the zoom buttons. Tapping a row opens its card or preview.
-  type Under = { id: number; kind: number };
+  type Under = { id: number; kind: number; name?: string | null; sci?: string | null; date?: string | null; lng?: number | null; lat?: number | null };
   const [under, setUnder] = useState<Under[]>([]);
   // ONE AT A TIME (user, 2026-10-06): the strip shows one sighting with ‹ › to
   // step through the rest under the pin
   const [underAt, setUnderAt] = useState(0);
   const [obsCache, setObsCache] = useState<Record<number, (Spot & { grade: string }) | null>>({});
+  // a mark that carries its name needs no fetch: the page passes name/sci/date
+  // along from the saved marks (user, 2026-10-06: nothing loads under the pin)
+  const spotOf = (u: Under): (Spot & { grade: string }) | null => u.name
+    ? { id: u.id, uri: `https://www.inaturalist.org/observations/${u.id}`, date: u.date ?? null, name: u.name, sci: u.sci ?? null, lng: u.lng ?? null, lat: u.lat ?? null, place: null, photo: null, credit: '', agree: 0, iconic: null, grade: '' }
+    : null;
   const fetching = useRef(new Set<number>());
   useEffect(() => {
     // the shown one and its neighbours are fetched ahead, so stepping is instant; the rest as you reach them
     const at = Math.min(underAt, Math.max(0, under.length - 1));
     for (const u of under.slice(Math.max(0, at - 1), at + 4)) {
-      if (u.id in obsCache || fetching.current.has(u.id)) continue;
+      if (u.name || u.id in obsCache || fetching.current.has(u.id)) continue;   // named marks (v8) are ready as they are
       fetching.current.add(u.id);
       observation(u.id).then(o => setObsCache(c => ({ ...c, [u.id]: o }))).catch(() => setObsCache(c => ({ ...c, [u.id]: null })))
         .finally(() => fetching.current.delete(u.id));
     }
   }, [under, underAt, obsCache]);
   // a tap on a ✕ puts those marks at the head of the list
-  const onMark = (ids: number[], ok: number) => {
+  const onMark = (ids: number[], ok: number, marks?: Under[]) => {
     if (!ids.length) return;
-    setUnder(prev => [...ids.map(id => ({ id, kind: ok })), ...prev.filter(u => !ids.includes(u.id))]); setUnderAt(0);
+    const head: Under[] = marks && marks.length ? marks : ids.map(id => ({ id, kind: ok }));
+    setUnder(prev => [...head, ...prev.filter(u => !ids.includes(u.id))]); setUnderAt(0);
   };
   const openObs = async (o: Spot & { grade: string }) => {
     const sci = o.sci?.toLowerCase();
@@ -269,8 +275,8 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     if (m.type === 'ready') setPageReady(true);
     if (m.type === 'center') setPick(m.eid != null && m.name && m.bbox ? { eid: m.eid, name: m.name, bbox: m.bbox } : null);
     if (m.type === 'pan' && typeof m.dx === 'number' && typeof m.dy === 'number') onPan(m.dx, m.dy);
-    if (m.type === 'mark' && Array.isArray(m.ids)) onMark(m.ids.map(Number).filter(Boolean), Number(m.ok ?? 1));
-    if (m.type === 'under' && Array.isArray(m.marks)) { setUnder((m.marks as { id: number; kind: number }[]).filter(u => u && Number.isFinite(u.id))); setUnderAt(0); }
+    if (m.type === 'mark' && Array.isArray(m.ids)) onMark(m.ids.map(Number).filter(Boolean), Number(m.ok ?? 1), Array.isArray(m.marks) ? (m.marks as Under[]).filter(u => u && Number.isFinite(u.id)) : undefined);
+    if (m.type === 'under' && Array.isArray(m.marks)) { setUnder((m.marks as Under[]).filter(u => u && Number.isFinite(u.id))); setUnderAt(0); }
   };
 
   // SUBTLE MOTION (user, 2026-09-29: "as much as the new Photos widget
@@ -426,7 +432,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
       {/* the ✕ mark under the pin, to the LEFT of − and +: one at a time, ‹ › for the others */}
       {under.length > 0 && (() => {
         const at = Math.min(underAt, under.length - 1), u = under[at];
-        const o = obsCache[u.id];
+        const o = spotOf(u) ?? obsCache[u.id];
         const sci = o?.sci?.toLowerCase();
         const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
         const color = u.kind === 0 ? '#5fe35a' : u.kind === 2 ? '#aaaaaa' : C.yellow;

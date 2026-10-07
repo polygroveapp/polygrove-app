@@ -65,9 +65,13 @@ type State = {
   // CONFIRMED and a card (yellow), 0 = WAITING for the community (green), 2 =
   // POTENTIAL — confirmed, but the game can't make the card yet (grey).
   // On the phone only, like everything else here.
-  marks: [number, number, number, number][];
+  // v8: + name, scientific name, date — so the strip under the pin has
+  // everything READY and never fetches (user, 2026-10-06: "have it all ready
+  // to go so it's not loading anything")
+  marks: Mark[];
 };
-const V = 7;   // 7: waiting holds only would-be cards; plants/fungi get their role by taxonomy · 6: marks tell potential (2) from confirmed (1) · 2: sightings carry their photo and stats, lists carry facts · 3: marks · 4: marks say confirmed or waiting · 5: marks carry the observation id
+export type Mark = [number, number, number, number, string, string | null, string | null];
+const V = 8;   // 8: marks carry name/sci/date ·   // 7: waiting holds only would-be cards; plants/fungi get their role by taxonomy · 6: marks tell potential (2) from confirmed (1) · 2: sightings carry their photo and stats, lists carry facts · 3: marks · 4: marks say confirmed or waiting · 5: marks carry the observation id
 const MAX_MARKS = 12000;   // 4,000 cut a 4,532-sighting account's waiting marks (2026-10-06); clusters keep the map light
 const EMPTY: State = { v: V, me: null, earned: [], waiting: [], waitingTotal: 0, potential: [], potentialTotal: 0, already: 0, unplaced: 0, confirmed: 0, checkedAt: 0, marks: [] };
 type Run = { busy: boolean; step: string | null; fresh: Earned[] | null; err: string | null };
@@ -203,7 +207,7 @@ export function syncSightings(force = false): Promise<void> {
     const startEarned = _s.earned;
     // pairs (ecoregion:species) your sightings gave you on earlier checks
     const mine = new Set(startEarned.map(e => `${e.eid}:${e.speciesId}`));
-    const marks: [number, number, number, number][] = [];
+    const marks: Mark[] = [];
     // what is known so far is SAVED AS WE GO — after every page, and if the
     // check dies — so a long account (2,000 sightings, 2026-10-05) that fails
     // on page eight still has its cards and its ✕ marks on the map
@@ -229,7 +233,7 @@ export function syncSightings(force = false): Promise<void> {
         if (!p.obs.photo && o.photo) p.obs = info(o);
       };
       let unplaced = 0, confirmed = 0, done = 0, skipped = 0;
-      const mark = (o: Spot, kind: 0 | 1 | 2) => { if (o.lng != null && o.lat != null && marks.length < MAX_MARKS) marks.push([+o.lng.toFixed(4), +o.lat.toFixed(4), kind, o.id]); };
+      const mark = (o: Spot, kind: 0 | 1 | 2) => { if (o.lng != null && o.lat != null && marks.length < MAX_MARKS) marks.push([+o.lng.toFixed(4), +o.lat.toFixed(4), kind, o.id, o.name, o.sci, o.date]); };
 
       for (let page = 1; page <= MAX_PAGES; page++) {
         const { list, total } = await gradedOf(me.id, 'research', page, PAGE);
