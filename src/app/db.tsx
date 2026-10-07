@@ -15,6 +15,7 @@ import HexThumb from '../components/HexThumb';
 import { C, F, TROPHIC_COLOR, TROPHIC_ORDER } from '../constants/polygrove';
 import { Card, getCards, loadCatalog, photoFor } from '../lib/catalog';
 import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { useStars } from '../lib/stars';
 
 const PAGE = 60;
 
@@ -29,6 +30,9 @@ export default function PolygroveDB() {
   const [group, setGroup] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [campOnly, setCampOnly] = useState(false);
+  // STARRED ONLY (user, 2026-10-06: 'stars apply throughout the app') — the same stars the journal uses
+  const [starsOnly, setStarsOnly] = useState(false);
+  const stars = useStars();
   const [open, setOpen] = useState<'role' | 'group' | null>(null);   // the open dropdown, Field Notes style (user, 2026-10-06)
   // pagination resets with the filters: the count is remembered against the filter key
   const [shownBy, setShownBy] = useState<{ key: string; n: number }>({ key: '', n: PAGE });
@@ -43,11 +47,12 @@ export default function PolygroveDB() {
       if (group && c.group !== group) continue;
       if (role && c.trophic !== role) continue;
       if (camp && !camp.has(c.id)) continue;
+      if (starsOnly && !stars.has(c.id)) continue;
       if (needle && !c.name.toLowerCase().includes(needle) && !c.sci.toLowerCase().includes(needle)) continue;
       out.push(c);
     }
     return out.sort((a, b) => a.name.localeCompare(b.name));
-  }, [cards, group, role, campOnly, eco, needle]);
+  }, [cards, group, role, campOnly, starsOnly, stars, eco, needle]);
   const countIf = (patch: { group?: string | null; role?: string | null }) => {
     const g = patch.group !== undefined ? patch.group : group, r = patch.role !== undefined ? patch.role : role;
     const camp = campOnly && eco ? new Set(ecoMembers(eco.eid).map(c => c.id)) : null;
@@ -56,12 +61,13 @@ export default function PolygroveDB() {
       if (g && c.group !== g) continue;
       if (r && c.trophic !== r) continue;
       if (camp && !camp.has(c.id)) continue;
+      if (starsOnly && !stars.has(c.id)) continue;
       if (needle && !c.name.toLowerCase().includes(needle) && !c.sci.toLowerCase().includes(needle)) continue;
       n++;
     }
     return n;
   };
-  const filterKey = `${needle}|${group}|${role}|${campOnly}`;
+  const filterKey = `${needle}|${group}|${role}|${campOnly}|${starsOnly}`;
   const shown = shownBy.key === filterKey ? shownBy.n : PAGE;
 
   const header = (
@@ -81,6 +87,10 @@ export default function PolygroveDB() {
         <Pressable onPress={() => eco && setCampOnly(v => !v)} accessibilityRole="button" accessibilityLabel="In your camp only"
           style={[s.filterBtn, s.campBtn, campOnly && { borderColor: `${C.yellow}80`, backgroundColor: `${C.yellow}1f` }]}>
           <Text style={[s.campBtnTxt, campOnly && { color: C.yellow }]}>⛺</Text>
+        </Pressable>
+        <Pressable onPress={() => setStarsOnly(v => !v)} accessibilityRole="button" accessibilityLabel="Starred species only"
+          style={[s.filterBtn, s.campBtn, starsOnly && { borderColor: `${C.yellow}80`, backgroundColor: `${C.yellow}1f` }]}>
+          <Text style={[s.campBtnTxt, { fontSize: 22, lineHeight: 26 }, starsOnly && { color: C.yellow }]}>{starsOnly ? '★' : '☆'}</Text>
         </Pressable>
       </View>
       {open ? (
