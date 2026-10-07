@@ -198,16 +198,16 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
           </View>
           <Pressable onPress={star} hitSlop={10} disabled={hideNames}><Text style={[s.ico, starred && s.starOn]}>{starred ? '★' : '☆'}</Text></Pressable>
         </View>
-        {/* the 2×2 order (user, 2026-10-06): Trophic level · Size / Group · Habitat */}
+        {/* the 2×2 order (user, 2026-10-06): Trophic level · Group / Size · Habitat */}
         <View style={s.row}>
           <Box k="Trophic level" v={card.trophic || '?'} vColor={tc} missing={lacks('feeding')}
             onPress={() => showSource('Trophic level', 'feeding')} />
-          <Box k="Size" v={card.size || '—'} missing={lacks('size')}
-            onPress={() => showSource('Size', 'size')} extra={<SizeBar card={card} tc={tc} />} />
-        </View>
-        <View style={s.row}>
           <Box k="Group" v={card.group}
             onPress={() => showSource('Group', 'taxonomy')} />
+        </View>
+        <View style={s.row}>
+          <Box k="Size" v={card.size || '—'} missing={lacks('size')}
+            onPress={() => showSource('Size', 'size')} extra={<SizeBar card={card} tc={tc} />} />
           <Box k={slot5label} v={slot5val} missing={lacks('slot5') || (!card.habitat && !card.origin && lacks('biome'))}
             onPress={() => showSource(slot5label, 'slot5')} />
         </View>
