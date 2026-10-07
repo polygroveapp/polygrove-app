@@ -381,8 +381,8 @@ function SizeBar({ card, tc }: { card: Card; tc: string }) {
         <View style={[s.szDot, { left: `${Math.round(frac * 100)}%`, backgroundColor: tc }]} />
       </View>
       <View style={s.szEnds}>
-        <Text style={s.szEnd}>{fmtSize(r.min, sz.unit)}</Text>
-        <Text style={s.szEnd}>{fmtSize(r.max, sz.unit)}</Text>
+        <Text style={s.szEnd}>{fmtSize(r.min, sz.unit)} | {fmtImperial(r.min, sz.unit)}</Text>
+        <Text style={s.szEnd}>{fmtSize(r.max, sz.unit)} | {fmtImperial(r.max, sz.unit)}</Text>
       </View>
     </View>
   );
@@ -446,7 +446,7 @@ const s = StyleSheet.create({
   szFill: { height: 3, borderRadius: 2 },
   szDot: { position: 'absolute', top: -2.5, width: 8, height: 8, borderRadius: 4, marginLeft: -4, borderWidth: 1.5, borderColor: '#222222' },
   szEnds: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 3 },
-  szEnd: { fontSize: 8, color: '#777777', fontFamily: F.sans },
+  szEnd: { fontSize: 7.5, color: '#777777', fontFamily: F.sans },   // the ends carry imperial too (user, 2026-10-06)
   // .dc-note
   note: { borderLeftWidth: 3, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12, marginBottom: 8 },
   noteK: { fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', fontFamily: F.sansBold },
