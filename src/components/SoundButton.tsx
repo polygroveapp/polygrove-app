@@ -15,8 +15,16 @@ import { openWeb } from '../lib/web';
 const fmt = (sec: number) => { const s = Math.max(0, Math.round(sec)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 // where the recording is hosted, from its url (the dataset name is not always filled in)
 const hostOf = (url: string) =>
-  /inaturalist/.test(url) ? 'iNaturalist' : /xeno-canto/.test(url) ? 'xeno-canto' : /naturalsciences\.be/.test(url) ? 'RBINS (Royal Belgian Institute of Natural Sciences)' : 'GBIF';
-const LICENSE_URL: Record<string, string> = { 'CC0': 'https://creativecommons.org/publicdomain/zero/1.0/', 'CC-BY': 'https://creativecommons.org/licenses/by/4.0/' };
+  /inaturalist/.test(url) ? 'iNaturalist' : /xeno-canto/.test(url) ? 'xeno-canto' : /naturalsciences\.be/.test(url) ? 'RBINS (Royal Belgian Institute of Natural Sciences)' : /wikimedia/.test(url) ? 'Wikimedia Commons' : 'GBIF';
+// a licence's page, from the short name the data carries ("CC0", "CC-BY", "CC BY-SA 4.0", "Public domain" …)
+function licenseUrl(lic: string): string {
+  const l = lic.toLowerCase().replace(/\s+/g, '-');
+  if (l.startsWith('cc0')) return 'https://creativecommons.org/publicdomain/zero/1.0/';
+  if (l.startsWith('public') || l === 'pd') return 'https://creativecommons.org/publicdomain/mark/1.0/';
+  const v = /(\d\.\d)/.exec(lic)?.[1] ?? '4.0';
+  if (l.includes('by-sa')) return `https://creativecommons.org/licenses/by-sa/${v}/`;
+  return `https://creativecommons.org/licenses/by/${v}/`;
+}
 
 export default function SoundButton({ sound }: { sound: Sound }) {
   const player = useAudioPlayer({ uri: sound.url });
@@ -47,9 +55,9 @@ export default function SoundButton({ sound }: { sound: Sound }) {
           <View style={s.pop} onStartShouldSetResponder={() => true}>
             <Text style={s.popLabel}>RECORDING</Text>
             {sound.by ? <Text style={s.popBy}>recorded by {sound.by}</Text> : null}
-            <Text style={s.popSrc}>{host}, via GBIF</Text>
-            <Pressable onPress={() => openWeb(LICENSE_URL[sound.lic] ?? 'https://creativecommons.org/licenses/')} hitSlop={6}>
-              <Text style={s.popLink}>{sound.lic === 'CC0' ? 'CC0 — public domain dedication' : `${sound.lic} 4.0 licence`} ›</Text>
+            <Text style={s.popSrc}>{host}{/wikimedia/.test(sound.url) ? '' : ', via GBIF'}</Text>
+            <Pressable onPress={() => openWeb(licenseUrl(sound.lic))} hitSlop={6}>
+              <Text style={s.popLink}>{sound.lic === 'CC0' ? 'CC0 — public domain dedication' : sound.lic === 'CC-BY' ? 'CC-BY 4.0 licence' : `${sound.lic} licence`} ›</Text>
             </Pressable>
             <Pressable onPress={() => openWeb(sound.url)} hitSlop={6}>
               <Text style={s.popLink}>The recording ›</Text>
