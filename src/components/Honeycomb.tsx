@@ -20,6 +20,7 @@ export type Comb = {
   key: string;
   uri?: string; frame?: Frame;
   border: string;
+  shimmer?: boolean;        // the map's glistening gold instead of a flat border (Solar level)
   name: string; sub?: string; meta?: string;
   fallback?: string;        // an emoji for a cell with no photo
   card?: () => ReactNode;   // the card to show above the comb (fills its box)
@@ -142,7 +143,7 @@ export default function Honeycomb({ cells, label, glowKey, rows = 3, picked: pic
               const ring = gold ? '#FFD700' : on ? '#ffffff' : c.border;
               const cell = (
                 <Pressable onPress={() => (on ? c.onOpen() : setPicked(c.key))} hitSlop={2} style={[s.cell, on && !gold && s.cellOn]}>
-                  <HexThumb uri={c.uri} width={W} height={H} borderColor={ring} borderWidth={on || gold ? 4 : 3} />
+                  <HexThumb uri={c.uri} width={W} height={H} borderColor={ring} borderWidth={on || gold ? 4 : 3} shimmer={!!c.shimmer && !on && !gold} />
                   {!c.uri && c.fallback ? <Text style={s.fallback}>{c.fallback}</Text> : null}
                 </Pressable>
               );

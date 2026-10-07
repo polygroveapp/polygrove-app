@@ -95,7 +95,7 @@ export default function FieldNotes() {
   const triples = useMemo(() => { const out: Card[][] = []; for (let i = 0; i < rows.length; i += 3) out.push(rows.slice(i, i + 3)); return out; }, [rows]);
   const combs = useMemo<Comb[]>(() => rows.map(c => {
     const t = getTier(scoreOf(c.species_id));
-    return { key: c.id, uri: photoFor(c.id, 250), frame: framingFor(c.id), border: t.border, name: c.name, sub: c.sci,
+    return { key: c.id, uri: photoFor(c.id, 250), frame: framingFor(c.id), border: t.border, shimmer: t.key === 'solar', name: c.name, sub: c.sci,
       meta: `${t.label} level · ${c.trophic || '?'} · ${c.group}`, fallback: '🌿', onOpen: () => openAt(c), card: () => <PolygroveCard card={c} /> };
   }), [rows, masteryVersion]);   // eslint-disable-line react-hooks/exhaustive-deps
   // the fresh Solar card: the comb opens with it picked and pulsing gold; the
