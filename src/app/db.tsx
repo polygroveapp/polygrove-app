@@ -7,7 +7,7 @@
 
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
@@ -29,6 +29,7 @@ export default function PolygroveDB() {
   const [group, setGroup] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [campOnly, setCampOnly] = useState(false);
+  const [open, setOpen] = useState<'role' | 'group' | null>(null);   // the open dropdown, Field Notes style (user, 2026-10-06)
   // pagination resets with the filters: the count is remembered against the filter key
   const [shownBy, setShownBy] = useState<{ key: string; n: number }>({ key: '', n: PAGE });
 
@@ -47,6 +48,19 @@ export default function PolygroveDB() {
     }
     return out.sort((a, b) => a.name.localeCompare(b.name));
   }, [cards, group, role, campOnly, eco, needle]);
+  const countIf = (patch: { group?: string | null; role?: string | null }) => {
+    const g = patch.group !== undefined ? patch.group : group, r = patch.role !== undefined ? patch.role : role;
+    const camp = campOnly && eco ? new Set(ecoMembers(eco.eid).map(c => c.id)) : null;
+    let n = 0;
+    for (const c of cards) {
+      if (g && c.group !== g) continue;
+      if (r && c.trophic !== r) continue;
+      if (camp && !camp.has(c.id)) continue;
+      if (needle && !c.name.toLowerCase().includes(needle) && !c.sci.toLowerCase().includes(needle)) continue;
+      n++;
+    }
+    return n;
+  };
   const filterKey = `${needle}|${group}|${role}|${campOnly}`;
   const shown = shownBy.key === filterKey ? shownBy.n : PAGE;
 
@@ -56,20 +70,30 @@ export default function PolygroveDB() {
       <Text style={s.sub}>{ready ? `${cards.length.toLocaleString()} species · every complete card` : 'the open species database'}</Text>
       <TextInput value={q} onChangeText={setQ} placeholder="Search species…" placeholderTextColor="#666"
         autoCapitalize="none" autoCorrect={false} returnKeyType="search" clearButtonMode="while-editing" style={s.search} />
-      <FlatList horizontal showsHorizontalScrollIndicator={false} data={['__all', ...TROPHIC_ORDER]} keyExtractor={x => x}
-        contentContainerStyle={s.chips} renderItem={({ item: t }) => {
-          const on = t === '__all' ? role === null : role === t, color = TROPHIC_COLOR[t];
-          return <Chip label={t === '__all' ? 'All roles' : t} on={on} color={color} onPress={() => setRole(t === '__all' ? null : role === t ? null : t)} />;
-        }} />
-      <FlatList horizontal showsHorizontalScrollIndicator={false} data={['__all', ...groups]} keyExtractor={x => x}
-        contentContainerStyle={s.chips} renderItem={({ item: g }) => (
-          <Chip label={g === '__all' ? 'All groups' : g} on={g === '__all' ? group === null : group === g} color={C.greenSoft}
-            onPress={() => setGroup(g === '__all' ? null : group === g ? null : g)} />
-        )} />
-      <View style={[s.chips, { paddingHorizontal: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-        <Chip label={eco ? `In ${eco.name}` : 'In your camp'} on={campOnly} color={C.yellow} onPress={() => eco && setCampOnly(v => !v)} />
-        <Text style={s.count}>{ready ? `${rows.length.toLocaleString()} species` : ''}</Text>
+      {/* the filters as Field Notes has them (user, 2026-10-06): dropdown
+          boxes — label, count, value ▾ — the open one's options as chips
+          below, and a box for "in your camp" */}
+      <View style={s.filterRow}>
+        <FilterBtn label="Role" value={role ?? undefined} color={role ? TROPHIC_COLOR[role] : undefined} count={rows.length}
+          open={open === 'role'} onPress={() => setOpen(open === 'role' ? null : 'role')} />
+        <FilterBtn label="Taxonomy" value={group ?? undefined} color={group ? C.greenSoft : undefined} count={rows.length}
+          open={open === 'group'} onPress={() => setOpen(open === 'group' ? null : 'group')} />
+        <Pressable onPress={() => eco && setCampOnly(v => !v)} accessibilityRole="button" accessibilityLabel="In your camp only"
+          style={[s.filterBtn, s.campBtn, campOnly && { borderColor: `${C.yellow}80`, backgroundColor: `${C.yellow}1f` }]}>
+          <Text style={[s.campBtnTxt, campOnly && { color: C.yellow }]}>⛺</Text>
+        </Pressable>
       </View>
+      {open ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+          {open === 'role' ? <>
+            <Chip label="All" count={countIf({ role: null })} on={!role} onPress={() => setRole(null)} />
+            {TROPHIC_ORDER.map(t => <Chip key={t} label={t} count={countIf({ role: t })} on={role === t} color={TROPHIC_COLOR[t]} onPress={() => setRole(role === t ? null : t)} />)}
+          </> : <>
+            <Chip label="All" count={countIf({ group: null })} on={!group} onPress={() => setGroup(null)} />
+            {groups.map(g => <Chip key={g} label={g} count={countIf({ group: g })} on={group === g} color={C.greenSoft} onPress={() => setGroup(group === g ? null : g)} />)}
+          </>}
+        </ScrollView>
+      ) : null}
     </View>
   );
 
@@ -114,10 +138,22 @@ export default function PolygroveDB() {
   );
 }
 
-function Chip({ label, on, color, onPress }: { label: string; on: boolean; color?: string; onPress: () => void }) {
+function FilterBtn({ label, value, open, color, count, onPress }: { label: string; value?: string; open: boolean; color?: string; count: number; onPress: () => void }) {
+  const tint = value && color ? { borderColor: `${color}80`, backgroundColor: `${color}1f` } : null;
   return (
-    <Pressable onPress={onPress} style={[s.chip, on && color ? { borderColor: `${color}80`, backgroundColor: `${color}22` } : null]}>
-      <Text style={[s.chipTxt, on && color ? { color } : null]} numberOfLines={1}>{label}</Text>
+    <Pressable onPress={onPress} style={[s.filterBtn, (open || value) && s.filterBtnOn, tint]}>
+      <View style={s.filterTop}>
+        <Text style={s.filterLabel}>{label}</Text>
+        <Text style={s.filterCount}>{count.toLocaleString()}</Text>
+      </View>
+      <Text style={[s.filterValue, value && color ? { color } : null]} numberOfLines={1}>{value ?? 'All'} {open ? '▴' : '▾'}</Text>
+    </Pressable>
+  );
+}
+function Chip({ label, count, on, color, onPress }: { label: string; count: number; on: boolean; color?: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[s.chip, on && s.chipOn, on && color ? { borderColor: `${color}80`, backgroundColor: `${color}22` } : null]}>
+      <Text style={[s.chipTxt, on && s.chipTxtOn, on && color ? { color } : null]}>{label}<Text style={s.chipCount}>  {count.toLocaleString()}</Text></Text>
     </Pressable>
   );
 }
@@ -131,10 +167,21 @@ const s = StyleSheet.create({
     fontFamily: F.sans, fontSize: 14, color: C.text, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: '#333', marginBottom: 10,
   },
-  chips: { gap: 7, paddingBottom: 8, paddingHorizontal: 2 },
-  chip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#2a2a2a', backgroundColor: 'rgba(255,255,255,0.04)' },
-  chipTxt: { fontFamily: F.sansMed, fontSize: 12, color: '#aaa' },
-  count: { fontFamily: F.sans, fontSize: 11.5, color: '#777', marginLeft: 'auto' },
+  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  filterBtn: { flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)' },
+  filterBtnOn: { borderColor: '#555555', backgroundColor: 'rgba(255,255,255,0.08)' },
+  filterTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  filterLabel: { fontFamily: F.sansBold, fontSize: 8.5, color: '#666', textTransform: 'uppercase', letterSpacing: 1 },
+  filterCount: { fontFamily: F.sansMed, fontSize: 9.5, color: '#777' },
+  filterValue: { fontFamily: F.sansMed, fontSize: 12.5, color: C.text, marginTop: 1 },
+  campBtn: { flex: 0, width: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 0 },
+  campBtnTxt: { fontSize: 20, lineHeight: 24, color: '#777' },
+  chips: { gap: 7, paddingBottom: 12, paddingRight: 8 },
+  chip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)' },
+  chipOn: { borderColor: '#666666', backgroundColor: 'rgba(255,255,255,0.1)' },
+  chipTxt: { fontFamily: F.sansMed, fontSize: 12, color: C.dim },
+  chipTxtOn: { color: C.text },
+  chipCount: { fontFamily: F.sans, fontSize: 10.5, color: '#777' },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 14, marginHorizontal: 20, marginBottom: 8,
     backgroundColor: '#141414', borderWidth: 1, borderColor: '#2a2a2a',
