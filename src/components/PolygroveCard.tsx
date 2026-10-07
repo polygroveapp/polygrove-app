@@ -16,6 +16,7 @@ import { Card, photoCommonsPage, photoFor, framingFor, soundsFor } from '../lib/
 import SoundButton from './SoundButton';
 import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
 import { FactKey, SightingInfo, niceDate } from '../lib/sightings';
+import { toggleStar, useStars } from '../lib/stars';
 import FwGraph from './FwGraph';
 import HexPhoto from './HexPhoto';
 
@@ -62,6 +63,9 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
   }, [noteCard, hideNames]);
 
   const router = useRouter();
+  // THE STAR (user, 2026-10-06): a tap on either face's ☆ stars the card for
+  // the journal's star filter; it takes the tap, so the card does not flip
+  const starred = useStars().has(card.id);
   const flip = useSharedValue(0);
   const [flipped, setFlipped] = useState(false);
   const [srcPop, setSrcPop] = useState<{ label: string; source: string; confidence: string } | null>(null);
@@ -137,7 +141,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
         <View style={s.site}>
           <Text style={s.siteGlyph}>⚑</Text>
           <Text style={s.siteMid}>polygrove.io</Text>
-          <Text style={s.siteGlyph}>☆</Text>
+          <Pressable onPress={() => toggleStar(card.id)} hitSlop={10}><Text style={[s.siteGlyph, starred && s.starOn]}>{starred ? '★' : '☆'}</Text></Pressable>
         </View>
         {/* the demo's photo field (user, 2026-09-26): full-bleed near-black with
             a radial accent glow behind the hex */}
@@ -188,7 +192,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
             <Text style={s.name} numberOfLines={1}>{card.name}</Text>
             <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
           </View>
-          <Text style={s.ico}>☆</Text>
+          <Pressable onPress={() => toggleStar(card.id)} hitSlop={10}><Text style={[s.ico, starred && s.starOn]}>{starred ? '★' : '☆'}</Text></Pressable>
         </View>
         <View style={s.row}>
           <Box k="Trophic level" v={card.trophic || '?'} vColor={tc} missing={lacks('feeding')}
@@ -392,6 +396,7 @@ const s = StyleSheet.create({
   name: { fontFamily: F.display, fontSize: 15, color: C.text },
   sci: { color: '#888888', fontSize: 12, fontFamily: F.sans, fontStyle: 'italic' },
   ico: { marginLeft: 'auto', color: '#555555', fontSize: 16 },
+  starOn: { color: C.yellow },
   head: { flexDirection: 'row', alignItems: 'center', marginBottom: 9 },
   // .dc-row / .dc-box
   row: { flexDirection: 'row', gap: 8, marginBottom: 8 },

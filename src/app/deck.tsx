@@ -11,6 +11,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, w
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import HexPhoto from '../components/HexPhoto';
 import ViewToggle from '../components/ViewToggle';
+import { useStars } from '../lib/stars';
 import { useViewMode } from '../lib/viewmode';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackChevron from '../components/BackChevron';
@@ -61,20 +62,24 @@ export default function FieldNotes() {
   const [group, setGroup] = useState<string | null>(null);
   const [trophic, setTrophic] = useState<string | null>(null);
   const [open, setOpen] = useState<'level' | 'group' | 'trophic' | null>(null);
+  // STARRED ONLY (user, 2026-10-06): the fourth box, just a star
+  const [starsOnly, setStarsOnly] = useState(false);
+  const stars = useStars();
   const groups = useMemo(() => [...new Set(cards.map(c => c.group))].sort(), [cards]);
   const trophics = useMemo(() => TROPHIC_ORDER.filter(t => cards.some(c => c.trophic === t)), [cards]);
   // no "Undiscovered" option — a screen of identical ? tiles says nothing
   const levelOpts = MASTERY.map(m => ({ key: m.key, label: m.label }));
-  type Sel = { level: string | null; group: string | null; trophic: string | null };
+  type Sel = { level: string | null; group: string | null; trophic: string | null; stars: boolean };
   const matches = (c: Card, sel: Sel) => {
+    if (sel.stars && !stars.has(c.id)) return false;
     if (sel.group && c.group !== sel.group) return false;
     if (sel.trophic && c.trophic !== sel.trophic) return false;
     if (sel.level) return getTier(scoreOf(c.species_id)).key === sel.level;
     return true;
   };
-  const cur: Sel = { level, group, trophic };
+  const cur: Sel = { level, group, trophic, stars: starsOnly };
   const rows = useMemo(() => cards.filter(c => matches(c, cur)),
-    [cards, group, trophic, level, eco, owned, masteryVersion]);   // eslint-disable-line react-hooks/exhaustive-deps
+    [cards, group, trophic, level, starsOnly, stars, eco, owned, masteryVersion]);   // eslint-disable-line react-hooks/exhaustive-deps
   // how many cards each option would leave, given the other two filters —
   // the count sits at the right of every chip and button (user, 2026-09-26)
   const countIf = (patch: Partial<Sel>) => cards.reduce((n, c) => n + (matches(c, { ...cur, ...patch }) ? 1 : 0), 0);
@@ -133,6 +138,10 @@ export default function FieldNotes() {
           open={open === 'trophic'} onPress={() => setOpen(open === 'trophic' ? null : 'trophic')} />
         <FilterBtn label="Taxonomy" value={group ?? undefined} color={group ? C.greenSoft : undefined} count={rows.length}
           open={open === 'group'} onPress={() => setOpen(open === 'group' ? null : 'group')} />
+        <Pressable onPress={() => setStarsOnly(v => !v)} accessibilityRole="button" accessibilityLabel="Starred cards only"
+          style={[s.filterBtn, s.starBtn, starsOnly && { borderColor: `${C.yellow}80`, backgroundColor: `${C.yellow}1f` }]}>
+          <Text style={[s.starBtnTxt, starsOnly && { color: C.yellow }]}>{starsOnly ? '★' : '☆'}</Text>
+        </Pressable>
       </View>
       {open && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
@@ -363,6 +372,8 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',
   },
   filterBtnOn: { borderColor: '#555555', backgroundColor: 'rgba(255,255,255,0.08)' },
+  starBtn: { flex: 0, width: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 0 },
+  starBtnTxt: { fontSize: 22, lineHeight: 26, color: '#777' },
   filterTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   filterLabel: { fontFamily: F.sansBold, fontSize: 8.5, color: '#666', textTransform: 'uppercase', letterSpacing: 1 },
   filterCount: { fontFamily: F.sansMed, fontSize: 9.5, color: '#777' },
