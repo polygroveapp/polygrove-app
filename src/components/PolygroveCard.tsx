@@ -6,10 +6,10 @@
 
 import { useRouter } from 'expo-router';
 import { openWeb as openPage } from '../lib/web';   // `openWeb` here is the card's own food-web expander
-import { useEffect, useState } from 'react';
+import { RefObject, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { interpolate, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
 import { Card, photoCommonsPage, photoFor, framingFor, soundsFor } from '../lib/catalog';
@@ -70,13 +70,38 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
   // it was before and on the website" — the website's fwExpand overlay). For
   // a while it grew to the card face, which is small when the card sits above
   // a honeycomb.
+  // It GROWS OUT OF THE CARD (user, 2026-10-06: "have it come out of the
+  // card and expand to full screen"): the mini web's box is measured on
+  // screen and a panel animates from that rectangle to the whole window.
   const [webBig, setWebBig] = useState(false);
   const [recs, setRecs] = useState<GlobiRow[] | null>(null);
   const [showRecs, setShowRecs] = useState(false);
-  const openWeb = () => { setShowRecs(false); setWebBig(true); };
-  const closeWeb = () => { setShowRecs(false); setWebBig(false); };
   const win = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const boxRef = useRef<View>(null);
+  const from = useSharedValue({ x: 0, y: 0, w: win.width, h: win.height });
+  const grow = useSharedValue(0);
+  const openWeb = () => {
+    setShowRecs(false);
+    const go = () => { setWebBig(true); grow.value = 0; grow.value = withTiming(1, { duration: 380 }); };
+    const node = boxRef.current;
+    if (node) node.measureInWindow((x, y, w, h) => { from.value = { x, y, w, h }; go(); });
+    else go();
+  };
+  const closeWeb = () => {
+    setShowRecs(false);
+    grow.value = withTiming(0, { duration: 300 }, done => { if (done) runOnJS(setWebBig)(false); });
+  };
+  const panelStyle = useAnimatedStyle(() => {
+    const g = grow.value, b = from.value;
+    return {
+      left: b.x * (1 - g), top: b.y * (1 - g),
+      width: b.w + (win.width - b.w) * g, height: b.h + (win.height - b.h) * g,
+      borderRadius: 10 * (1 - g),
+      backgroundColor: interpolateColor(g, [0, 1], ['#1c1c1c', '#0d0d0d']),
+    };
+  });
+  const insideStyle = useAnimatedStyle(() => ({ opacity: interpolate(grow.value, [0.35, 1], [0, 1], 'clamp') }));
   const [glowId] = useState(() => `glow${++_glowSeq}`);
   const doFlip = () => {
     const to = flipped ? 0 : 1;
@@ -186,23 +211,27 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
           <Text style={[s.fwLabel, lacks('foodweb') && { color: MISSING_RED }]}>{lacks('foodweb') ? 'FOOD WEB · MISSING' : 'FOOD WEB'}</Text>
           <View style={s.fwLine} />
         </View>
-        <MiniWeb card={card} onExpand={openWeb} />
+        <MiniWeb card={card} onExpand={openWeb} boxRef={boxRef} />
         <View style={s.pillRow}><View style={s.pill}><Text style={s.pillTxt}>Tap card to flip</Text></View></View>
 
         {/* EXPANDED FOOD WEB — full screen, over everything */}
-        <Modal visible={webBig} transparent animationType="fade" statusBarTranslucent onRequestClose={closeWeb}>
+        <Modal visible={webBig} transparent animationType="none" statusBarTranslucent onRequestClose={closeWeb}>
+          <Animated.View style={[s.webBigPanel, panelStyle]}>
+          <Animated.View style={[{ flex: 1 }, insideStyle]}>
           <Pressable style={[s.webBig, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }]} onPress={closeWeb}>
+            {/* the name, then FOOD WEB under it, centred at the top (user, 2026-10-06) */}
             <View style={s.webBigHead}>
-              <Text style={s.fwLabel}>FOOD WEB</Text>
-              <Text style={s.webBigHint}>tap outside to close</Text>
+              <Text style={s.webBigName} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>{hideNames ? '?' : card.name}</Text>
+              <Text style={s.webBigLabel}>FOOD WEB</Text>
             </View>
-            <Text style={s.webBigName} numberOfLines={1}>{hideNames ? '?' : card.name}</Text>
             {/* the square web, as wide as the screen; nodes take their own
                 taps, anything else bubbles up to the close */}
-            <View style={{ flex: 1, justifyContent: 'center' }}>
-              <View style={{ width: win.width, height: win.width }}>
-                <FwGraph card={card} viewW={500} viewH={500} nodeR={22} centerR={34}
-                  fontSize={14} radiusFactor={0.36} showLabels
+            {/* the web fills the width; the view box is taller than wide so the
+                outer labels have room (user, 2026-10-06: "proportions are off") */}
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ width: win.width - 24, height: Math.round((win.width - 24) * 560 / 500) }}>
+                <FwGraph card={card} viewW={500} viewH={560} nodeR={26} centerR={40}
+                  fontSize={15} radiusFactor={0.39} showLabels
                   onNodePress={cid => { closeWeb(); router.push(`/species/${cid}`); }} />
               </View>
             </View>
@@ -233,6 +262,8 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
                 </Pressable>
               )}
           </Pressable>
+          </Animated.View>
+          </Animated.View>
         </Modal>
       </Animated.View>
 
@@ -319,7 +350,7 @@ function Box({ k, v, vColor, onPress, missing = false }: { k: string; v: string;
 // the back's mini food web — the shared fwGraphSVG port, 'sm' instance
 // (300x200, nodeR 9, centerR 16, no labels), same as the website's card.
 // Tap grows the box into the full labeled web (onLayout feeds the animation).
-function MiniWeb({ card, onExpand }: { card: Card; onExpand: () => void }) {
+function MiniWeb({ card, onExpand, boxRef }: { card: Card; onExpand: () => void; boxRef: RefObject<View | null> }) {
   const hasWeb = (card.foodweb?.eatenBy?.length || 0) + (card.foodweb?.eats?.length || 0) > 0;
   if (!hasWeb) {
     return (
@@ -329,7 +360,7 @@ function MiniWeb({ card, onExpand }: { card: Card; onExpand: () => void }) {
     );
   }
   return (
-    <Pressable style={s.fwBox} onPress={onExpand}>
+    <Pressable ref={boxRef} style={s.fwBox} onPress={onExpand}>
       <View style={s.fwChip}><Text style={s.fwChipTxt}>Tap to expand</Text></View>
       <FwGraph card={card} viewW={300} viewH={160} nodeR={9} centerR={16}
         fontSize={8} radiusFactor={0.425} showLabels={false} />
@@ -383,16 +414,17 @@ const s = StyleSheet.create({
   fwBox: { aspectRatio: 300 / 160, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, paddingVertical: 4, paddingHorizontal: 12, overflow: 'hidden' },
   fwChip: { position: 'absolute', top: 6, left: 6, backgroundColor: '#2a2a2a', borderRadius: 9, paddingHorizontal: 7, paddingVertical: 2, zIndex: 2 },
   // the expanded food web — the box grown to the face
-  webBig: { flex: 1, backgroundColor: '#0d0d0d', paddingHorizontal: 16 },
-  webBigName: { fontFamily: F.display, fontSize: 18, color: C.text, paddingHorizontal: 4, marginTop: 2 },
+  webBigPanel: { position: 'absolute', overflow: 'hidden' },
+  webBig: { flex: 1, paddingHorizontal: 16 },
+  webBigName: { fontFamily: F.display, fontSize: 26, color: C.text, textAlign: 'center' },
+  webBigLabel: { color: '#888888', fontSize: 12, letterSpacing: 3, fontFamily: F.sans },
   webBigX: {
     position: 'absolute', zIndex: 20, width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
   webBigXTxt: { color: C.text, fontSize: 15, lineHeight: 18 },
-  webBigHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingBottom: 4, paddingRight: 52 },
-  webBigHint: { color: '#555555', fontSize: 10, fontFamily: F.sans },
+  webBigHead: { alignItems: 'center', paddingTop: 44, paddingHorizontal: 24, gap: 4 },
   webBigI: {
     position: 'absolute', right: 12, bottom: 12, width: 26, height: 26, borderRadius: 13,
     backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',

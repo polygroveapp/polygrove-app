@@ -48,7 +48,12 @@ export default function FwGraph({ card, viewW, viewH, nodeR, centerR, fontSize, 
   if (!preds.length && !prey.length) return null;
   const inst = `fw${_seq++}`;
   const tc = TROPHIC_COLOR[card.trophic] || '#81C784';
-  const cx = viewW / 2, cy = viewH / 2 - (showLabels ? 6 : 0), rowOff = Math.min(viewW, viewH) * radiusFactor;
+  const rowOff = Math.min(viewW, viewH) * radiusFactor;
+  // a one-sided web (only eaten-by, or only eats) is re-centred on its own
+  // half so the drawing sits in the middle, not in the top or bottom half
+  // (user, 2026-10-06: the acorn woodpecker's web hung low)
+  const shift = !preds.length ? -rowOff / 2 : !prey.length ? rowOff / 2 : 0;
+  const cx = viewW / 2, cy = viewH / 2 - (showLabels ? 6 : 0) + shift;
   const mk = (list: typeof preds, pred: boolean) => list.map((sp, i) => {
     const a = ((pred ? -180 : 0) + (i + 0.5) * 180 / list.length) * Math.PI / 180;
     return { ...sp, x: cx + Math.cos(a) * rowOff, y: cy + Math.sin(a) * rowOff, pred };

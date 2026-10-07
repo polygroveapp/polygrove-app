@@ -76,7 +76,12 @@ export default function Honeycomb({ cells, label, glowKey, rows = 3, picked: pic
   { cells: Comb[]; label?: string; glowKey?: string | null; rows?: number; picked?: string | null; onPick?: (key: string | null) => void }) {
   const [pickedOwn, setPickedOwn] = useState<string | null>(glowKey ?? null);
   const controlled = onPick !== undefined;
-  const picked = controlled ? pickedProp ?? null : pickedOwn;
+  // a card is ALWAYS on show (user, 2026-10-06: "always a card selected when
+  // you open, the first one in the list"): your own pick while it is still in
+  // the comb, else the fresh card's glow, else the first cell
+  const inComb = (k: string | null | undefined) => !!k && cells.some(c => c.key === k);
+  const picked = controlled ? pickedProp ?? null
+    : inComb(pickedOwn) ? pickedOwn : inComb(glowKey) ? glowKey! : cells[0]?.key ?? null;
   const setPicked = (k: string | null) => (controlled ? onPick!(k) : setPickedOwn(k));
   const pulse = useSharedValue(0);
   useEffect(() => {
