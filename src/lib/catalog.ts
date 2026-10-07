@@ -153,19 +153,19 @@ export const sizeFrac = (v: number, r: { min: number; max: number }) =>
 /** short, human: 2.4 g · 1.2 kg · 190 t · 35 cm · 11 m · 85 mm */
 export function fmtSize(v: number, unit: SizeVal['unit']): string {
   const f = (x: number) => (x >= 100 ? Math.round(x).toLocaleString() : x >= 10 ? x.toFixed(0) : x.toFixed(1).replace(/\.0$/, ''));
-  if (unit === 'g') return v >= 1e6 ? `${f(v / 1e6)} t` : v >= 1000 ? `${f(v / 1000)} kg` : `${f(v)} g`;
-  if (unit === 'cm') return v >= 100 ? `${f(v / 100)} m` : `${f(v)} cm`;
-  return v >= 10 ? `${f(v / 10)} cm` : `${f(v)} mm`;
+  if (unit === 'g') return v >= 1e6 ? `${f(v / 1e6)}t` : v >= 1000 ? `${f(v / 1000)}kg` : `${f(v)}g`;
+  if (unit === 'cm') return v >= 100 ? `${f(v / 100)}m` : `${f(v)}cm`;
+  return v >= 10 ? `${f(v / 10)}cm` : `${f(v)}mm`;
 }
 /** the same size in imperial (user, 2026-10-06: "put imperial numbers to the right of metric") */
 export function fmtImperial(v: number, unit: SizeVal['unit']): string {
   const f = (x: number, d = 1) => (x >= 100 ? Math.round(x).toLocaleString() : x >= 10 ? x.toFixed(0) : x.toFixed(d).replace(/\.0$/, ''));
   if (unit === 'g') {
     const oz = v / 28.3495, lb = v / 453.592;
-    if (lb >= 2000) { const t = f(lb / 2000); return `${t} ${t === "1" ? "ton" : "tons"}`; }
-    return lb >= 1 ? `${f(lb)} lb` : `${f(oz, oz < 1 ? 2 : 1)} oz`;
+    if (lb >= 2000) { const t = f(lb / 2000); return `${t}${t === "1" ? "ton" : "tons"}`; }
+    return lb >= 1 ? `${f(lb)}lb` : `${f(oz, oz < 1 ? 2 : 1)}oz`;
   }
   const inches = unit === 'cm' ? v / 2.54 : v / 25.4;
-  if (inches >= 12) { const ft = inches / 12; return ft >= 100 ? `${f(ft)} ft` : `${f(ft)} ft`; }
-  return `${f(inches, inches < 1 ? 2 : 1)} in`;
+  if (inches >= 12) { const ft = inches / 12; return ft >= 100 ? `${f(ft)}ft` : `${f(ft)}ft`; }
+  return `${f(inches, inches < 1 ? 2 : 1)}in`;
 }
