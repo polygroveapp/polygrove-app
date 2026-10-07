@@ -69,8 +69,18 @@ export default function PolygroveDB() {
       if (needle && !c.name.toLowerCase().includes(needle) && !c.sci.toLowerCase().includes(needle)) continue;
       out.push(c);
     }
-    // Pin and Tent: most-recorded first; All: by name
-    return ranking && rank ? out.sort((a, b) => (rank.get(b.id) ?? 0) - (rank.get(a.id) ?? 0)) : out.sort((a, b) => a.name.localeCompare(b.name));
+    // Pin and Tent: most-recorded first — WITHIN ITS GROUP (user, 2026-10-06:
+    // "birds are dominating"): GBIF's records are mostly eBird, so by raw count
+    // birds swamp the list. Each species scores by its share of its own
+    // group's records here, so the top plant, insect and mammal sit beside the
+    // top bird. All: by name
+    if (ranking && rank) {
+      const groupTotal = new Map<string, number>();
+      for (const c of out) groupTotal.set(c.group, (groupTotal.get(c.group) ?? 0) + (rank.get(c.id) ?? 0));
+      const score = (c: Card) => (rank.get(c.id) ?? 0) / (groupTotal.get(c.group) || 1);
+      return out.sort((a, b) => score(b) - score(a));
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name));
   }, [cards, group, role, ranking, rank, starsOnly, stars, needle]);
   const countIf = (patch: { group?: string | null; role?: string | null }) => {
     const g = patch.group !== undefined ? patch.group : group, r = patch.role !== undefined ? patch.role : role;
