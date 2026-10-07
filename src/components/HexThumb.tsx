@@ -7,20 +7,24 @@
 // the flat border for the map's glisten — deep yellow → yellow → pale yellow,
 // each cell on its own phase — driven on the UI thread by one shared clock.
 
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import Animated, { interpolateColor, makeMutable, useAnimatedProps, withRepeat, withTiming } from 'react-native-reanimated';
 import { ClipPath, Defs, Image as SvgImage, Polygon, Svg } from 'react-native-svg';
 
 const pts = (w: number, h: number, ox = 0, oy = 0) =>
   [[0.5, 0], [1, 0.25], [1, 0.75], [0.5, 1], [0, 0.75], [0, 0.25]].map(([x, y]) => `${ox + x * w},${oy + y * h}`).join(' ');
 
-// one clock for every shimmering hexagon: 0 → 1 over 1.8 s, forever
+// one clock for every shimmering hexagon: 0 → 1 over 1.8 s, forever — started
+// on the first shimmering cell's mount, not at module load (Metro's web/node
+// render of the routes has no requestAnimationFrame, 2026-10-07)
 const clock = makeMutable(0);
-clock.value = withRepeat(withTiming(1, { duration: 1800 }), -1, false);
+let clockStarted = false;
+const startClock = () => { if (!clockStarted) { clockStarted = true; clock.value = withRepeat(withTiming(1, { duration: 1800 }), -1, false); } };
 const GOLD = ['rgb(255,200,60)', 'rgb(255,225,77)', 'rgb(255,245,160)'];   // the map's marks (map.html shimmerMarks)
 const APolygon = Animated.createAnimatedComponent(Polygon);
 
 function ShimmerBorder({ points, phase }: { points: string; phase: number }) {
+  useEffect(() => { startClock(); }, []);
   const props = useAnimatedProps(() => {
     const a = (clock.value + phase) * Math.PI * 2;
     const m = 0.5 + 0.25 * Math.sin(a) + 0.25 * Math.sin(1.618 * a);   // the map's two-sine glisten
