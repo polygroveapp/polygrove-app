@@ -59,6 +59,7 @@ export default function Preview() {
       };
     }
   }
+  // 'Find card in journal' opens that ecoregion's Field Notes on the card, sliding in from the right (user, 2026-10-06)
   const real = found?.cardId ? cardById(found.cardId) : undefined;
   const card = found ? real ?? partialCard(found.name, found.sci, found.facts) : null;
   const missing = found && !real ? found.facts?.missing ?? ALL : undefined;
@@ -83,8 +84,8 @@ export default function Preview() {
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               {kind === 'earned' && found.cardId ? (
-                <Pressable onPress={() => found && router.push({ pathname: '/gallery', params: { ids: found.cardId as string, start: '0' } })} style={s.btn}>
-                  <Text style={s.btnTxt}>The card in your journal ›</Text>
+                <Pressable onPress={() => found && router.push({ pathname: '/deck', params: { glow: found.cardId as string, eid: String(found.eid ?? ''), slide: 'right' } })} style={s.btn}>
+                  <Text style={s.btnTxt}>Find card in journal ›</Text>
                 </Pressable>
               ) : null}
               {found.obs.uri ? (

@@ -44,7 +44,10 @@ export default function RootLayout() {
           // tab changes (BottomNav's `tab` param) switch instantly; everything
           // else slides in from the right
           // Field Notes RISES FROM THE BOTTOM (user, 2026-09-29), like the web pages
+          // … except when a sighting sends you to FIND a card in a journal
+          // (`slide: 'right'`; user, 2026-10-06)
           animation: (route.params as { tab?: string } | undefined)?.tab ? 'none'
+            : (route.params as { slide?: string } | undefined)?.slide === 'right' ? 'slide_from_right'
             : route.name === 'deck' || route.name === 'custom/[id]' || route.name === 'preview' ? 'slide_from_bottom' : 'slide_from_right',
         })}
       />

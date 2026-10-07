@@ -20,14 +20,26 @@ import PolygroveCard from '../components/PolygroveCard';
 import { ALL_TIERS, C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
 import { Card, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
-import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { CurrentEco, ecoMembers, ecoMeta, loadCurrentEco, loadEcoMeta, useCurrentEco } from '../lib/ecoregions';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 export default function FieldNotes() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const eco = useCurrentEco();
+  // eid = another ecoregion's journal than the camp's (a sighting's "Find
+  // card in journal"; user, 2026-10-06); otherwise the camp
+  const { glow, eid: eidParam } = useLocalSearchParams<{ glow?: string; eid?: string; slide?: string }>();
+  const camp = useCurrentEco();
+  const [other, setOther] = useState<CurrentEco | null>(null);
+  const wantEid = eidParam ? Number(eidParam) : null;
+  useEffect(() => {
+    if (wantEid === null || wantEid === camp?.eid) return;
+    let on = true;
+    loadEcoMeta().then(() => { const m = ecoMeta(wantEid); if (on && m) setOther({ eid: wantEid, name: m.name, bbox: m.bbox, size: 0, lead: m.lead, photo: m.photo, wiki: m.wiki }); }).catch(() => {});
+    return () => { on = false; };
+  }, [wantEid, camp?.eid]);
+  const eco = wantEid !== null && wantEid !== camp?.eid ? other : camp;
   const owned = useCollection(eco?.eid);
   const masteryVersion = useMastery();   // tiers re-render as quizzes are won
   const [ready, setReady] = useState(false);
@@ -36,9 +48,8 @@ export default function FieldNotes() {
   // vertically like you had before, but have both options") — a switch in
   // the filter bar, remembered
   const [view, setView] = useViewMode('deck', 'hex');
-  // glow = the card that just went Solar (user, 2026-09-28): its tile is
-  // scrolled into view and haloed gold
-  const { glow } = useLocalSearchParams<{ glow?: string }>();
+  // glow = the card that just went Solar (user, 2026-09-28), or the card a
+  // sighting sent you to find: its tile is scrolled into view and haloed gold
   const list = useRef<SectionList<Card[]>>(null);
 
   const load = () =>
