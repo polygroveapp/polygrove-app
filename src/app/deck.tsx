@@ -15,13 +15,13 @@ import { useStars } from '../lib/stars';
 import { useViewMode } from '../lib/viewmode';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackChevron from '../components/BackChevron';
-import Honeycomb, { Comb } from '../components/Honeycomb';
+import Honeycomb, { Comb, ShownCard } from '../components/Honeycomb';
 import PolygroveCard from '../components/PolygroveCard';
 import { ALL_TIERS, C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
 import { Card, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
 import { CurrentEco, ecoMembers, ecoMeta, loadCurrentEco, loadEcoMeta, useCurrentEco } from '../lib/ecoregions';
-import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
+import { countsOf, isFullyLocked, loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 export default function FieldNotes() {
@@ -97,18 +97,24 @@ export default function FieldNotes() {
   // A HONEYCOMB (user, 2026-10-05: "do it for the regular game too"): the
   // list is a SectionList so the FILTER BAR can stick to the top (user,
   // 2026-09-28); its one item is the comb of every journaled card that
-  // matches. Cells wear the LEVEL colour (the tile theme since 2026-09-26);
-  // a tap names the card, a second tap opens the gallery there.
-  const openAt = (item: Card) => {
-    const j = rows.filter(c => owns(eco!.eid, c.species_id));
-    router.push({ pathname: '/gallery', params: { ids: j.map(c => c.id).join(','), start: String(j.findIndex(c => c.id === item.id)) } });
-  };
+  // matches. Cells wear the LEVEL colour (the tile theme since 2026-09-26).
+  // NO GALLERY SCREEN any more (user, 2026-10-06: "remove this screen"): a tap
+  // shows the card above the comb, and the button under the comb takes you to
+  // its Solar quiz; a tile in the grid goes straight to the quiz.
+  const toQuiz = (item: Card) => router.push({ pathname: '/quiz/[id]', params: { id: item.id } });
+  const [picked, setPicked] = useState<string | null>(null);
   const triples = useMemo(() => { const out: Card[][] = []; for (let i = 0; i < rows.length; i += 3) out.push(rows.slice(i, i + 3)); return out; }, [rows]);
   const combs = useMemo<Comb[]>(() => rows.map(c => {
     const t = getTier(scoreOf(c.species_id));
     return { key: c.id, uri: photoFor(c.id, 250), frame: framingFor(c.id), border: t.border, shimmer: t.key === 'solar', name: c.name, sub: c.sci,
-      meta: `${t.label} level · ${c.trophic || '?'} · ${c.group}`, fallback: '🌿', onOpen: () => openAt(c), card: () => <PolygroveCard card={c} /> };
+      meta: `${t.label} level · ${c.trophic || '?'} · ${c.group}`, fallback: '🌿', onOpen: () => {}, card: () => <PolygroveCard card={c} /> };
   }), [rows, masteryVersion]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // the card on show: your pick while it is in the comb, else the glowing
+  // card, else the first (user, 2026-10-06: "always a card selected")
+  const inComb = (k: string | null | undefined) => !!k && combs.some(c => c.key === k);
+  const shownKey = inComb(picked) ? picked : inComb(glow) ? glow! : combs[0]?.key ?? null;
+  const shownCard = shownKey ? rows.find(c => c.id === shownKey) : undefined;
+  const shownMastered = shownCard ? isFullyLocked(countsOf(shownCard.species_id)) : false;
   // the fresh Solar card: the comb opens with it picked and pulsing gold; the
   // list scrolls to the comb's top
   const scrollToGlow = (retry = true) => {
@@ -232,11 +238,17 @@ export default function FieldNotes() {
       }
       renderItem={({ item }) => (view === 'hex' ? (
         <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
-          <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} />
+          {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
+          <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} picked={shownKey} onPick={setPicked} />
+          {shownCard ? (
+            <Pressable onPress={() => toQuiz(shownCard)} style={[s.quizBtn, shownMastered && s.quizBtnGold]}>
+              <Text style={[s.quizTxt, shownMastered && { color: C.gold }]}>{shownMastered ? '☀️ Practice the Solar quiz' : '☀️ Take the Solar quiz'}</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : (
         <View style={s.row}>
-          {item.map(c => <Cell key={c.id} card={c} glow={c.id === glow} onPress={() => openAt(c)} />)}
+          {item.map(c => <Cell key={c.id} card={c} glow={c.id === glow} onPress={() => toQuiz(c)} />)}
           {item.length < 3 && Array.from({ length: 3 - item.length }).map((_, i) => <View key={`pad${i}`} style={s.cellWrap} />)}
         </View>
       ))}
@@ -378,6 +390,10 @@ const s = StyleSheet.create({
   // sticky: opaque so the cards slide underneath (user, 2026-09-28)
   filters: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, backgroundColor: GREEN_BG, overflow: 'hidden' },
   filterRow: { flexDirection: 'row', gap: 8 },
+  // under the comb: the shown card's way into its quiz (gold 'Practice' once mastered)
+  quizBtn: { alignSelf: 'center', marginTop: 18, paddingVertical: 12, paddingHorizontal: 22, borderRadius: 22, backgroundColor: 'rgba(76,175,80,0.18)', borderWidth: 1, borderColor: 'rgba(76,175,80,0.45)' },
+  quizBtnGold: { backgroundColor: 'rgba(245,166,35,0.15)', borderColor: 'rgba(245,166,35,0.4)' },
+  quizTxt: { fontFamily: F.display, fontSize: 13, color: C.green },
   filterBtn: {
     flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,
     borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',

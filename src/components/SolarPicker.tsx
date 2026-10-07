@@ -6,10 +6,10 @@
 // Solar-locked are left out while any others remain.
 
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { SharedValue, runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F, getTier } from '../constants/polygrove';
 import { Card, cardById } from '../lib/catalog';
@@ -44,25 +44,34 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
 
   const cardSize = { width: Math.min(Math.round(win.width * 0.78), 320), height: Math.min(520, Math.round(win.height * 0.56)) };
   const step = cardSize.width + 18;
-  const tx = useSharedValue(0);
-  const go = (i: number) => setIdx(Math.max(0, Math.min(n - 1, i)));
+  // ONE FLUID MOTION (user, 2026-10-06: "the swiping on this screen needs to
+  // feel natural too"): a fractional position follows the finger, springs to
+  // the nearest card and carries the fling; neighbours ride alongside
+  const pos = useSharedValue(1);
+  const start = useSharedValue(1);
+  const SNAP = { damping: 22, stiffness: 190, mass: 0.7 };
+  const go = (i: number) => { const t = Math.max(0, Math.min(n - 1, i)); pos.value = withSpring(t, SNAP); setIdx(t); };
   const pan = Gesture.Pan()
-    .activeOffsetX([-12, 12])
-    .onChange(e => { tx.value = e.translationX; })
-    .onEnd(() => {
-      const d = tx.value < -50 ? 1 : tx.value > 50 ? -1 : 0;
-      if (d !== 0) runOnJS(go)(idx + d);
-      tx.value = withSpring(0, { damping: 18, stiffness: 170 });
+    .activeOffsetX([-8, 8])
+    .onStart(() => { start.value = pos.value; })
+    .onChange(e => {
+      const raw = start.value - e.translationX / step;
+      pos.value = raw < 0 ? raw * 0.35 : raw > n - 1 ? n - 1 + (raw - (n - 1)) * 0.35 : raw;
+    })
+    .onEnd(e => {
+      const target = Math.max(0, Math.min(n - 1, Math.round(pos.value - (e.velocityX / step) * 0.25)));
+      pos.value = withSpring(target, { ...SNAP, velocity: -e.velocityX / step });
+      runOnJS(setIdx)(target);
     });
-  const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
+  const reset = () => { pos.value = 1; setIdx(1); };
 
   const quiz = () => { if (!cur) return; onClose(); router.push({ pathname: '/quiz/[id]', params: { id: cur.id } }); };
   const journal = () => { onClose(); router.push('/deck'); };
-  const randomize = () => { setSeed(k => k + 1); setIdx(1); };
+  const randomize = () => { setSeed(k => k + 1); reset(); };
   const tier = cur ? getTier(scoreOf(cur.species_id)) : null;
 
   return (
-    <Modal visible={visible} animationType="fade" onRequestClose={onClose} onShow={() => setIdx(1)}>
+    <Modal visible={visible} animationType="fade" onRequestClose={onClose} onShow={reset}>
       <View style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
         <GreenBackdrop />
         <CloseX onPress={onClose} />
@@ -77,16 +86,8 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
           ))}
         </View>
         <GestureDetector gesture={pan}>
-          <Animated.View style={[{ height: cardSize.height, alignItems: 'center' }, dragStyle]}>
-            {cards.map((c, i) => {
-              const diff = i - idx;
-              return (
-                <View key={c.id} pointerEvents={diff === 0 ? 'auto' : 'none'}
-                  style={[cardSize, { position: 'absolute', top: 0, transform: [{ translateX: diff * step }] }]}>
-                  <PolygroveCard card={c} />
-                </View>
-              );
-            })}
+          <Animated.View style={{ height: cardSize.height, alignItems: 'center' }}>
+            {cards.map((c, i) => <Slot key={c.id} i={i} pos={pos} step={step} active={i === idx} size={cardSize}><PolygroveCard card={c} /></Slot>)}
           </Animated.View>
         </GestureDetector>
 
@@ -104,6 +105,12 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
   );
 }
 
+// one card of the hand, placed by the hand's fractional position
+function Slot({ i, pos, step, active, size, children }: { i: number; pos: SharedValue<number>; step: number; active: boolean; size: { width: number; height: number }; children: ReactNode }) {
+  const at = useAnimatedStyle(() => ({ transform: [{ translateX: (i - pos.value) * step }] }));
+  return <Animated.View pointerEvents={active ? 'auto' : 'none'} style={[size, { position: 'absolute', top: 0 }, at]}>{children}</Animated.View>;
+}
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: GREEN_BG, paddingHorizontal: 20 },
   top: { alignItems: 'center', justifyContent: 'center', minHeight: 36 },
@@ -111,7 +118,7 @@ const s = StyleSheet.create({
   sub: { fontFamily: F.sans, fontSize: 11, color: '#777', textAlign: 'center', marginTop: 8, marginBottom: 12 },
   dots: { flexDirection: 'row', gap: 4, justifyContent: 'center', marginBottom: 10 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#333' },
-  bottom: { marginTop: 'auto', gap: 8 },
+  bottom: { marginTop: 18, gap: 8 },
   confirm: { padding: 13, borderRadius: 14, alignItems: 'center', backgroundColor: '#FFC107' },
   confirmTxt: { fontFamily: F.display, fontSize: 14, color: '#1a1a1a' },
   btns: { flexDirection: 'row', gap: 8 },

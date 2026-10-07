@@ -108,10 +108,10 @@ export default function Sightings() {
   // the shown card's two links (user, 2026-10-06: "to the right of this put two
   // buttons, journal and iNaturalist"): the game's card, and the observation
   const shownLinks = (() => {
-    if (!shownKey) return { cardId: null as string | null, uri: undefined as string | undefined };
-    if (tab === 'cards') { const e = earned.find(x => `${x.eid}:${x.speciesId}` === shownKey); return { cardId: e?.cardId ?? null, uri: e?.uri }; }
-    if (tab === 'waiting') { const w = st.waiting.find(x => String(x.obsId) === shownKey); return { cardId: w?.cardId ?? null, uri: w?.uri }; }
-    const p = st.potential.find(x => x.key === shownKey); return { cardId: p?.cardId ?? null, uri: p?.obs.uri };
+    if (!shownKey) return { cardId: null as string | null, eid: null as number | null, uri: undefined as string | undefined };
+    if (tab === 'cards') { const e = earned.find(x => `${x.eid}:${x.speciesId}` === shownKey); return { cardId: e?.cardId ?? null, eid: e?.eid ?? null, uri: e?.uri }; }
+    if (tab === 'waiting') { const w = st.waiting.find(x => String(x.obsId) === shownKey); return { cardId: null, eid: null, uri: w?.uri }; }   // not in a journal yet
+    const p = st.potential.find(x => x.key === shownKey); return { cardId: null, eid: null, uri: p?.obs.uri };
   })();
 
   return (
@@ -204,7 +204,7 @@ export default function Sightings() {
               <ViewToggle mode={view} onChange={setView} />
               {view === 'hex' ? (
                 <>
-                  <Pressable disabled={!shownLinks.cardId} onPress={() => shownLinks.cardId && router.push({ pathname: '/gallery', params: { ids: shownLinks.cardId, start: '0' } })}
+                  <Pressable disabled={!shownLinks.cardId} onPress={() => shownLinks.cardId && router.push({ pathname: '/deck', params: { glow: shownLinks.cardId, eid: String(shownLinks.eid ?? ''), slide: 'right' } })}
                     style={[s.tool, !shownLinks.cardId && { opacity: 0.35 }]}><Text style={s.toolTxt}>📖 Journal</Text></Pressable>
                   <Pressable disabled={!shownLinks.uri} onPress={() => shownLinks.uri && openWeb(shownLinks.uri)}
                     style={[s.tool, !shownLinks.uri && { opacity: 0.35 }]}><Text style={s.toolTxt}>iNaturalist ›</Text></Pressable>
