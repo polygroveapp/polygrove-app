@@ -31,7 +31,7 @@ const TABS = [
   // observations as cards. Social — following people, buying cards — is parked.
   // A CAMERA (user, same day; the globe before), dimmed like the compass
   // POLYGROVEDB (user, 2026-10-06): the database itself, searchable, every species' page — before Sightings (user, same day)
-  { id: 'db', icon: '🗂', label: 'PolygroveDB', href: '/db', dim: 0.85 },
+  { id: 'db', icon: '🌳', label: 'PolygroveDB', href: '/db', dim: 0.85 },   // a tree (user, 2026-10-06)
   { id: 'sightings', icon: '📷', label: 'Sightings', href: '/sightings', dim: 0.85 },
 ] as const;
 
