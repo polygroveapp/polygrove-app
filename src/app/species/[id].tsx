@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackChevron from '../../components/BackChevron';
 import GreenBackdrop, { GREEN_BG } from '../../components/GreenBackdrop';
 import PolygroveCard from '../../components/PolygroveCard';
-import { C, F } from '../../constants/polygrove';
+import { C, F, TROPHIC_COLOR } from '../../constants/polygrove';
 import { cardById, getCards, loadCatalog } from '../../lib/catalog';
 import { DossierSection, dossierSections, rangeOf } from '../../lib/dossier';
 import { EcoMeta, ecoMeta, loadEcoMeta } from '../../lib/ecoregions';
@@ -66,6 +66,7 @@ export default function Species() {
     </View>
   );
 
+  const tc = TROPHIC_COLOR[card.trophic] || C.greenSoft;   // the group label wears the role colour, like the card's border (user, 2026-10-06: 'mammal is yellow')
   const climate = card.climate as Climate | undefined;
   const diet = (card.diet as DietItem[] | undefined) ?? [];
   const prov = card.provenance ?? {};
@@ -84,7 +85,7 @@ export default function Species() {
             <Text style={s.name}>{card.name}</Text>
             <Text style={s.sci}>{card.sci}</Text>
           </View>
-          <Text style={[s.group, { color: C.yellow }]}>{card.group.toUpperCase()}</Text>
+          <Text style={[s.group, { color: tc }]}>{card.group.toUpperCase()}</Text>
         </View>
 
         {/* 2 · the card itself */}
