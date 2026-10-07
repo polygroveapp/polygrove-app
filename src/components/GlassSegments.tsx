@@ -10,7 +10,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { F } from '../constants/polygrove';
 
-export type Segment<K extends string> = { key: K; label: string; n?: number };
+export type Segment<K extends string> = { key: K; label: string; n?: number; color?: string };   // color: the count's colour when chosen
 
 const PAD = 4;
 
@@ -36,7 +36,7 @@ export default function GlassSegments<K extends string>({ items, value, onChange
         return (
           <Pressable key={it.key} onPress={() => onChange(it.key)} style={s.seg} hitSlop={4}>
             <Text style={[s.label, on && s.labelOn]} numberOfLines={1}>{it.label}</Text>
-            {it.n !== undefined ? <Text style={[s.count, on && s.countOn]}>{it.n.toLocaleString()}</Text> : null}
+            {it.n !== undefined ? <Text style={[s.count, on && s.countOn, on && it.color ? { color: it.color } : null]}>{it.n.toLocaleString()}</Text> : null}
           </Pressable>
         );
       })}

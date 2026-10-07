@@ -174,9 +174,10 @@ export default function Sightings() {
             <View style={{ alignItems: 'center', marginTop: 30 }}><ViewToggle mode={view} onChange={setView} /></View>
             <View style={{ marginTop: 14, marginBottom: 14 }}>
               <GlassSegments value={tab} onChange={setTab} items={[
-                { key: 'cards', label: 'Sightings', n: earned.length },
-                { key: 'waiting', label: 'Unconfirmed', n: st.waitingTotal },
-                { key: 'potential', label: 'Potential', n: st.potentialTotal },
+                // the counts wear the map's mark colours (user, 2026-10-06): confirmed yellow, waiting green, potential grey
+                { key: 'cards', label: 'Sightings', n: earned.length, color: C.yellow },
+                { key: 'waiting', label: 'Unconfirmed', n: st.waitingTotal, color: '#5fe35a' },
+                { key: 'potential', label: 'Potential', n: st.potentialTotal, color: '#bbbbbb' },
               ]} />
             </View>
             {view === 'hex' && shownKey ? <ShownCard cells={cells} picked={shownKey} onPick={setShown} /> : null}
