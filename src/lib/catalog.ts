@@ -166,6 +166,6 @@ export function fmtImperial(v: number, unit: SizeVal['unit']): string {
     return lb >= 1 ? `${f(lb)}lb` : `${f(oz, oz < 1 ? 2 : 1)}oz`;
   }
   const inches = unit === 'cm' ? v / 2.54 : v / 25.4;
-  if (inches >= 12) { const ft = inches / 12; return ft >= 100 ? `${f(ft)}ft` : `${f(ft)}ft`; }
+  if (inches >= 12) { const ft = inches / 12; return ft >= 100 ? `${f(ft)} ft` : `${f(ft)} ft`; }
   return `${f(inches, inches < 1 ? 2 : 1)}in`;
 }
