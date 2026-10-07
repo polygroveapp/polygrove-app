@@ -6,13 +6,13 @@
 
 import { useRouter } from 'expo-router';
 import { openWeb as openPage } from '../lib/web';   // `openWeb` here is the card's own food-web expander
-import { RefObject, useEffect, useRef, useState } from 'react';
+import { ReactNode, RefObject, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { interpolate, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
-import { Card, photoCommonsPage, photoFor, framingFor, soundsFor } from '../lib/catalog';
+import { Card, fmtSize, parseSize, photoCommonsPage, photoFor, framingFor, sizeFrac, sizeRange, soundsFor } from '../lib/catalog';
 import SoundButton from './SoundButton';
 import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
 import { FactKey, SightingInfo, niceDate } from '../lib/sightings';
@@ -206,7 +206,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
         </View>
         <View style={s.row}>
           <Box k="Size" v={card.size || '—'} missing={lacks('size')}
-            onPress={() => showSource('Size', 'size')} />
+            onPress={() => showSource('Size', 'size')} extra={<SizeBar card={card} tc={tc} />} />
           <Box k={slot5label} v={slot5val} missing={lacks('slot5') || (!card.habitat && !card.origin && lacks('biome'))}
             onPress={() => showSource(slot5label, 'slot5')} />
         </View>
@@ -346,12 +346,35 @@ function FieldNote({ tc, note, sci }: { tc: string; note: string | null; sci: st
   );
 }
 
-function Box({ k, v, vColor, onPress, missing = false }: { k: string; v: string; vColor?: string; onPress?: () => void; missing?: boolean }) {
+function Box({ k, v, vColor, onPress, missing = false, extra }: { k: string; v: string; vColor?: string; onPress?: () => void; missing?: boolean; extra?: ReactNode }) {
   return (
     <Pressable style={[s.box, missing && { borderWidth: 1, borderColor: 'rgba(229,115,115,0.5)' }]} onPress={onPress} disabled={!onPress || missing}>
       <Text style={s.boxK}>{k}</Text>
       <Text style={[s.boxV, vColor ? { color: vColor } : null, missing && { color: MISSING_RED }]} numberOfLines={2}>{missing ? 'missing' : v}</Text>
+      {!missing && extra}
     </Pressable>
+  );
+}
+
+// SIZE IN CONTEXT (user, 2026-10-06): under the size, a bar from the smallest
+// to the largest card of the same group (same unit), filled to this one's
+// place on a log scale; the ends are labelled
+function SizeBar({ card, tc }: { card: Card; tc: string }) {
+  const sz = parseSize(card.size);
+  const r = sz ? sizeRange(card.group, sz.unit) : null;
+  if (!sz || !r) return null;
+  const frac = sizeFrac(sz.v, r);
+  return (
+    <View style={s.szWrap}>
+      <View style={s.szTrack}>
+        <View style={[s.szFill, { width: `${Math.round(frac * 100)}%`, backgroundColor: tc }]} />
+        <View style={[s.szDot, { left: `${Math.round(frac * 100)}%`, backgroundColor: tc }]} />
+      </View>
+      <View style={s.szEnds}>
+        <Text style={s.szEnd}>{fmtSize(r.min, sz.unit)}</Text>
+        <Text style={s.szEnd}>{fmtSize(r.max, sz.unit)}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -407,6 +430,13 @@ const s = StyleSheet.create({
   box: { flex: 1, backgroundColor: '#222222', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center' },
   boxK: { fontSize: 9.5, letterSpacing: 1.3, textTransform: 'uppercase', color: '#888888', fontFamily: F.sans },
   boxV: { fontSize: 14, marginTop: 3, color: C.text, fontFamily: F.sans, textAlign: 'center' },
+  // the size bar: a 3px track, the fill in the card's role colour, a dot at this species, tiny end labels
+  szWrap: { alignSelf: 'stretch', marginTop: 5 },
+  szTrack: { height: 3, borderRadius: 2, backgroundColor: '#3a3a3a', overflow: 'visible' },
+  szFill: { height: 3, borderRadius: 2 },
+  szDot: { position: 'absolute', top: -2.5, width: 8, height: 8, borderRadius: 4, marginLeft: -4, borderWidth: 1.5, borderColor: '#222222' },
+  szEnds: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 3 },
+  szEnd: { fontSize: 8, color: '#777777', fontFamily: F.sans },
   // .dc-note
   note: { borderLeftWidth: 3, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12, marginBottom: 8 },
   noteK: { fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', fontFamily: F.sansBold },

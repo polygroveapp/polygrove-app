@@ -119,3 +119,41 @@ export function photoCommonsPage(id: string): string | undefined {
   const m = u?.match(/\/thumb\/[0-9a-f]\/[0-9a-f]{2}\/([^/]+)\//);
   return m ? `https://commons.wikimedia.org/wiki/File:${m[1]}` : undefined;
 }
+
+// SIZE IN CONTEXT (user, 2026-10-06: "a bar indicating the minimum of its
+// taxonomy to the maximum and a progress bar of its size"): where a card's
+// size sits among every card of the same group measured in the same unit.
+// Sizes span orders of magnitude (a 2 g hummingbird, a 190 t whale), so the
+// position is on a log scale. Ranges are built once per group+unit.
+export type SizeVal = { v: number; unit: 'cm' | 'mm' | 'g' };
+export function parseSize(size?: string | null): SizeVal | null {
+  const m = /^\s*([\d.,]+)\s*(cm|mm|g)\b/.exec(size || '');
+  if (!m) return null;
+  const v = parseFloat(m[1].replace(/,/g, ''));
+  return Number.isFinite(v) && v > 0 ? { v, unit: m[2] as SizeVal['unit'] } : null;
+}
+const _ranges = new Map<string, { min: number; max: number } | null>();
+export function sizeRange(group: string, unit: SizeVal['unit']): { min: number; max: number } | null {
+  const key = `${group}|${unit}`;
+  if (_ranges.has(key)) return _ranges.get(key)!;
+  let min = Infinity, max = -Infinity, n = 0;
+  for (const c of getCards()) {
+    if (c.group !== group) continue;
+    const sz = parseSize(c.size);
+    if (!sz || sz.unit !== unit) continue;
+    if (sz.v < min) min = sz.v; if (sz.v > max) max = sz.v; n++;
+  }
+  const r = n >= 3 && max > min ? { min, max } : null;
+  _ranges.set(key, r);
+  return r;
+}
+/** 0..1 on a log scale between the group's smallest and largest */
+export const sizeFrac = (v: number, r: { min: number; max: number }) =>
+  Math.max(0, Math.min(1, (Math.log(v) - Math.log(r.min)) / (Math.log(r.max) - Math.log(r.min))));
+/** short, human: 2.4 g · 1.2 kg · 190 t · 35 cm · 11 m · 85 mm */
+export function fmtSize(v: number, unit: SizeVal['unit']): string {
+  const f = (x: number) => (x >= 100 ? Math.round(x).toLocaleString() : x >= 10 ? x.toFixed(0) : x.toFixed(1).replace(/\.0$/, ''));
+  if (unit === 'g') return v >= 1e6 ? `${f(v / 1e6)} t` : v >= 1000 ? `${f(v / 1000)} kg` : `${f(v)} g`;
+  if (unit === 'cm') return v >= 100 ? `${f(v / 100)} m` : `${f(v)} cm`;
+  return v >= 10 ? `${f(v / 10)} cm` : `${f(v)} mm`;
+}
