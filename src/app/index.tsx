@@ -241,14 +241,14 @@ function Stat({ n, pct, label }: { n: number; pct?: boolean; label: string }) {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: GREEN_BG },
   header: {
-    paddingTop: 20, paddingHorizontal: 20, paddingBottom: 10, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)',   // less air under the ecoregion name (user, 2026-10-07)
+    padding: 20, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(0,0,0,0.15)',
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
   // bigger, and the tagline under it is gone (user, 2026-09-28)
   // the tagline sits BETWEEN the wordmark and the ecoregion name (user, 2026-09-29)
   tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 4 },   // a little closer to the ecoregion name (user, 2026-09-29)
-  ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 20, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // wraps: the full name always shows
+  ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 17, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // lines close together (user, 2026-10-07)   // wraps: the full name always shows
   body: { paddingHorizontal: 20, paddingTop: 12 },   // a little closer to the header line (user, 2026-09-29)
   // stats
   stats: { flexDirection: 'row', justifyContent: 'center', gap: 40, marginBottom: 24 },
