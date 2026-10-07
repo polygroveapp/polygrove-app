@@ -235,7 +235,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
                   onNodePress={cid => { closeWeb(); router.push(`/species/${cid}`); }} />
               </View>
             </View>
-            <Pressable onPress={closeWeb} hitSlop={12} style={[s.webBigX, { top: insets.top + 8, right: __DEV__ ? 78 : 16 }]}><Text style={s.webBigXTxt}>✕</Text></Pressable>
+            <Pressable onPress={closeWeb} hitSlop={12} style={[s.webBigX, { top: insets.top + 8, right: 16 }]}><Text style={s.webBigXTxt}>✕</Text></Pressable>
               {/* ⓘ: every GloBI record behind this web, in-card */}
               <Pressable hitSlop={10} style={s.webBigI}
                 onPress={async () => { setShowRecs(true); if (!recs) setRecs(await globiRecords(card.sci)); }}>
