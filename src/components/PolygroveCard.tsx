@@ -357,11 +357,13 @@ function Box({ k, v, vColor, onPress, missing = false, extra }: { k: string; v: 
   );
 }
 
-// "2140.8 g | 4.7 lb": the metric size with its imperial twin to the right (user, 2026-10-06)
+// "2.1 kg | 4.7 lb": the metric size in a relatable unit (grams → kg → t,
+// cm → m, mm → cm) with its imperial twin to the right (user, 2026-10-06:
+// "so many grams should be converted to something more relatable")
 function sizeLabel(size?: string | null): string {
   if (!size) return '—';
   const sz = parseSize(size);
-  return sz ? `${size} | ${fmtImperial(sz.v, sz.unit)}` : size;
+  return sz ? `${fmtSize(sz.v, sz.unit)} | ${fmtImperial(sz.v, sz.unit)}` : size;
 }
 
 // SIZE IN CONTEXT (user, 2026-10-06): under the size, a bar from the smallest
