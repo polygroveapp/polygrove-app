@@ -22,7 +22,6 @@
 
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { DeviceMotion } from 'expo-sensors';
 import { openWeb } from '../lib/web';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
@@ -47,7 +46,6 @@ const HEADER_H = 62;   // the "Where are you?" bar, below the safe area
 // of the map above it, so a sheet that grew with its content would move the
 // pin, change what's under it, and chase itself
 const SHEET_H = 198;   // (222 left a band of nothing under the button — user, 2026-09-30 "why is there space here"; content hangs from the top, so the sheet only needs its tallest state: 2-line name + 2-line lead + button)
-const TILT_REST = 9;   // degrees of lean at rest; motion adds or removes up to this much
 
 type Pick = { eid: number; name: string; bbox: [number, number, number, number] };
 
@@ -287,38 +285,11 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     if (m.type === 'under' && Array.isArray(m.marks)) { setUnder((m.marks as Under[]).filter(u => u && Number.isFinite(u.id))); setUnderAt(0); }
   };
 
-  // SUBTLE MOTION (user, 2026-09-29: "as much as the new Photos widget
-  // feature, very subtle"): the map leans a few degrees with the phone and
-  // settles back. The resting posture is a slow running average, so however
-  // you hold the phone is "level"; only movement away from it shows.
-  useEffect(() => {
-    if (!visible || !pageReady) return;
-    let sub: { remove: () => void } | null = null, live = true;
-    let base: [number, number] | null = null, out: [number, number] = [TILT_REST, 0], sent: [number, number] = [-1, 0];
-    const deg = (r: number) => (r * 180) / Math.PI, clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-    DeviceMotion.isAvailableAsync().then(ok => {
-      if (!ok || !live) return;   // simulators have no motion sensor
-      // 10 Hz and a half-degree dead band (2026-10-06): at 20 Hz with 0.15° every
-      // tremor of the hand re-rendered the whole map — the phone lagged with the
-      // marks hidden; the simulator never showed it (no sensor)
-      DeviceMotion.setUpdateInterval(100);
-      sub = DeviceMotion.addListener(m => {
-        if (!m.rotation) return;
-        const b = deg(m.rotation.beta), g = deg(m.rotation.gamma);
-        base = base ? [base[0] + (b - base[0]) * 0.02, base[1] + (g - base[1]) * 0.02] : [b, g];
-        // TONED DOWN BY TWO-THIRDS (user, 2026-10-05): a third of the tripled
-        // cut from 2026-09-30 — pitch 1.1 → 0.37, bearing 0.9 → 0.3, with the
-        // caps back to a gentle ±9° of pitch and ±5° of turn
-        const pitch = clamp(TILT_REST + (b - base[0]) * 0.37, 0, TILT_REST * 2);
-        const bearing = clamp((g - base[1]) * 0.3, -5, 5);
-        out = [out[0] + (pitch - out[0]) * 0.25, out[1] + (bearing - out[1]) * 0.25];
-        if (Math.abs(out[0] - sent[0]) < 0.5 && Math.abs(out[1] - sent[1]) < 0.5) return;
-        sent = [out[0], out[1]];
-        web.current?.injectJavaScript(`window.polygroveTilt && window.polygroveTilt(${out[0].toFixed(2)}, ${out[1].toFixed(2)}); true;`);
-      });
-    }).catch(() => {});
-    return () => { live = false; sub?.remove(); };
-  }, [visible, pageReady]);
+  // NO GYRO TILT (user, 2026-10-06: "if the gyro kills performance remove
+  // it"): the map leaned a few degrees with the phone from 2026-09-29; each
+  // tilt re-rendered the whole 3D scene and an iPhone 13 Pro lagged even
+  // with the marks hidden. The map is flat and still now; the pin still
+  // leans against a drag (that comes from the page's pan messages).
 
   const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom && window.polygroveZoom(${d}); true;`);
 
