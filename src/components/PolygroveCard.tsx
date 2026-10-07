@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { interpolate, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
-import { Card, fmtSize, parseSize, photoCommonsPage, photoFor, framingFor, sizeFrac, sizeRange, soundsFor } from '../lib/catalog';
+import { Card, fmtImperial, fmtSize, parseSize, photoCommonsPage, photoFor, framingFor, sizeFrac, sizeRange, soundsFor } from '../lib/catalog';
 import SoundButton from './SoundButton';
 import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
 import { FactKey, SightingInfo, niceDate } from '../lib/sightings';
@@ -200,7 +200,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
         </View>
         {/* the 2×2 order (user, 2026-10-06): Size · Group / Trophic level · Habitat */}
         <View style={s.row}>
-          <Box k="Size" v={card.size || '—'} missing={lacks('size')}
+          <Box k="Size" v={sizeLabel(card.size)} missing={lacks('size')}
             onPress={() => showSource('Size', 'size')} extra={<SizeBar card={card} tc={tc} />} />
           <Box k="Group" v={card.group}
             onPress={() => showSource('Group', 'taxonomy')} />
@@ -355,6 +355,13 @@ function Box({ k, v, vColor, onPress, missing = false, extra }: { k: string; v: 
       {!missing && extra}
     </Pressable>
   );
+}
+
+// "2140.8 g · 4.7 lb": the metric size with its imperial twin to the right (user, 2026-10-06)
+function sizeLabel(size?: string | null): string {
+  if (!size) return '—';
+  const sz = parseSize(size);
+  return sz ? `${size} · ${fmtImperial(sz.v, sz.unit)}` : size;
 }
 
 // SIZE IN CONTEXT (user, 2026-10-06): under the size, a bar from the smallest
