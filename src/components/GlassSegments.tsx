@@ -60,5 +60,5 @@ const s = StyleSheet.create({
   seg: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999, gap: 1 },
   label: { fontFamily: F.sansBold, fontSize: 11, color: '#8f8f8f' },
   labelOn: { color: C.text },
-  count: { fontFamily: F.sansMed, fontSize: 13, color: '#8f8f8f', fontVariant: ['tabular-nums'] },   // thinner than the display face (user, 2026-10-06)
+  count: { fontFamily: F.sans, fontSize: 13, color: '#8f8f8f', fontVariant: ['tabular-nums'] },   // the regular weight — medium was still too heavy (user, 2026-10-06)
 });
