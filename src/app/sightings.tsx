@@ -171,8 +171,8 @@ export default function Sightings() {
               </View>
             ) : null}
 
-            <View style={{ alignItems: 'center', marginTop: 30 }}><ViewToggle mode={view} onChange={setView} /></View>
-            <View style={{ marginTop: 14, marginBottom: 14 }}>
+            {/* the selector first, the Hexes/List switch under it (user, 2026-10-06) */}
+            <View style={{ marginTop: 30, marginBottom: 14 }}>
               <GlassSegments value={tab} onChange={setTab} items={[
                 // the counts wear the map's mark colours (user, 2026-10-06): confirmed yellow, waiting green, potential grey
                 { key: 'cards', label: 'Sightings', n: earned.length, color: C.yellow },
@@ -180,6 +180,7 @@ export default function Sightings() {
                 { key: 'potential', label: 'Potential', n: st.potentialTotal, color: '#bbbbbb' },
               ]} />
             </View>
+            <View style={{ alignItems: 'center', marginBottom: 14 }}><ViewToggle mode={view} onChange={setView} /></View>
             {view === 'hex' && shownKey ? <ShownCard cells={cells} picked={shownKey} onPick={setShown} /> : null}
             {tab === 'cards' ? (earned.length === 0 ? (
               <Text style={s.empty}>
