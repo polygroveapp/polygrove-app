@@ -69,8 +69,8 @@ const s = StyleSheet.create({
   fill: { height: 4, borderRadius: 2, backgroundColor: '#999999' },
   time: { color: '#999999', fontSize: 11, fontFamily: F.sans, fontVariant: ['tabular-nums'] },
   // the ⓘ, in the card's small round-button style
-  i: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  iTxt: { color: '#999999', fontSize: 13, fontStyle: 'italic', fontFamily: F.sansBold },
+  i: { width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', alignItems: 'center', justifyContent: 'center' },
+  iTxt: { color: '#6e6e6e', fontSize: 11, lineHeight: 13, fontStyle: 'italic', fontFamily: F.sansBold },
   popWrap: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 28 },
   pop: { backgroundColor: '#222222', borderRadius: 14, borderWidth: 1, borderColor: '#3a3a3a', padding: 16, width: '100%', maxWidth: 320, gap: 6 },
   popLabel: { fontFamily: F.sansBold, fontSize: 10, letterSpacing: 1.8, color: '#888888', marginBottom: 2 },

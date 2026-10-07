@@ -46,14 +46,14 @@ export default function GlassSegments<K extends string>({ items, value, onChange
 
 const s = StyleSheet.create({
   bar: {
-    flexDirection: 'row', padding: PAD, borderRadius: 18,
+    flexDirection: 'row', padding: PAD, borderRadius: 999,   // the bottom nav's pill (user, 2026-10-06)
     backgroundColor: 'rgba(0,0,0,0.28)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.22)',
   },
   lens: {
-    position: 'absolute', top: PAD, bottom: PAD, left: PAD, borderRadius: 14, overflow: 'hidden',
+    position: 'absolute', top: PAD, bottom: PAD, left: PAD, borderRadius: 999, overflow: 'hidden',
     shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 6, shadowOffset: { width: 0, height: 3 },
   },
-  rim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.38)' },
+  rim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.38)' },
   seg: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, gap: 1 },
   label: { fontFamily: F.sansBold, fontSize: 11.5, color: '#8a9a8a', letterSpacing: 0.3 },
   labelOn: { color: '#ffffff' },
