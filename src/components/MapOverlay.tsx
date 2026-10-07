@@ -103,6 +103,10 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     if (!ids.length) return;
     const head: Under[] = marks && marks.length ? marks : ids.map(id => ({ id, kind: ok }));
     setUnder(prev => [...head, ...prev.filter(u => !ids.includes(u.id))]); setUnderAt(0);
+    // and OPEN it (user, 2026-10-06: "swipe right to this screen when you press
+    // an x on the map"): the tapped sighting's screen slides in from the right
+    const o = spotOf(head[0]);
+    if (o) openObs(o);
   };
   const openObs = async (o: Spot & { grade: string }) => {
     const sci = o.sci?.toLowerCase();
@@ -110,12 +114,12 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     if (card) {
       let eid: number | null = null;
       if (o.lng != null && o.lat != null) { try { eid = await ecoregionAt(o.lng, o.lat); } catch { /* no outline: fall through */ } }
-      if (eid != null && sightings.earned.some(e => e.eid === eid && e.speciesId === card.species_id)) { router.push({ pathname: '/preview', params: { kind: 'earned', key: `${eid}:${card.species_id}` } }); return; }
-      if (eid != null && owns(eid, card.species_id)) { router.push({ pathname: '/gallery', params: { ids: card.id, start: '0' } }); return; }
+      if (eid != null && sightings.earned.some(e => e.eid === eid && e.speciesId === card.species_id)) { router.push({ pathname: '/preview', params: { kind: 'earned', key: `${eid}:${card.species_id}`, slide: 'right' } }); return; }
+      if (eid != null && owns(eid, card.species_id)) { router.push({ pathname: '/deck', params: { glow: card.id, eid: String(eid), slide: 'right' } }); return; }
       // a card, but not yours there (not confirmed, or not in that deck): the preview knows which
-      if (eid != null && sightings.potential.some(p => p.key === `${card.species_id}@${eid}`)) { router.push({ pathname: '/preview', params: { kind: 'potential', key: `${card.species_id}@${eid}` } }); return; }
-    } else if (sci && sightings.potential.some(p => p.key === sci)) { router.push({ pathname: '/preview', params: { kind: 'potential', key: sci } }); return; }
-    if (sightings.waiting.some(w => w.obsId === o.id)) { router.push({ pathname: '/preview', params: { kind: 'waiting', key: String(o.id) } }); return; }
+      if (eid != null && sightings.potential.some(p => p.key === `${card.species_id}@${eid}`)) { router.push({ pathname: '/preview', params: { kind: 'potential', key: `${card.species_id}@${eid}`, slide: 'right' } }); return; }
+    } else if (sci && sightings.potential.some(p => p.key === sci)) { router.push({ pathname: '/preview', params: { kind: 'potential', key: sci, slide: 'right' } }); return; }
+    if (sightings.waiting.some(w => w.obsId === o.id)) { router.push({ pathname: '/preview', params: { kind: 'waiting', key: String(o.id), slide: 'right' } }); return; }
     openWeb(o.uri);   // nothing in the game for it yet: the observation itself
   };
   const [catalogReady, setCatalogReady] = useState(false);
