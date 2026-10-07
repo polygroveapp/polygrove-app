@@ -93,6 +93,14 @@ export default function Sightings() {
   // (user, 2026-10-06: "automatically have the first card selected")
   const cells = tab === 'cards' ? earnedCombs : tab === 'waiting' ? waitingCombs : potentialCombs;
   const shownKey = shown && cells.some(c => c.key === shown) ? shown : cells[0]?.key ?? null;
+  // the shown card's two links (user, 2026-10-06: "to the right of this put two
+  // buttons, journal and iNaturalist"): the game's card, and the observation
+  const shownLinks = (() => {
+    if (!shownKey) return { cardId: null as string | null, uri: undefined as string | undefined };
+    if (tab === 'cards') { const e = earned.find(x => `${x.eid}:${x.speciesId}` === shownKey); return { cardId: e?.cardId ?? null, uri: e?.uri }; }
+    if (tab === 'waiting') { const w = st.waiting.find(x => String(x.obsId) === shownKey); return { cardId: w?.cardId ?? null, uri: w?.uri }; }
+    const p = st.potential.find(x => x.key === shownKey); return { cardId: p?.cardId ?? null, uri: p?.obs.uri };
+  })();
 
   return (
     <View style={s.root}>
@@ -180,7 +188,13 @@ export default function Sightings() {
                 { key: 'potential', label: 'Potential', n: st.potentialTotal, color: '#bbbbbb' },
               ]} />
             </View>
-            <View style={{ alignItems: 'center', marginBottom: 14 }}><ViewToggle mode={view} onChange={setView} /></View>
+            <View style={s.toolRow}>
+              <ViewToggle mode={view} onChange={setView} />
+              <Pressable disabled={!shownLinks.cardId} onPress={() => shownLinks.cardId && router.push({ pathname: '/gallery', params: { ids: shownLinks.cardId, start: '0' } })}
+                style={[s.tool, !shownLinks.cardId && { opacity: 0.35 }]}><Text style={s.toolTxt}>📖 Journal</Text></Pressable>
+              <Pressable disabled={!shownLinks.uri} onPress={() => shownLinks.uri && openWeb(shownLinks.uri)}
+                style={[s.tool, !shownLinks.uri && { opacity: 0.35 }]}><Text style={s.toolTxt}>iNaturalist ›</Text></Pressable>
+            </View>
             {view === 'hex' && shownKey ? <ShownCard cells={cells} picked={shownKey} onPick={setShown} /> : null}
             {tab === 'cards' ? (earned.length === 0 ? (
               <Text style={s.empty}>
@@ -323,6 +337,10 @@ const s = StyleSheet.create({
   freshTxt: { fontFamily: F.sansBold, fontSize: 12.5, color: C.yellow, textAlign: 'center' },
   hint: { fontFamily: F.sans, fontSize: 11.5, color: '#777', lineHeight: 16.5, marginBottom: 8 },
   empty: { fontFamily: F.sans, fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 19, paddingVertical: 14 },
+  // the Hexes/List switch with the shown card's two links beside it, in the switch's own style
+  toolRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
+  tool: { paddingVertical: 9, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: '#2a2a2a' },
+  toolTxt: { fontFamily: F.sansBold, fontSize: 11.5, color: C.greenSoft },
   more: { fontFamily: F.sans, fontSize: 11.5, color: '#666', textAlign: 'center', paddingVertical: 6 },
   person: {
     flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 14, marginBottom: 8,
