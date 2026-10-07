@@ -75,10 +75,15 @@ export default function PolygroveDB() {
     // group's records here, so the top plant, insect and mammal sit beside the
     // top bird. All: by name
     if (ranking && rank) {
-      const groupTotal = new Map<string, number>();
-      for (const c of out) groupTotal.set(c.group, (groupTotal.get(c.group) ?? 0) + (rank.get(c.id) ?? 0));
-      const score = (c: Card) => (rank.get(c.id) ?? 0) / (groupTotal.get(c.group) || 1);
-      return out.sort((a, b) => score(b) - score(a));
+      // interleaved: every group's most-recorded species first (those ordered
+      // by records), then every group's second, and so on — a lone species in
+      // a small group can't outrank the whole list on share alone
+      const n = (c: Card) => rank.get(c.id) ?? 0;
+      const byGroup = new Map<string, Card[]>();
+      for (const c of out) { if (!byGroup.has(c.group)) byGroup.set(c.group, []); byGroup.get(c.group)!.push(c); }
+      const pos = new Map<string, number>();
+      for (const list of byGroup.values()) list.sort((a, b) => n(b) - n(a)).forEach((c, i) => pos.set(c.species_id + '', i));
+      return out.sort((a, b) => (pos.get(a.species_id + '')! - pos.get(b.species_id + '')!) || (n(b) - n(a)));
     }
     return out.sort((a, b) => a.name.localeCompare(b.name));
   }, [cards, group, role, ranking, rank, starsOnly, stars, needle]);
@@ -155,7 +160,7 @@ export default function PolygroveDB() {
       ) : (
         <FlatList
           data={rows.slice(0, shown)}
-          keyExtractor={c => c.id}
+          keyExtractor={c => String(c.species_id)}
           ListHeaderComponent={header}
           contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: NAV_HEIGHT + insets.bottom + 24 }}
           keyboardShouldPersistTaps="handled"
