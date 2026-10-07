@@ -198,18 +198,18 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
           </View>
           <Pressable onPress={star} hitSlop={10} disabled={hideNames}><Text style={[s.ico, starred && s.starOn]}>{starred ? '★' : '☆'}</Text></Pressable>
         </View>
-        {/* the 2×2 order (user, 2026-10-06): Trophic level · Habitat / Size · Group */}
+        {/* the 2×2 order (user, 2026-10-06): Habitat · Group / Size · Trophic level */}
         <View style={s.row}>
-          <Box k="Trophic level" v={card.trophic || '?'} vColor={tc} missing={lacks('feeding')}
-            onPress={() => showSource('Trophic level', 'feeding')} />
           <Box k={slot5label} v={slot5val} missing={lacks('slot5') || (!card.habitat && !card.origin && lacks('biome'))}
             onPress={() => showSource(slot5label, 'slot5')} />
+          <Box k="Group" v={card.group}
+            onPress={() => showSource('Group', 'taxonomy')} />
         </View>
         <View style={s.row}>
           <Box k="Size" v={sizeLabel(card.size)} missing={lacks('size')}
             onPress={() => showSource('Size', 'size')} extra={<SizeBar card={card} tc={tc} />} />
-          <Box k="Group" v={card.group}
-            onPress={() => showSource('Group', 'taxonomy')} />
+          <Box k="Trophic level" v={card.trophic || '?'} vColor={tc} missing={lacks('feeding')}
+            onPress={() => showSource('Trophic level', 'feeding')} />
         </View>
         {/* a custom card's BACK keeps the species' field note when there is one
             (user, 2026-10-05); the sighting is on the front, and stands in here
