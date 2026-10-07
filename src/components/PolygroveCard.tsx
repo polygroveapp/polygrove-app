@@ -229,9 +229,9 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
             {/* the web fills the width; the view box is taller than wide so the
                 outer labels have room (user, 2026-10-06: "proportions are off") */}
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              <View style={{ width: win.width - 24, height: Math.round((win.width - 24) * 560 / 500) }}>
+              <View style={{ width: win.width, height: Math.round(win.width * 560 / 500), marginHorizontal: -16 }}>
                 <FwGraph card={card} viewW={500} viewH={560} nodeR={26} centerR={40}
-                  fontSize={15} radiusFactor={0.39} showLabels
+                  fontSize={15} radiusFactor={0.37} showLabels
                   onNodePress={cid => { closeWeb(); router.push(`/species/${cid}`); }} />
               </View>
             </View>
