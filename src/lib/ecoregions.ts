@@ -6,7 +6,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
-import { Card, getCards, photoFor } from './catalog';
+import { Card, getCards, onPhotosLoaded, photoFor, photosLoaded } from './catalog';
 
 // lead = the Wikipedia article's first sentence; photo = its lead image (CC/PD, credited)
 export type EcoMeta = {
@@ -83,8 +83,13 @@ export function ecoMembers(eid: number): Card[] {
   if (_members[eid]) return _members[eid];
   const all = getCards();
   if (!all.length) return [];
-  const m = all.filter(c => (c.ecoregions as number[] | undefined)?.includes(eid) && photoFor(c.id));
-  _members[eid] = m;
+  // without the photo index every card would fail the photo test and the deck
+  // would read empty — so until it arrives, membership is by ecoregion alone
+  // and nothing is cached (the index's arrival clears the cache)
+  const ready = photosLoaded();
+  const m = all.filter(c => (c.ecoregions as number[] | undefined)?.includes(eid) && (!ready || photoFor(c.id)));
+  if (ready) _members[eid] = m;
   return m;
 }
+onPhotosLoaded(() => { for (const k of Object.keys(_members)) delete _members[+k]; });
 export const ecoDeckSize = (eid: number) => ecoMembers(eid).length;

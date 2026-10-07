@@ -51,9 +51,11 @@ export function loadCatalog(onStage?: (s: string) => void) {
     ]);
     for (const c of cards) { const q = quiz[c.id]; if (q) Object.assign(c, q); }
     onStage?.('Fetching photos…');
-    const photos: Record<string, string> = await fetch(`${BASE}/photos.json`)
-      .then(r => (r.ok ? r.json() : {}))
-      .catch(() => ({}));
+    const photos: Record<string, string> = await fetchPhotos();
+    // a failed photo index must not stick (2026-10-06: a sheet read "37 / 0
+    // species in deck" — with no index every deck counted as empty, while the
+    // journaled cards still showed from their on-disk photos): retry quietly
+    if (!Object.keys(photos).length) retryPhotos();
     // SOUNDS (user, 2026-10-06): data/audio.json — up to three licensed recordings
     // (CC0 / CC-BY, from iNaturalist and Cornell via GBIF) per species, by
     // scientific name. Linked, never copied. A nicety like framing.
@@ -88,6 +90,16 @@ export type Sound = { url: string; by: string; lic: string; ds: string };
 let _audio: Record<string, Sound[]> = {};
 export const soundsFor = (sci: string): Sound[] => _audio[sci] ?? [];
 export const getCards = () => _cards ?? [];
+const fetchPhotos = (): Promise<Record<string, string>> => fetch(`${BASE}/photos.json`).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+let _photoRetry = 0;
+function retryPhotos() {
+  if (_photoRetry++ > 5) return;
+  setTimeout(() => fetchPhotos().then(p => { if (Object.keys(p).length) { _photos = p; _photoListeners.forEach(l => l()); } else retryPhotos(); }), 4000 * _photoRetry);
+}
+/** true once the photo index has arrived (deck membership depends on it) */
+export const photosLoaded = () => Object.keys(_photos).length > 0;
+const _photoListeners = new Set<() => void>();
+export const onPhotosLoaded = (l: () => void) => { _photoListeners.add(l); return () => { _photoListeners.delete(l); }; };
 // indexed (2026-10-06): the Sightings combs call this thousands of times a
 // render; a scan of 14,713 cards each time made the screen crawl
 let _byId: Record<string, Card> = {}, _byIdOf: Card[] | null = null;
