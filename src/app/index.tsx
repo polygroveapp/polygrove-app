@@ -241,7 +241,7 @@ function Stat({ n, pct, label }: { n: number; pct?: boolean; label: string }) {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: GREEN_BG },
   header: {
-    padding: 20, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)',
+    paddingTop: 20, paddingHorizontal: 20, paddingBottom: 8, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)',   // the rule sits close under the name (user, 2026-10-07)
     backgroundColor: 'rgba(0,0,0,0.15)',
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },

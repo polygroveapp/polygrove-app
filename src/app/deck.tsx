@@ -379,7 +379,7 @@ const s = StyleSheet.create({
   retryTxt: { fontFamily: F.sansBold, color: C.green, fontSize: 13 },
   // the demo's header, same as home
   header: {
-    padding: 20, alignItems: 'center',
+    paddingTop: 20, paddingHorizontal: 20, paddingBottom: 8, alignItems: 'center',   // the rule sits close under the name (user, 2026-10-07)
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.15)',
   },
   logo: { fontFamily: F.display, fontSize: 28, color: C.green, lineHeight: 34, marginBottom: 4 },
