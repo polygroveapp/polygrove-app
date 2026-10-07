@@ -200,7 +200,7 @@ export default function Sightings() {
             {/* search above the selector (user, 2026-10-07), then the selector, then the Hexes/List switch */}
             <TextInput value={query} onChangeText={setQuery} placeholder="Search your observations…" placeholderTextColor="#666"
               autoCapitalize="none" autoCorrect={false} returnKeyType="search" clearButtonMode="while-editing" style={[s.search, { marginTop: 30, marginBottom: 0 }]} />
-            <View style={{ marginTop: 12, marginBottom: 14 }}>
+            <View style={{ marginTop: 10, marginBottom: 8 }}>   {/* the switch row sits right under the selector (user, 2026-10-07) */}
               <GlassSegments value={tab} onChange={setTab} items={[
                 // the counts wear the map's mark colours (user, 2026-10-06): confirmed yellow, waiting green, potential grey
                 { key: 'cards', label: 'Sightings', n: earned.length, color: C.yellow },
@@ -383,7 +383,7 @@ const s = StyleSheet.create({
   hint: { fontFamily: F.sans, fontSize: 11.5, color: '#777', lineHeight: 16.5, marginBottom: 8 },
   empty: { fontFamily: F.sans, fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 19, paddingVertical: 14 },
   // the Hexes/List switch with the shown card's two links beside it, in the switch's own style
-  toolRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
+  toolRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 },
   tool: { paddingVertical: 9, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: '#2a2a2a' },
   toolTxt: { fontFamily: F.sansBold, fontSize: 11.5, color: C.greenSoft },
   toolOn: { backgroundColor: 'rgba(76,175,80,0.22)', borderColor: 'rgba(76,175,80,0.4)' },

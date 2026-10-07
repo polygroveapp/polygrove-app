@@ -48,7 +48,7 @@ export default function GlassSegments<K extends string>({ items, value, onChange
 
 const s = StyleSheet.create({
   track: {
-    height: 60, borderRadius: 999, padding: PAD, flexDirection: 'row', overflow: 'hidden',
+    height: 50, borderRadius: 999, padding: PAD, flexDirection: 'row', overflow: 'hidden',   // tighter than the tab bar's 60 (user, 2026-10-07)
     backgroundColor: Platform.OS === 'android' ? 'rgba(20,24,20,0.72)' : 'rgba(255,255,255,0.06)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.13)',
   },
@@ -59,8 +59,8 @@ const s = StyleSheet.create({
   },
   thumbFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   thumbShine: { position: 'absolute', top: 0, left: 10, right: 10, height: 1, backgroundColor: 'rgba(255,255,255,0.28)' },
-  seg: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999, gap: 1 },
-  label: { fontFamily: F.sansBold, fontSize: 11, color: '#8f8f8f' },
+  seg: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999, gap: 0 },
+  label: { fontFamily: F.sansBold, fontSize: 11, color: '#8f8f8f', lineHeight: 14 },
   labelOn: { color: C.text },
-  count: { fontFamily: F.sans, fontSize: 13, color: '#8f8f8f', fontVariant: ['tabular-nums'] },   // the regular weight — medium was still too heavy (user, 2026-10-06)
+  count: { fontFamily: F.sans, fontSize: 12, color: '#8f8f8f', fontVariant: ['tabular-nums'], lineHeight: 14 },   // the regular weight — medium was still too heavy (user, 2026-10-06)
 });
