@@ -24,6 +24,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { DeviceMotion } from 'expo-sensors';
 import { openWeb } from '../lib/web';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -78,6 +79,13 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // step through the rest under the pin
   const [underAt, setUnderAt] = useState(0);
   const [obsCache, setObsCache] = useState<Record<number, (Spot & { grade: string }) | null>>({});
+  // observations shown or hidden (the ✕ obs button; remembered on the phone)
+  const [showObs, setShowObs] = useState(true);
+  useEffect(() => { AsyncStorage.getItem('polygrove.map.obs').then(v => { if (v === '0') setShowObs(false); }).catch(() => {}); }, []);
+  useEffect(() => {
+    AsyncStorage.setItem('polygrove.map.obs', showObs ? '1' : '0').catch(() => {});
+    if (pageReady) web.current?.injectJavaScript(`window.polygroveShowMarks && window.polygroveShowMarks(${showObs}); true;`);
+  }, [showObs, pageReady]);
   // a mark that carries its name needs no fetch: the page passes name/sci/date
   // along from the saved marks (user, 2026-10-06: nothing loads under the pin)
   const spotOf = (u: Under): (Spot & { grade: string }) | null => u.name
@@ -416,6 +424,13 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
           <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>Where do you want to camp?</Text>
           <Text style={s.sub}>{pageReady ? 'move the map under the pin 🏕️' : err ? 'map unavailable' : 'loading ecoregions…'}</Text>
         </View>
+        {/* OBSERVATIONS ON / OFF (user, 2026-10-06): an ✕ with "obs" under it, to
+            the right of the title; off hides every mark and the strip under the pin */}
+        <Pressable onPress={() => setShowObs(v => !v)} hitSlop={6} accessibilityRole="switch" accessibilityState={{ checked: showObs }}
+          style={[s.obsBtn, showObs && s.obsBtnOn]}>
+          <Text style={[s.obsX, showObs && { color: C.yellow }]}>✕</Text>
+          <Text style={[s.obsLbl, showObs && { color: C.yellow }]}>obs</Text>
+        </Pressable>
       </View>
 
       {/* zoom in / out (user, 2026-09-28) — zooms around the pin */}
@@ -430,7 +445,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
 
 
       {/* the ✕ mark under the pin, to the LEFT of − and +: one at a time, ‹ › for the others */}
-      {under.length > 0 && (() => {
+      {showObs && under.length > 0 && (() => {
         const at = Math.min(underAt, under.length - 1), u = under[at];
         const o = spotOf(u) ?? obsCache[u.id];
         const sci = o?.sci?.toLowerCase();
@@ -529,6 +544,10 @@ const s = StyleSheet.create({
   // no back button (user, 2026-09-29): the tab bar's Camp is the way home
   top: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 40, gap: 10 },
   titleWrap: { flex: 1, alignItems: 'center', backgroundColor: 'rgba(10,15,10,0.85)', borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10 },
+  obsBtn: { marginLeft: 8, width: 46, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,15,10,0.85)', borderRadius: 14, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  obsBtnOn: { borderColor: 'rgba(255,225,77,0.35)' },
+  obsX: { fontFamily: F.sansBold, fontSize: 16, lineHeight: 18, color: '#666' },
+  obsLbl: { fontFamily: F.sansBold, fontSize: 9, letterSpacing: 0.8, color: '#666', marginTop: 1 },
   title: { fontFamily: F.display, fontSize: 15, color: '#ffe14d' },   // yellow (user, 2026-09-30 — after the ecoregion brown, white, dimmer white)
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#ffffff' },   // white (user, 2026-09-30; was grey)
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
