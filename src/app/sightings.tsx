@@ -197,8 +197,10 @@ export default function Sightings() {
               </View>
             ) : null}
 
-            {/* the selector first, the Hexes/List switch under it (user, 2026-10-06) */}
-            <View style={{ marginTop: 30, marginBottom: 14 }}>
+            {/* search above the selector (user, 2026-10-07), then the selector, then the Hexes/List switch */}
+            <TextInput value={query} onChangeText={setQuery} placeholder="Search your observations…" placeholderTextColor="#666"
+              autoCapitalize="none" autoCorrect={false} returnKeyType="search" clearButtonMode="while-editing" style={[s.search, { marginTop: 30, marginBottom: 0 }]} />
+            <View style={{ marginTop: 12, marginBottom: 14 }}>
               <GlassSegments value={tab} onChange={setTab} items={[
                 // the counts wear the map's mark colours (user, 2026-10-06): confirmed yellow, waiting green, potential grey
                 { key: 'cards', label: 'Sightings', n: earned.length, color: C.yellow },
@@ -206,8 +208,6 @@ export default function Sightings() {
                 { key: 'potential', label: 'Potential', n: st.potentialTotal, color: '#bbbbbb' },
               ]} />
             </View>
-            <TextInput value={query} onChangeText={setQuery} placeholder="Search your observations…" placeholderTextColor="#666"
-              autoCapitalize="none" autoCorrect={false} returnKeyType="search" clearButtonMode="while-editing" style={[s.search, { marginBottom: 10 }]} />
             <View style={s.toolRow}>
               <ViewToggle mode={view} onChange={setView} />
               {view === 'hex' ? (
