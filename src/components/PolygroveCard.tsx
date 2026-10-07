@@ -357,13 +357,13 @@ function Box({ k, v, vColor, onPress, missing = false, extra }: { k: string; v: 
   );
 }
 
-// "2.1 kg | 4.7 lb": the metric size in a relatable unit (grams → kg → t,
+// "2.1 kg 4.7 lb": the metric size in a relatable unit (grams → kg → t,
 // cm → m, mm → cm) with its imperial twin to the right (user, 2026-10-06:
 // "so many grams should be converted to something more relatable")
 function sizeLabel(size?: string | null): string {
   if (!size) return '—';
   const sz = parseSize(size);
-  return sz ? `${fmtSize(sz.v, sz.unit)} | ${fmtImperial(sz.v, sz.unit)}` : size;
+  return sz ? `${fmtSize(sz.v, sz.unit)} ${fmtImperial(sz.v, sz.unit)}` : size;
 }
 
 // SIZE IN CONTEXT (user, 2026-10-06): under the size, a bar from the smallest
@@ -381,8 +381,8 @@ function SizeBar({ card, tc }: { card: Card; tc: string }) {
         <View style={[s.szDot, { left: `${Math.round(frac * 100)}%`, backgroundColor: tc }]} />
       </View>
       <View style={s.szEnds}>
-        <Text style={s.szEnd}>{fmtSize(r.min, sz.unit)} | {fmtImperial(r.min, sz.unit)}</Text>
-        <Text style={s.szEnd}>{fmtSize(r.max, sz.unit)} | {fmtImperial(r.max, sz.unit)}</Text>
+        <Text style={s.szEnd}>{fmtSize(r.min, sz.unit)} {fmtImperial(r.min, sz.unit)}</Text>
+        <Text style={s.szEnd}>{fmtSize(r.max, sz.unit)} {fmtImperial(r.max, sz.unit)}</Text>
       </View>
     </View>
   );

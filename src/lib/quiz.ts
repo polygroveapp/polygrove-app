@@ -58,7 +58,7 @@ export function withImperial(size: string): string {
   const p = parseUnit(size);
   if (!p) return size;
   const word = /wingspan/i.test(size) ? ' wingspan' : '';
-  return `${niceMetric(p.v, p.unit)}${word} | ${fmtImperial(p.v, p.unit)}`;
+  return `${niceMetric(p.v, p.unit)}${word} ${fmtImperial(p.v, p.unit)}`;
 }
 
 // six slots, null where the card can't ask that question (no look-alikes, say)
