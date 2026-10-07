@@ -21,6 +21,7 @@ export type Comb = {
   uri?: string; frame?: Frame;
   border: string;
   shimmer?: boolean;        // the map's glistening gold instead of a flat border (Solar level)
+  date?: string | null;     // when it was seen (ISO), for the list's month/year filters
   name: string; sub?: string; meta?: string;
   fallback?: string;        // an emoji for a cell with no photo
   card?: () => ReactNode;   // the card to show above the comb (fills its box)

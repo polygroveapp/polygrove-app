@@ -26,6 +26,7 @@ import { ALL_FACTS, Earned, chooseMe, forgetMe, loadSightings, niceDate, partial
 import PolygroveCard from '../components/PolygroveCard';
 import { openWeb } from '../lib/web';
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const STALE_MS = 60 * 60 * 1000;   // coming back to the tab probes for new sightings after an hour (a probe is two tiny requests; a full pass only if the counts moved)
 
 export default function Sightings() {
@@ -80,18 +81,29 @@ export default function Sightings() {
   const preview = (kind: 'waiting' | 'potential', key: string) => router.push({ pathname: '/preview', params: { kind, key } });
   const me = st.me;
   // built once per data change (useMemo): 3,000+ cells rebuilt on every tap made the tab slow (2026-10-06)
-  const earnedCombs = useMemo<Comb[]>(() => earned.map(e => combOf(e.photo, e.cardId, { key: `${e.eid}:${e.speciesId}`, name: e.name,
+  const earnedCombs = useMemo<Comb[]>(() => earned.map(e => combOf(e.photo, e.cardId, { key: `${e.eid}:${e.speciesId}`, name: e.name, date: e.date,
                   sub: cardById(e.cardId)?.sci, meta: `Journaled in ${e.eco}${e.date ? ` · seen ${niceDate(e.date)}` : ''}`, onOpen: () => openCard(e),
                   card: () => { const c = cardById(e.cardId); return c ? <PolygroveCard card={c} sighting={e} /> : null; } })), [earned]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const waitingCombs = useMemo<Comb[]>(() => st.waiting.map(w => combOf(w.photo, w.cardId, { key: String(w.obsId), name: w.name, sub: w.sci,
+  const waitingCombs = useMemo<Comb[]>(() => st.waiting.map(w => combOf(w.photo, w.cardId, { key: String(w.obsId), name: w.name, sub: w.sci, date: w.date,
                   meta: `${w.cardId ? 'a card once confirmed' : 'not a card yet'}${w.date ? ` · ${niceDate(w.date)}` : ''}`, onOpen: () => preview('waiting', String(w.obsId)),
                   card: () => { const c = w.cardId ? cardById(w.cardId) : undefined; return <PolygroveCard card={c ?? partialCard(w.name, w.sci, w.facts)} sighting={w} missing={c ? undefined : w.facts?.missing ?? ALL_FACTS} />; } }, w.facts?.trophic)), [st.waiting]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const potentialCombs = useMemo<Comb[]>(() => st.potential.map(p => combOf(p.obs.photo, p.cardId, { key: p.key, name: p.name + (p.seen > 1 ? `  ×${p.seen}` : ''), sub: p.sci,
+  const potentialCombs = useMemo<Comb[]>(() => st.potential.map(p => combOf(p.obs.photo, p.cardId, { key: p.key, name: p.name + (p.seen > 1 ? `  ×${p.seen}` : ''), sub: p.sci, date: p.obs.date,
                   meta: p.why, onOpen: () => preview('potential', p.key),
                   card: () => { const c = p.cardId ? cardById(p.cardId) : undefined; return <PolygroveCard card={c ?? partialCard(p.name, p.sci, p.facts)} sighting={{ ...p.obs, seen: p.seen }} missing={c ? undefined : p.facts?.missing ?? ALL_FACTS} />; } }, p.facts?.trophic)), [st.potential]);   // eslint-disable-line react-hooks/exhaustive-deps
   // the list on show, with ITS FIRST CARD selected until you pick another
   // (user, 2026-10-06: "automatically have the first card selected")
-  const cells = tab === 'cards' ? earnedCombs : tab === 'waiting' ? waitingCombs : potentialCombs;
+  const allCells = tab === 'cards' ? earnedCombs : tab === 'waiting' ? waitingCombs : potentialCombs;
+  // THE LIST'S MONTH AND YEAR (user, 2026-10-06: "when it's on the list view
+  // have the journal button be month … and iNaturalist button be year"): two
+  // pickers over the dates in the list; the hexes are never filtered
+  const [month, setMonth] = useState<number | null>(null);   // 1–12
+  const [year, setYear] = useState<number | null>(null);
+  const [pickOpen, setPickOpen] = useState<'month' | 'year' | null>(null);
+  const years = useMemo(() => [...new Set(allCells.map(c => c.date?.slice(0, 4)).filter((y): y is string => !!y))].sort().reverse(), [allCells]);
+  const months = useMemo(() => [...new Set(allCells.filter(c => !year || c.date?.startsWith(String(year))).map(c => c.date ? Number(c.date.slice(5, 7)) : 0).filter(m => m > 0))].sort((a, b) => a - b), [allCells, year]);
+  const cells = view === 'list' && (month || year)
+    ? allCells.filter(c => c.date && (!year || c.date.startsWith(String(year))) && (!month || Number(c.date.slice(5, 7)) === month))
+    : allCells;
   const shownKey = shown && cells.some(c => c.key === shown) ? shown : cells[0]?.key ?? null;
   // the shown card's two links (user, 2026-10-06: "to the right of this put two
   // buttons, journal and iNaturalist"): the game's card, and the observation
@@ -190,11 +202,32 @@ export default function Sightings() {
             </View>
             <View style={s.toolRow}>
               <ViewToggle mode={view} onChange={setView} />
-              <Pressable disabled={!shownLinks.cardId} onPress={() => shownLinks.cardId && router.push({ pathname: '/gallery', params: { ids: shownLinks.cardId, start: '0' } })}
-                style={[s.tool, !shownLinks.cardId && { opacity: 0.35 }]}><Text style={s.toolTxt}>📖 Journal</Text></Pressable>
-              <Pressable disabled={!shownLinks.uri} onPress={() => shownLinks.uri && openWeb(shownLinks.uri)}
-                style={[s.tool, !shownLinks.uri && { opacity: 0.35 }]}><Text style={s.toolTxt}>iNaturalist ›</Text></Pressable>
+              {view === 'hex' ? (
+                <>
+                  <Pressable disabled={!shownLinks.cardId} onPress={() => shownLinks.cardId && router.push({ pathname: '/gallery', params: { ids: shownLinks.cardId, start: '0' } })}
+                    style={[s.tool, !shownLinks.cardId && { opacity: 0.35 }]}><Text style={s.toolTxt}>📖 Journal</Text></Pressable>
+                  <Pressable disabled={!shownLinks.uri} onPress={() => shownLinks.uri && openWeb(shownLinks.uri)}
+                    style={[s.tool, !shownLinks.uri && { opacity: 0.35 }]}><Text style={s.toolTxt}>iNaturalist ›</Text></Pressable>
+                </>
+              ) : (
+                <>
+                  <Pressable onPress={() => setPickOpen(pickOpen === 'month' ? null : 'month')} style={[s.tool, (!!month || pickOpen === 'month') && s.toolOn]}>
+                    <Text style={s.toolTxt}>{month ? MONTHS[month - 1] : 'Month'} {pickOpen === 'month' ? '▴' : '▾'}</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setPickOpen(pickOpen === 'year' ? null : 'year')} style={[s.tool, (!!year || pickOpen === 'year') && s.toolOn]}>
+                    <Text style={s.toolTxt}>{year ?? 'Year'} {pickOpen === 'year' ? '▴' : '▾'}</Text>
+                  </Pressable>
+                </>
+              )}
             </View>
+            {view === 'list' && pickOpen ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+                <Pressable onPress={() => { (pickOpen === 'month' ? setMonth : setYear)(null); setPickOpen(null); }} style={[s.chip, !(pickOpen === 'month' ? month : year) && s.chipOn]}><Text style={s.chipTxt}>All</Text></Pressable>
+                {pickOpen === 'month'
+                  ? months.map(m => <Pressable key={m} onPress={() => { setMonth(month === m ? null : m); setPickOpen(null); }} style={[s.chip, month === m && s.chipOn]}><Text style={s.chipTxt}>{MONTHS[m - 1]}</Text></Pressable>)
+                  : years.map(y => <Pressable key={y} onPress={() => { setYear(year === Number(y) ? null : Number(y)); setMonth(null); setPickOpen(null); }} style={[s.chip, year === Number(y) && s.chipOn]}><Text style={s.chipTxt}>{y}</Text></Pressable>)}
+              </ScrollView>
+            ) : null}
             {view === 'hex' && shownKey ? <ShownCard cells={cells} picked={shownKey} onPick={setShown} /> : null}
             {tab === 'cards' ? (earned.length === 0 ? (
               <Text style={s.empty}>
@@ -341,6 +374,11 @@ const s = StyleSheet.create({
   toolRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
   tool: { paddingVertical: 9, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: '#2a2a2a' },
   toolTxt: { fontFamily: F.sansBold, fontSize: 11.5, color: C.greenSoft },
+  toolOn: { backgroundColor: 'rgba(76,175,80,0.22)', borderColor: 'rgba(76,175,80,0.4)' },
+  chips: { gap: 7, paddingBottom: 12, paddingHorizontal: 2 },
+  chip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#2a2a2a', backgroundColor: 'rgba(255,255,255,0.04)' },
+  chipOn: { borderColor: 'rgba(76,175,80,0.5)', backgroundColor: 'rgba(76,175,80,0.2)' },
+  chipTxt: { fontFamily: F.sansMed, fontSize: 12, color: C.text },
   more: { fontFamily: F.sans, fontSize: 11.5, color: '#666', textAlign: 'center', paddingVertical: 6 },
   person: {
     flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 14, marginBottom: 8,
