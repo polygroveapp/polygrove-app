@@ -85,12 +85,23 @@ export default function Honeycomb({ cells, label, glowKey, rows = 3, picked: pic
     transform: [{ scale: 1.06 + 0.03 * pulse.value }],
   }));
   const R = Math.max(1, Math.min(rows, cells.length));
-  const cols: Comb[][] = [];
-  for (let i = 0; i < cells.length; i += R) cols.push(cells.slice(i, i + R));
+  // columns of R cells; the LAST, partial column sits in the middle rows, so
+  // its cells nest against the column before instead of dangling off the top
+  // corner (user, 2026-10-06: "always forms a honeycomb pattern so the turkey
+  // is a part of the honeycomb") — a cell in a middle row touches three
+  // neighbours to the left, a cell in the top row only one
+  const middleOut: number[] = [];
+  for (let k = 0; k < R; k++) middleOut.push(Math.floor(R / 2) + (k % 2 ? -Math.ceil(k / 2) : Math.ceil(k / 2)));
+  const cols: { c: Comb; r: number }[][] = [];
+  for (let i = 0; i < cells.length; i += R) {
+    const chunk = cells.slice(i, i + R);
+    const rowsUsed = chunk.length === R ? middleOut.map((_, k) => k) : middleOut.slice(0, chunk.length).sort((a, b) => a - b);
+    cols.push(chunk.map((c, k) => ({ c, r: rowsUsed[k] })));
+  }
   const height = (R - 1) * PITCH + H;
   const idx = cells.findIndex(c => c.key === picked);
   const cur = idx >= 0 ? cells[idx] : null;
-  const list = useRef<FlatList<Comb[]>>(null);
+  const list = useRef<FlatList<{ c: Comb; r: number }[]>>(null);
   // the comb follows the pick: whenever the picked cell changes, its column scrolls into view
   useEffect(() => {
     if (idx < 0) return;
@@ -119,7 +130,7 @@ export default function Honeycomb({ cells, label, glowKey, rows = 3, picked: pic
         removeClippedSubviews
         renderItem={({ item: col }) => (
           <View style={{ width: STEP, height, overflow: 'visible' }}>
-            {col.map((c, r) => {
+            {col.map(({ c, r }) => {
               const on = c.key === picked, gold = c.key === glowKey;
               const ring = gold ? '#FFD700' : on ? '#ffffff' : c.border;
               const cell = (
