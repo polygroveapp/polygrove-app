@@ -92,7 +92,13 @@ export default function Sightings() {
                   card: () => { const c = p.cardId ? cardById(p.cardId) : undefined; return <PolygroveCard card={c ?? partialCard(p.name, p.sci, p.facts)} sighting={{ ...p.obs, seen: p.seen }} missing={c ? undefined : p.facts?.missing ?? ALL_FACTS} />; } }, p.facts?.trophic)), [st.potential]);   // eslint-disable-line react-hooks/exhaustive-deps
   // the list on show, with ITS FIRST CARD selected until you pick another
   // (user, 2026-10-06: "automatically have the first card selected")
-  const allCells = tab === 'cards' ? earnedCombs : tab === 'waiting' ? waitingCombs : potentialCombs;
+  // SEARCH ALL OBSERVATIONS (user, 2026-10-06): a query looks across all
+  // three lists by common or scientific name; empty, the selector's list shows
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLowerCase();
+  const allCells = needle
+    ? [...earnedCombs, ...waitingCombs, ...potentialCombs].filter(c => c.name.toLowerCase().includes(needle) || (c.sub ?? '').toLowerCase().includes(needle))
+    : tab === 'cards' ? earnedCombs : tab === 'waiting' ? waitingCombs : potentialCombs;
   // THE LIST'S MONTH AND YEAR (user, 2026-10-06: "when it's on the list view
   // have the journal button be month … and iNaturalist button be year"): two
   // pickers over the dates in the list; the hexes are never filtered
@@ -200,6 +206,8 @@ export default function Sightings() {
                 { key: 'potential', label: 'Potential', n: st.potentialTotal, color: '#bbbbbb' },
               ]} />
             </View>
+            <TextInput value={query} onChangeText={setQuery} placeholder="Search your observations…" placeholderTextColor="#666"
+              autoCapitalize="none" autoCorrect={false} returnKeyType="search" clearButtonMode="while-editing" style={[s.search, { marginBottom: 10 }]} />
             <View style={s.toolRow}>
               <ViewToggle mode={view} onChange={setView} />
               {view === 'hex' ? (
@@ -229,16 +237,20 @@ export default function Sightings() {
               </ScrollView>
             ) : null}
             {view === 'hex' && shownKey ? <ShownCard cells={cells} picked={shownKey} onPick={setShown} /> : null}
-            {tab === 'cards' ? (earned.length === 0 ? (
+            {/* a search shows its matches from all three lists (and the month/year
+                filters apply to the rows — they were built but never wired to Cells) */}
+            {needle ? (cells.length === 0 ? <Text style={s.empty}>Nothing matches “{query.trim()}”.</Text>
+              : <Cells cells={cells} view={view} picked={shownKey} onPick={setShown} />) : null}
+            {!needle && tab === 'cards' ? (earned.length === 0 ? (
               <Text style={s.empty}>
                 {st.checkedAt === 0 ? 'Checking your sightings…' : 'None yet. A confirmed sighting of a species in the game becomes a card here.'}
               </Text>
-            ) : <Cells cells={earnedCombs} view={view} picked={shownKey} onPick={setShown} />) : null}
+            ) : <Cells cells={cells} view={view} picked={shownKey} onPick={setShown} />) : null}
 
-            {tab === 'waiting' ? (st.waiting.length === 0 ? <Text style={s.empty}>Nothing waiting.</Text> : (
+            {!needle && tab === 'waiting' ? (st.waiting.length === 0 ? <Text style={s.empty}>Nothing waiting.</Text> : (
               <>
                 <Text style={s.hint}>These need the iNaturalist community to agree on what they are. Tap one to see what it is, again to see the card it could be.</Text>
-                <Cells cells={waitingCombs} view={view} picked={shownKey} onPick={setShown} />
+                <Cells cells={cells} view={view} picked={shownKey} onPick={setShown} />
                 {/* the comb holds the newest 200 named down to a species; the rest of the count has not got that far */}
                 {st.waitingTotal > st.waiting.length ? (
                   <Text style={s.more}>{st.waitingTotal - st.waiting.length} more aren’t identified down to a species yet</Text>
@@ -246,10 +258,10 @@ export default function Sightings() {
               </>
             )) : null}
 
-            {tab === 'potential' ? (st.potential.length === 0 ? <Text style={s.empty}>Nothing here — everything you’ve had confirmed is a card.</Text> : (
+            {!needle && tab === 'potential' ? (st.potential.length === 0 ? <Text style={s.empty}>Nothing here — everything you’ve had confirmed is a card.</Text> : (
               <>
                 <Text style={s.hint}>You’ve seen these, but the game can’t make the card yet. Tap one to see what it is, again to see it as it could be.</Text>
-                <Cells cells={potentialCombs} view={view} picked={shownKey} onPick={setShown} />
+                <Cells cells={cells} view={view} picked={shownKey} onPick={setShown} />
                 {st.potentialTotal > st.potential.length ? <Text style={s.more}>and {st.potentialTotal - st.potential.length} more</Text> : null}
               </>
             )) : null}
