@@ -200,7 +200,8 @@ export default function Sightings() {
             {/* search above the selector (user, 2026-10-07), then the selector, then the Hexes/List switch */}
             <TextInput value={query} onChangeText={setQuery} placeholder="Search your observations…" placeholderTextColor="#666"
               autoCapitalize="none" autoCorrect={false} returnKeyType="search" clearButtonMode="while-editing" style={[s.search, { marginTop: 30, marginBottom: 0 }]} />
-            <View style={{ marginTop: 10, marginBottom: 8 }}>   {/* the switch row sits right under the selector (user, 2026-10-07) */}
+            {/* the switch row sits right under the selector (user, 2026-10-07) */}
+            <View style={{ marginTop: 10, marginBottom: 8 }}>
               <GlassSegments value={tab} onChange={setTab} items={[
                 // the counts wear the map's mark colours (user, 2026-10-06): confirmed yellow, waiting green, potential grey
                 { key: 'cards', label: 'Sightings', n: earned.length, color: C.yellow },
