@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 import HexPhoto from '../components/HexPhoto';
+import GlassSegments from '../components/GlassSegments';
 import Honeycomb, { Comb, ShownCard } from '../components/Honeycomb';
 import ViewToggle from '../components/ViewToggle';
 import { ViewMode, useViewMode } from '../lib/viewmode';
@@ -37,15 +38,14 @@ export default function Sightings() {
   const [found, setFound] = useState<{ q: string; list: Naturalist[] } | null>(null);
   const [searching, setSearching] = useState(false);
   const [pick, setPick] = useState<Naturalist | null>(null);   // the account being confirmed
-  // the three lists FOLD (user, 2026-10-05): your cards start open, the
-  // other two closed
-  const [open, setOpen] = useState<Record<'cards' | 'waiting' | 'potential', boolean>>({ cards: true, waiting: false, potential: false });
+  // ONE list at a time, chosen on a glass selector (user, 2026-10-06; the
+  // three fold-down lists before that)
+  const [tab, setTab] = useState<'cards' | 'waiting' | 'potential'>('cards');
   // ONE card shown at a time, above the combs (user, 2026-10-06): the picked
   // cell from whichever comb; the key is unique across the three
   const [shown, setShown] = useState<string | null>(null);
   // HEXES OR THE LIST (user, 2026-10-06): a switch above the combs, remembered
   const [view, setView] = useViewMode('sightings', 'hex');
-  const toggle = (k: keyof typeof open) => setOpen(o => ({ ...o, [k]: !o[k] }));
   // cards in the order you saw them, NEWEST first (user, 2026-10-05; oldest first for a minute)
   const earned = [...st.earned].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || b.at - a.at);
 
@@ -89,8 +89,10 @@ export default function Sightings() {
   const potentialCombs = useMemo<Comb[]>(() => st.potential.map(p => combOf(p.obs.photo, p.cardId, { key: p.key, name: p.name + (p.seen > 1 ? `  ×${p.seen}` : ''), sub: p.sci,
                   meta: p.why, onOpen: () => preview('potential', p.key),
                   card: () => { const c = p.cardId ? cardById(p.cardId) : undefined; return <PolygroveCard card={c ?? partialCard(p.name, p.sci, p.facts)} sighting={{ ...p.obs, seen: p.seen }} missing={c ? undefined : p.facts?.missing ?? ALL_FACTS} />; } }, p.facts?.trophic)), [st.potential]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const allCombs = [earnedCombs, waitingCombs, potentialCombs];
-  const shownIn = allCombs.find(cs => cs.some(c => c.key === shown));
+  // the list on show, with ITS FIRST CARD selected until you pick another
+  // (user, 2026-10-06: "automatically have the first card selected")
+  const cells = tab === 'cards' ? earnedCombs : tab === 'waiting' ? waitingCombs : potentialCombs;
+  const shownKey = shown && cells.some(c => c.key === shown) ? shown : cells[0]?.key ?? null;
 
   return (
     <View style={s.root}>
@@ -143,17 +145,17 @@ export default function Sightings() {
               <Pressable onPress={forgetMe} hitSlop={8} disabled={run.busy}><Text style={s.change}>Not you?</Text></Pressable>
             </View>
 
-            <View style={s.stats}>
-              <Stat n={st.earned.length} label="Cards earned" />
-              <Stat n={st.waitingTotal} label="Waiting" />
-              <Stat n={st.potentialTotal} label="Potential" />
-            </View>
-
             <Pressable onPress={() => syncSightings(true)} disabled={run.busy} style={[s.check, run.busy && { opacity: 0.6 }]}>
               {run.busy ? <ActivityIndicator color={C.text} size="small" /> : null}
               <Text style={s.checkTxt}>{run.busy ? run.step ?? 'Checking…' : 'Check for new sightings'}</Text>
             </Pressable>
             {run.err ? <Text style={s.err}>{run.err}</Text> : null}
+
+            <View style={s.stats}>
+              <Stat n={st.earned.length} label="Cards earned" />
+              <Stat n={st.waitingTotal} label="Waiting" />
+              <Stat n={st.potentialTotal} label="Potential" />
+            </View>
             {!run.busy && st.checkedAt > 0 ? (
               <Text style={s.note}>
                 {st.confirmed.toLocaleString()} confirmed sighting{st.confirmed === 1 ? '' : 's'}
@@ -169,35 +171,39 @@ export default function Sightings() {
               </View>
             ) : null}
 
-            <View style={{ alignItems: 'center', marginTop: 16 }}><ViewToggle mode={view} onChange={setView} /></View>
-            {view === 'hex' && shownIn ? <ShownCard cells={shownIn} picked={shown} onPick={setShown} /> : null}
-            <Fold label="Cards from your sightings" n={earned.length} open={open.cards} onPress={() => toggle('cards')} />
-            {open.cards && (earned.length === 0 ? (
+            <View style={{ alignItems: 'center', marginTop: 30 }}><ViewToggle mode={view} onChange={setView} /></View>
+            <View style={{ marginTop: 14, marginBottom: 14 }}>
+              <GlassSegments value={tab} onChange={setTab} items={[
+                { key: 'cards', label: 'Sightings', n: earned.length },
+                { key: 'waiting', label: 'Unconfirmed', n: st.waitingTotal },
+                { key: 'potential', label: 'Potential', n: st.potentialTotal },
+              ]} />
+            </View>
+            {view === 'hex' && shownKey ? <ShownCard cells={cells} picked={shownKey} onPick={setShown} /> : null}
+            {tab === 'cards' ? (earned.length === 0 ? (
               <Text style={s.empty}>
                 {st.checkedAt === 0 ? 'Checking your sightings…' : 'None yet. A confirmed sighting of a species in the game becomes a card here.'}
               </Text>
-            ) : <Cells cells={earnedCombs} view={view} picked={shown} onPick={setShown} />)}
+            ) : <Cells cells={earnedCombs} view={view} picked={shownKey} onPick={setShown} />) : null}
 
-            <Fold label="Waiting to be confirmed" n={st.waitingTotal} open={open.waiting} onPress={() => toggle('waiting')} />
-            {open.waiting && (st.waiting.length === 0 ? <Text style={s.empty}>Nothing waiting.</Text> : (
+            {tab === 'waiting' ? (st.waiting.length === 0 ? <Text style={s.empty}>Nothing waiting.</Text> : (
               <>
                 <Text style={s.hint}>These need the iNaturalist community to agree on what they are. Tap one to see what it is, again to see the card it could be.</Text>
-                <Cells cells={waitingCombs} view={view} picked={shown} onPick={setShown} />
+                <Cells cells={waitingCombs} view={view} picked={shownKey} onPick={setShown} />
                 {/* the comb holds the newest 200 named down to a species; the rest of the count has not got that far */}
                 {st.waitingTotal > st.waiting.length ? (
                   <Text style={s.more}>{st.waitingTotal - st.waiting.length} more aren’t identified down to a species yet</Text>
                 ) : null}
               </>
-            ))}
+            )) : null}
 
-            <Fold label="Potential cards" n={st.potentialTotal} open={open.potential} onPress={() => toggle('potential')} />
-            {open.potential && (st.potential.length === 0 ? <Text style={s.empty}>Nothing here — everything you’ve had confirmed is a card.</Text> : (
+            {tab === 'potential' ? (st.potential.length === 0 ? <Text style={s.empty}>Nothing here — everything you’ve had confirmed is a card.</Text> : (
               <>
                 <Text style={s.hint}>You’ve seen these, but the game can’t make the card yet. Tap one to see what it is, again to see it as it could be.</Text>
-                <Cells cells={potentialCombs} view={view} picked={shown} onPick={setShown} />
+                <Cells cells={potentialCombs} view={view} picked={shownKey} onPick={setShown} />
                 {st.potentialTotal > st.potential.length ? <Text style={s.more}>and {st.potentialTotal - st.potential.length} more</Text> : null}
               </>
-            ))}
+            )) : null}
           </>
         )}
 
@@ -207,16 +213,6 @@ export default function Sightings() {
       </ScrollView>
       <BottomNav active="sightings" />
     </View>
-  );
-}
-
-// a list's fold-up header: name, count, and a chevron that turns
-function Fold({ label, n, open, onPress }: { label: string; n: number; open: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={s.fold} hitSlop={6}>
-      <Text style={s.section}>{label} · {n.toLocaleString()}</Text>
-      <Text style={[s.foldChev, open && { transform: [{ rotate: '90deg' }] }]}>›</Text>
-    </Pressable>
   );
 }
 
@@ -323,12 +319,6 @@ const s = StyleSheet.create({
   note: { fontFamily: F.sans, fontSize: 11, color: '#666', textAlign: 'center', marginTop: 8, lineHeight: 16 },
   fresh: { marginTop: 10, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12, backgroundColor: 'rgba(255,225,77,0.12)', borderWidth: 1, borderColor: 'rgba(255,225,77,0.4)' },
   freshTxt: { fontFamily: F.sansBold, fontSize: 12.5, color: C.yellow, textAlign: 'center' },
-  section: { fontFamily: F.sansBold, fontSize: 11, color: '#777', textTransform: 'uppercase', letterSpacing: 1 },
-  fold: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, marginBottom: 10,
-    paddingVertical: 11, paddingHorizontal: 14, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.25)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.22)',
-  },
-  foldChev: { fontFamily: F.sansBold, fontSize: 18, color: '#777', lineHeight: 20 },
   hint: { fontFamily: F.sans, fontSize: 11.5, color: '#777', lineHeight: 16.5, marginBottom: 8 },
   empty: { fontFamily: F.sans, fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 19, paddingVertical: 14 },
   more: { fontFamily: F.sans, fontSize: 11.5, color: '#666', textAlign: 'center', paddingVertical: 6 },

@@ -13,7 +13,7 @@ import HexPhoto from '../components/HexPhoto';
 import ViewToggle from '../components/ViewToggle';
 import { useViewMode } from '../lib/viewmode';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
+import BackChevron from '../components/BackChevron';
 import Honeycomb, { Comb } from '../components/Honeycomb';
 import PolygroveCard from '../components/PolygroveCard';
 import { C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
@@ -204,7 +204,7 @@ export default function FieldNotes() {
       windowSize={7}
       extraData={owned}
       ListHeaderComponent={header}
-      contentContainerStyle={{ paddingBottom: NAV_HEIGHT + insets.bottom + 20 }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
       ListEmptyComponent={
         <View style={[s.center, { paddingTop: 40 }]}>
           <Text style={s.msg}>{cards.length === 0 ? 'Nothing journaled here yet — open a pack.' : 'No journaled cards match these filters.'}</Text>
@@ -227,7 +227,9 @@ export default function FieldNotes() {
     <View style={[s.root, { paddingTop: insets.top }]}>
       <GreenBackdrop />
       {ready && eco && !error ? body : <>{header}{body}</>}
-      <BottomNav active="none" />
+      {/* no tab bar here (user, 2026-10-06): Field Notes is a page off the camp,
+          and the ‹ in the top-left takes you back there */}
+      <BackChevron label="Back to camp" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
     </View>
   );
 }
