@@ -31,6 +31,8 @@ const TABS = [
   // observations as cards. Social — following people, buying cards — is parked.
   // A CAMERA (user, same day; the globe before), dimmed like the compass
   { id: 'sightings', icon: '📷', label: 'Sightings', href: '/sightings', dim: 0.85 },
+  // POLYGROVEDB (user, 2026-10-06): the database itself, searchable, every species' page
+  { id: 'db', icon: '🗂', label: 'PolygroveDB', href: '/db', dim: 0.85 },
 ] as const;
 
 export type Tab = typeof TABS[number]['id'] | 'none';   // 'none' = no tab lit (Field Notes)

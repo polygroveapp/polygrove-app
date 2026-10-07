@@ -51,3 +51,34 @@ export async function fieldNoteFresh(sci: string): Promise<string | null> {
   _notes[sci] = note;
   return note;
 }
+
+// THE WHOLE DOSSIER (the PolygroveDB tab's species page, 2026-10-06): every
+// row the database holds for a species, grouped by source, the way the
+// website's "Everything in the database" lists them. Wikipedia extracts are
+// left out (the card's field note already carries the lead sentence); GloBI
+// rows come back separately for the Diet section.
+export type DossierSection = { source: string; rows: { fact: string; value: string }[] };
+export async function dossierSections(sci: string): Promise<{ globi: DossierSection[]; rest: DossierSection[] }> {
+  const sh = djb2(sci);
+  _shards[sh] ||= fetch(`${BASE}/${sh}.json`).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+  const rows = (await _shards[sh])[sci] || [];
+  const by = new Map<string, { fact: string; value: string }[]>();
+  for (const [src, fact, value] of rows) {
+    if (src === 'Wikipedia extracts (sourced)') continue;
+    if (!by.has(src)) by.set(src, []);
+    by.get(src)!.push({ fact: String(fact), value: String(value ?? '') });
+  }
+  const all = [...by.entries()].map(([source, rows]) => ({ source, rows }));
+  return { globi: all.filter(s => s.source.startsWith('GloBI')), rest: all.filter(s => !s.source.startsWith('GloBI')) };
+}
+
+// RANGE BY RECORDS: every ecoregion a species is recorded in, as
+// [ecoregion id, permille of its records], descending — data/range shards,
+// keyed like the dossier
+const RANGE_BASE = 'https://polygrovedb.pages.dev/data/range';
+const _range: Record<number, Promise<Record<string, [number, number][]>>> = {};
+export async function rangeOf(sci: string): Promise<[number, number][]> {
+  const sh = djb2(sci);
+  _range[sh] ||= fetch(`${RANGE_BASE}/${sh}.json`).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+  return (await _range[sh])[sci] || [];
+}
