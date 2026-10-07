@@ -26,7 +26,10 @@ export const TROPHIC_COLOR: Record<string, string> = {
 export const TROPHIC_ORDER = ['Producer', 'Decomposer', 'Herbivore', 'Omnivore', 'Carnivore'];
 
 // the demo's Geology Mastery System (App.jsx MASTERY) — one tier per quiz
-// level cleared; every journaled card starts at Clay
+// level cleared. A card starts with NO tier (user, 2026-10-06: a card read
+// "Solar" with the Solar question never answered — the six tiers were being
+// spread over scores 0–5); Clay is the first question answered right, Solar
+// the sixth.
 export const MASTERY = [
   { key: 'clay', label: 'Clay', colors: ['#8B5A3C', '#A67B5B', '#8B5A3C'], border: '#A67B5B', glow: 'rgba(166,123,91,0.3)' },
   { key: 'limestone', label: 'Limestone', colors: ['#B8B8A0', '#D4D4BC', '#B8B8A0'], border: '#D4D4BC', glow: 'rgba(212,212,188,0.3)' },
@@ -35,8 +38,12 @@ export const MASTERY = [
   { key: 'serpentinite', label: 'Serpentinite', colors: ['#2D5A27', '#4AE040', '#1B8A3E'], border: '#4AE040', glow: 'rgba(74,224,64,0.45)' },
   { key: 'solar', label: 'Solar', colors: ['#F5A623', '#FFD700', '#FF8C00'], border: '#FFD700', glow: 'rgba(255,215,0,0.5)' },
 ] as const;
-export const getTier = (score: number) => MASTERY[Math.min(score, MASTERY.length - 1)];
-export const getLevel = (score: number) => Math.min(score, MASTERY.length - 1);
+export const NO_TIER = { key: 'none', label: 'No level', colors: ['#2a2a2a', '#3a3a3a', '#2a2a2a'], border: '#555555', glow: 'rgba(80,80,80,0.3)' } as const;
+export type Tier = typeof MASTERY[number] | typeof NO_TIER;
+export const ALL_TIERS: readonly Tier[] = [NO_TIER, ...MASTERY];
+/** questions answered right at least once → 0 (none) … 6 (Solar) */
+export const getLevel = (score: number) => Math.max(0, Math.min(score, MASTERY.length));
+export const getTier = (score: number): Tier => (getLevel(score) === 0 ? NO_TIER : MASTERY[getLevel(score) - 1]);
 
 export const F = {
   display: 'DelaGothicOne_400Regular',

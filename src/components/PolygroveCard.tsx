@@ -65,7 +65,11 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
   const router = useRouter();
   // THE STAR (user, 2026-10-06): a tap on either face's ☆ stars the card for
   // the journal's star filter; it takes the tap, so the card does not flip
-  const starred = useStars().has(card.id);
+  // on a quiz card the star is hidden and inert — a starred card would give
+  // away which is yours (user, 2026-10-06)
+  const stars = useStars();
+  const starred = !hideNames && stars.has(card.id);
+  const star = () => { if (!hideNames) toggleStar(card.id); };
   const flip = useSharedValue(0);
   const [flipped, setFlipped] = useState(false);
   const [srcPop, setSrcPop] = useState<{ label: string; source: string; confidence: string } | null>(null);
@@ -141,7 +145,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
         <View style={s.site}>
           <Text style={s.siteGlyph}>⚑</Text>
           <Text style={s.siteMid}>polygrove.io</Text>
-          <Pressable onPress={() => toggleStar(card.id)} hitSlop={10}><Text style={[s.siteGlyph, starred && s.starOn]}>{starred ? '★' : '☆'}</Text></Pressable>
+          <Pressable onPress={star} hitSlop={10} disabled={hideNames}><Text style={[s.siteGlyph, starred && s.starOn]}>{starred ? '★' : '☆'}</Text></Pressable>
         </View>
         {/* the demo's photo field (user, 2026-09-26): full-bleed near-black with
             a radial accent glow behind the hex */}
@@ -192,7 +196,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
             <Text style={s.name} numberOfLines={1}>{card.name}</Text>
             <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
           </View>
-          <Pressable onPress={() => toggleStar(card.id)} hitSlop={10}><Text style={[s.ico, starred && s.starOn]}>{starred ? '★' : '☆'}</Text></Pressable>
+          <Pressable onPress={star} hitSlop={10} disabled={hideNames}><Text style={[s.ico, starred && s.starOn]}>{starred ? '★' : '☆'}</Text></Pressable>
         </View>
         <View style={s.row}>
           <Box k="Trophic level" v={card.trophic || '?'} vColor={tc} missing={lacks('feeding')}

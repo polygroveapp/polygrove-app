@@ -7,10 +7,10 @@
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { Easing, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, SharedValue, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import HexPhoto from '../../components/HexPhoto';
 import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -144,8 +144,8 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
               <View style={{ flexDirection: 'row', gap: 3 }}>
                 {MASTERY.map((m, i) => (
                   <View key={m.key} style={[s.dot, {
-                    backgroundColor: i <= getLevel(score) ? m.colors[1] : '#222',
-                    borderColor: i <= getLevel(score) ? m.border : '#333',
+                    backgroundColor: i < getLevel(score) ? m.colors[1] : '#222',
+                    borderColor: i < getLevel(score) ? m.border : '#333',
                   }, i === level && { borderWidth: 2, borderColor: m.border, transform: [{ scale: 1.25 }] }]} />
                 ))}
               </View>
@@ -176,7 +176,11 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
 
         {q ? (
           <Question key={q.type === 'pick' ? `${level}-${round}` : `${level}-${attempt}-${round}`} q={q} card={card} done={result !== null} onAnswer={onAnswer}
-            onReshuffle={() => setAttempt(a => a + 1)} />
+            // a wrong pick RESTARTS THE LADDER (user, 2026-10-06: "it didn't bring
+            // me back to the beginning"): once the hand has dropped out of sight,
+            // the questions re-roll and the level snaps to the first unlocked one
+            // — only re-asking the pick when it is the only question left
+            onReshuffle={() => { setAttempt(a => a + 1); if (!locked) setProgress(nextUnlocked(effCounts, 0)); }} />
         ) : (
           <Text style={s.msg}>This card has no more questions.</Text>
         )}
@@ -223,12 +227,18 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
   const [picked, setPicked] = useState<string | null>(null);
   const [shuffling, setShuffling] = useState(false);
   const [wrongTick, setWrongTick] = useState(0);   // resets the button after a shuffle
-  const tx = useSharedValue(0);
-  const ty = useSharedValue(0);        // the whole hand of cards, dropping off the bottom
+  // ONE FLUID MOTION (user, 2026-10-06: "make it fluid like you're flipping
+  // through cards in one motion"): the hand's position is a fractional index
+  // that follows the finger, then springs to the nearest card, carried on by
+  // the fling's speed — no snap-back-and-jump
   const n = q.cards.length;
+  const pos = useSharedValue(1);
+  const start = useSharedValue(1);
+  const ty = useSharedValue(0);        // the whole hand of cards, dropping off the bottom
   const cardSize = { width: Math.min(Math.round(win.width * 0.78), 320), height: Math.min(520, Math.round(win.height * 0.56)) };
   const step = cardSize.width + 18;
-  const go = (i: number) => setIdx(Math.max(0, Math.min(n - 1, i)));
+  const SNAP = { damping: 22, stiffness: 190, mass: 0.7 };
+  const go = (i: number) => { const t = Math.max(0, Math.min(n - 1, i)); pos.value = withSpring(t, SNAP); setIdx(t); };
   // a wrong pick (user, 2026-09-26): the three drop off the bottom of the
   // screen together as if into your hands, the order re-rolls while they're
   // out of sight, then they rise back and land on the middle card
@@ -241,7 +251,7 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
   };
   const afterDrop = () => {
     onReshuffle();          // new seed → new order, while hidden
-    setIdx(1);
+    pos.value = 1; setIdx(1);
     setPicked(null);
     setWrongTick(t => t + 1);
     ty.value = withDelay(120, withTiming(0, { duration: 460, easing: Easing.out(Easing.cubic) }, d => {
@@ -250,14 +260,19 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
   };
   const pan = Gesture.Pan()
     .enabled(!shuffling && !done)
-    .activeOffsetX([-12, 12])
-    .onChange(e => { tx.value = e.translationX; })
-    .onEnd(() => {
-      const d = tx.value < -50 ? 1 : tx.value > 50 ? -1 : 0;
-      if (d !== 0) runOnJS(go)(idx + d);
-      tx.value = withSpring(0, { damping: 18, stiffness: 170 });
+    .activeOffsetX([-8, 8])
+    .onStart(() => { start.value = pos.value; })
+    .onChange(e => {
+      const raw = start.value - e.translationX / step;
+      // a soft wall past the first and last card
+      pos.value = raw < 0 ? raw * 0.35 : raw > n - 1 ? n - 1 + (raw - (n - 1)) * 0.35 : raw;
+    })
+    .onEnd(e => {
+      const target = Math.max(0, Math.min(n - 1, Math.round(pos.value - (e.velocityX / step) * 0.25)));
+      pos.value = withSpring(target, { ...SNAP, velocity: -e.velocityX / step });
+      runOnJS(setIdx)(target);
     });
-  const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }, { translateY: ty.value }] }));
+  const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateY: ty.value }] }));
   const cur = q.cards[idx];
   const targetCard = q.cards.find(c => c.key === 'correct')?.card;
   const target = targetCard ? { name: targetCard.name, sci: targetCard.sci } : undefined;
@@ -279,17 +294,15 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
       <GestureDetector gesture={pan}>
         <Animated.View style={[{ height: cardSize.height, alignItems: 'center' }, dragStyle]}>
           {q.cards.map((c, i) => {
-            const diff = i - idx;
             const v = verdict(c.key);
             return (
-              <View key={c.key} pointerEvents={diff === 0 ? 'auto' : 'none'}
-                style={[cardSize, { position: 'absolute', top: 0, transform: [{ translateX: diff * step }] },
-                  v ? { borderRadius: 22, borderWidth: 3, borderColor: v } : null]}>
+              <Slot key={c.key} i={i} pos={pos} step={step} active={i === idx}
+                style={[cardSize, v ? { borderRadius: 22, borderWidth: 3, borderColor: v } : null]}>
                 {/* all three claim the card in question's name + scientific name,
                     each with a "?" (user, 2026-09-28; was ??? / · · ·) — the tell
                     is the photo and the field note, never the name */}
                 <PolygroveCard card={c.card} noteFrom={c.noteFrom} nameAs={done ? undefined : target} />
-              </View>
+              </Slot>
             );
           })}
         </Animated.View>
@@ -302,6 +315,12 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
       )}
     </View>
   );
+}
+
+// one card of the hand, placed by the hand's fractional position
+function Slot({ i, pos, step, active, style, children }: { i: number; pos: SharedValue<number>; step: number; active: boolean; style: StyleProp<ViewStyle>; children: ReactNode }) {
+  const at = useAnimatedStyle(() => ({ transform: [{ translateX: (i - pos.value) * step }] }));
+  return <Animated.View pointerEvents={active ? 'auto' : 'none'} style={[{ position: 'absolute', top: 0 }, style, at]}>{children}</Animated.View>;
 }
 
 // the gold "This is my card" button: on a wrong pick it fades to red and

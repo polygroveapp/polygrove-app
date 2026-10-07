@@ -11,7 +11,7 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { SharedValue, runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { F } from '../constants/polygrove';
 import { Frame } from '../lib/catalog';
 import HexThumb from './HexThumb';
@@ -37,36 +37,47 @@ const PITCH = H * 0.75 + GAP / 2, STEP = W + GAP;
 export function ShownCard({ cells, picked, onPick }: { cells: Comb[]; picked: string | null; onPick: (key: string | null) => void }) {
   const win = useWindowDimensions();
   const idx = cells.findIndex(c => c.key === picked);
-  const cur = idx >= 0 ? cells[idx] : null;
-  const tx = useSharedValue(0);
-  const step = (d: number) => {
-    const n = cells.findIndex(c => c.key === picked) + d;
-    if (n >= 0 && n < cells.length) onPick(cells[n].key);
-  };
-  const pan = Gesture.Pan()
-    .activeOffsetX([-14, 14])
-    .onChange(e => { tx.value = e.translationX; })
-    .onEnd(() => {
-      const d = tx.value < -50 ? 1 : tx.value > 50 ? -1 : 0;
-      if (d !== 0) runOnJS(step)(d);
-      tx.value = withSpring(0, { damping: 18, stiffness: 170 });
-    });
-  const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
-  // as tall as the gallery gives a card: shorter and the back's "Tap card to
-  // flip" fell off the bottom (user, 2026-10-06)
   const cardSize = { width: Math.min(win.width - 48, 340), height: Math.min(530, Math.round(win.height * 0.61)) };
-  if (!cur) return null;
+  const step = cardSize.width + 18;
+  // ONE FLUID MOTION (user, 2026-10-06): the row's position is a fractional
+  // index that follows the finger and springs to the nearest card, carried
+  // on by the fling — the neighbours ride alongside, as in a hand of cards
+  const pos = useSharedValue(Math.max(0, idx));
+  const start = useSharedValue(0);
+  const SNAP = { damping: 22, stiffness: 190, mass: 0.7 };
+  const land = (t: number) => { if (cells[t]) onPick(cells[t].key); };
+  const n = cells.length;
+  const pan = Gesture.Pan()
+    .activeOffsetX([-8, 8])
+    .onStart(() => { start.value = pos.value; })
+    .onChange(e => {
+      const raw = start.value - e.translationX / step;
+      pos.value = raw < 0 ? raw * 0.35 : raw > n - 1 ? n - 1 + (raw - (n - 1)) * 0.35 : raw;
+    })
+    .onEnd(e => {
+      const target = Math.max(0, Math.min(n - 1, Math.round(pos.value - (e.velocityX / step) * 0.25)));
+      pos.value = withSpring(target, { ...SNAP, velocity: -e.velocityX / step });
+      runOnJS(land)(target);
+    });
+  // the comb picked a new cell (a tap): glide there
+  useEffect(() => { if (idx >= 0 && Math.abs(pos.value - idx) > 0.001) pos.value = withSpring(idx, SNAP); }, [idx]);   // eslint-disable-line react-hooks/exhaustive-deps
+  if (idx < 0) return null;
+  // the card on show and up to two neighbours each side: enough to fill a fling
+  const lo = Math.max(0, idx - 2), hi = Math.min(n - 1, idx + 2);
+  const slots: ReactNode[] = [];
+  for (let i = lo; i <= hi; i++) slots.push(<Slot key={cells[i].key} i={i} pos={pos} step={step} active={i === idx} size={cardSize}>{cells[i].card?.()}</Slot>);
   return (
     <View style={s.cardWrap}>
-      {cur.card ? (
-        <GestureDetector gesture={pan}>
-          <Animated.View style={[cardSize, dragStyle]}>
-            {cur.card()}
-          </Animated.View>
-        </GestureDetector>
-      ) : null}
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[cardSize, { overflow: 'visible' }]}>{slots}</Animated.View>
+      </GestureDetector>
     </View>
   );
+}
+
+function Slot({ i, pos, step, active, size, children }: { i: number; pos: SharedValue<number>; step: number; active: boolean; size: { width: number; height: number }; children: ReactNode }) {
+  const at = useAnimatedStyle(() => ({ transform: [{ translateX: (i - pos.value) * step }] }));
+  return <Animated.View pointerEvents={active ? 'auto' : 'none'} style={[size, { position: 'absolute', top: 0, left: 0 }, at]}>{children}</Animated.View>;
 }
 
 // glowKey: the fresh Solar card (the journal's gold pulse) — picked at the start.

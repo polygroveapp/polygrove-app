@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackChevron from '../components/BackChevron';
 import Honeycomb, { Comb } from '../components/Honeycomb';
 import PolygroveCard from '../components/PolygroveCard';
-import { C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
+import { ALL_TIERS, C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
 import { Card, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection } from '../lib/collection';
 import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
@@ -68,7 +68,7 @@ export default function FieldNotes() {
   const groups = useMemo(() => [...new Set(cards.map(c => c.group))].sort(), [cards]);
   const trophics = useMemo(() => TROPHIC_ORDER.filter(t => cards.some(c => c.trophic === t)), [cards]);
   // no "Undiscovered" option — a screen of identical ? tiles says nothing
-  const levelOpts = MASTERY.map(m => ({ key: m.key, label: m.label }));
+  const levelOpts = ALL_TIERS.map(m => ({ key: m.key, label: m.label }));
   type Sel = { level: string | null; group: string | null; trophic: string | null; stars: boolean };
   const matches = (c: Card, sel: Sel) => {
     if (sel.stars && !stars.has(c.id)) return false;
@@ -132,7 +132,7 @@ export default function FieldNotes() {
       </Animated.View>
       <View style={s.filterRow}>
         <FilterBtn label="Level" value={level ? levelOpts.find(o => o.key === level)?.label : undefined}
-          color={level ? MASTERY.find(m => m.key === level)?.border : undefined} count={rows.length}
+          color={level ? ALL_TIERS.find(m => m.key === level)?.border : undefined} count={rows.length}
           open={open === 'level'} onPress={() => setOpen(open === 'level' ? null : 'level')} />
         <FilterBtn label="Role" value={trophic ?? undefined} color={trophic ? TROPHIC_COLOR[trophic] : undefined} count={rows.length}
           open={open === 'trophic'} onPress={() => setOpen(open === 'trophic' ? null : 'trophic')} />
@@ -147,7 +147,7 @@ export default function FieldNotes() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
           {open === 'level' && <>
             <Chip label="All" count={countIf({ level: null })} on={!level} onPress={() => setLevel(null)} />
-            {MASTERY.map(m => <Chip key={m.key} label={m.label} count={countIf({ level: m.key })} on={level === m.key} color={m.border} onPress={() => setLevel(level === m.key ? null : m.key)} />)}
+            {ALL_TIERS.map(m => <Chip key={m.key} label={m.label} count={countIf({ level: m.key })} on={level === m.key} color={m.border} onPress={() => setLevel(level === m.key ? null : m.key)} />)}
           </>}
           {open === 'group' && <>
             <Chip label="All" count={countIf({ group: null })} on={!group} onPress={() => setGroup(null)} />
@@ -322,7 +322,7 @@ function Cell({ card, onPress, glow = false }: { card: Card; onPress: () => void
         </Text>
         <View style={{ flexDirection: 'row', gap: 2 }}>
           {MASTERY.map((m, i) => (
-            <View key={m.key} style={[s.dot, { backgroundColor: journaled && i <= getLevel(score) ? m.border : '#222222' }]} />
+            <View key={m.key} style={[s.dot, { backgroundColor: journaled && i < getLevel(score) ? m.border : '#222222' }]} />
           ))}
         </View>
       </View>

@@ -1,7 +1,8 @@
 // Per-card mastery — the demo's "skip-if-2-correct" mechanic (App.jsx
 // questionCounts/scores), keyed by species_id. Each card has six questions
 // (one per Geology tier); a question LOCKS after 2 correct answers. The tier
-// = how many questions have been answered right at least once; Solar = all six.
+// = how many questions have been answered right at least once (0 = no tier,
+// Clay = 1 … Solar = all six).
 // Sol: +1 when a non-Solar question locks, +5 the first time a card goes Solar.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -72,7 +73,7 @@ export function recordCorrect(sid: number, level: number): Advance {
 export function masteryPct(sids: number[]) {
   if (!sids.length) return 0;
   const sum = sids.reduce((s, sid) => s + getLevel(scoreOf(sid)), 0);
-  return Math.round((sum / sids.length) * 20);
+  return Math.round((sum / (sids.length * NUM_Q)) * 100);
 }
 
 // subscribe: returns a version number that changes on every update

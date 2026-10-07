@@ -136,7 +136,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     // the deck (unjournaled cards count as nothing), 0..1 — and GOLD once
     // every card is Solar (completed: gold border + gold inside). Known once
     // the catalog has loaded.
-    const top = MASTERY.length - 1;
+    const top = MASTERY.length;   // 6: a card's level runs 0 (none) … 6 (Solar)
     const progress: Record<number, number> = {};
     if (catalogReady) for (const eid of collected) {
       const deck = ecoMembers(eid);
