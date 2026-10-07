@@ -33,6 +33,7 @@ import BottomNav, { NAV_HEIGHT } from './BottomNav';
 import { C, F, getLevel, MASTERY } from '../constants/polygrove';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import { loadSightings, niceDate, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
+import { setPin } from '../lib/pin';
 import { Spot, observation } from '../lib/inatPublic';
 import { ecoregionAt } from '../lib/locate';
 import { getCards, loadCatalog } from '../lib/catalog';
@@ -156,6 +157,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
       const deck = ecoMembers(eid);
       if (!deck.length) continue;
       progress[eid] = deck.reduce((n, c) => n + getLevel(scoreOf(c.species_id)), 0) / (deck.length * top);
+      if (eid === current?.eid) progress[eid] = 1;   // TEMP PREVIEW (user, 2026-10-06: 'keep the gold up for a while') — not committed
     }
     const completed = collected.filter(eid => (progress[eid] ?? 0) >= 1);
     const state = JSON.stringify({ current: current?.eid ?? null, camp: current?.eid ?? null, collected, completed, progress, fly, pad: { top: padTop, bottom: padBottom } });
@@ -278,10 +280,14 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   }));
 
   const onMessage = (e: WebViewMessageEvent) => {
-    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox']; dx?: number; dy?: number; ids?: unknown[]; ok?: number; marks?: unknown[] };
+    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox']; dx?: number; dy?: number; ids?: unknown[]; ok?: number; marks?: unknown[]; lng?: number; lat?: number };
     try { m = JSON.parse(e.nativeEvent.data); } catch { return; }
     if (m.type === 'ready') setPageReady(true);
-    if (m.type === 'center') setPick(m.eid != null && m.name && m.bbox ? { eid: m.eid, name: m.name, bbox: m.bbox } : null);
+    if (m.type === 'center') {
+      setPick(m.eid != null && m.name && m.bbox ? { eid: m.eid, name: m.name, bbox: m.bbox } : null);
+      // the pin's spot, for the PolygroveDB tab's "near the pin" ranking (2026-10-06)
+      if (typeof m.lng === 'number' && typeof m.lat === 'number') setPin({ lng: m.lng, lat: m.lat, eid: m.eid ?? null, name: m.name });
+    }
     if (m.type === 'pan' && typeof m.dx === 'number' && typeof m.dy === 'number') onPan(m.dx, m.dy);
     if (m.type === 'mark' && Array.isArray(m.ids)) onMark(m.ids.map(Number).filter(Boolean), Number(m.ok ?? 1), Array.isArray(m.marks) ? (m.marks as Under[]).filter(u => u && Number.isFinite(u.id)) : undefined);
     if (m.type === 'under' && Array.isArray(m.marks)) { setUnder((m.marks as Under[]).filter(u => u && Number.isFinite(u.id))); setUnderAt(0); }

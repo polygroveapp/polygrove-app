@@ -7,16 +7,17 @@
 
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
+import GlassSegments from '../components/GlassSegments';
 import HexThumb from '../components/HexThumb';
 import { C, F, TROPHIC_COLOR, TROPHIC_ORDER } from '../constants/polygrove';
 import { Card, getCards, loadCatalog, photoFor } from '../lib/catalog';
-import { ecoMembers, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { ecoRanking, pinRanking } from '../lib/nearby';
+import { usePin } from '../lib/pin';
 import { useStars } from '../lib/stars';
 
 const PAGE = 60;
@@ -31,7 +32,23 @@ export default function PolygroveDB() {
   const [q, setQ] = useState('');
   const [group, setGroup] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
-  const [campOnly, setCampOnly] = useState(false);
+  // ALL · PIN · TENT (user, 2026-10-06: "the pin matters"): all species; the
+  // ones most likely to be seen near the pin, most-recorded first; the ones
+  // most likely in your camp's ecoregion, likewise — a sliding glass pill
+  const [where, setWhere] = useState<'all' | 'pin' | 'tent'>('all');
+  const pin = usePin();
+  const [rankFor, setRankFor] = useState<{ key: string; rank: Map<string, number> } | null>(null);
+  const rankKey = where === 'pin' && pin ? `pin:${pin.lng.toFixed(1)},${pin.lat.toFixed(1)}` : where === 'tent' && eco ? `tent:${eco.eid}` : '';
+  useEffect(() => {
+    if (!rankKey) return;
+    let on = true;
+    const p = rankKey.startsWith('pin:') && pin ? pinRanking(pin.lng, pin.lat) : eco ? ecoRanking(eco.eid) : Promise.resolve([] as [string, number][]);
+    p.then(list => { if (on) setRankFor({ key: rankKey, rank: new Map(list) }); }).catch(() => { if (on) setRankFor({ key: rankKey, rank: new Map() }); });
+    return () => { on = false; };
+  }, [rankKey]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const rank = rankFor && rankFor.key === rankKey ? rankFor.rank : null;
+  const ranking = rankKey !== '';            // a Pin or Tent view is asked for
+  const rankLoading = ranking && rank === null;
   // STARRED ONLY (user, 2026-10-06: 'stars apply throughout the app') — the same stars the journal uses
   const [starsOnly, setStarsOnly] = useState(false);
   const stars = useStars();
@@ -43,33 +60,32 @@ export default function PolygroveDB() {
   const groups = useMemo(() => [...new Set(cards.map(c => c.group))].sort(), [cards]);
   const needle = q.trim().toLowerCase();
   const rows = useMemo(() => {
-    const camp = campOnly && eco ? new Set(ecoMembers(eco.eid).map(c => c.id)) : null;
     const out: Card[] = [];
     for (const c of cards) {
       if (group && c.group !== group) continue;
       if (role && c.trophic !== role) continue;
-      if (camp && !camp.has(c.id)) continue;
+      if (ranking && !(rank && rank.has(c.id))) continue;
       if (starsOnly && !stars.has(c.id)) continue;
       if (needle && !c.name.toLowerCase().includes(needle) && !c.sci.toLowerCase().includes(needle)) continue;
       out.push(c);
     }
-    return out.sort((a, b) => a.name.localeCompare(b.name));
-  }, [cards, group, role, campOnly, starsOnly, stars, eco, needle]);
+    // Pin and Tent: most-recorded first; All: by name
+    return ranking && rank ? out.sort((a, b) => (rank.get(b.id) ?? 0) - (rank.get(a.id) ?? 0)) : out.sort((a, b) => a.name.localeCompare(b.name));
+  }, [cards, group, role, ranking, rank, starsOnly, stars, needle]);
   const countIf = (patch: { group?: string | null; role?: string | null }) => {
     const g = patch.group !== undefined ? patch.group : group, r = patch.role !== undefined ? patch.role : role;
-    const camp = campOnly && eco ? new Set(ecoMembers(eco.eid).map(c => c.id)) : null;
     let n = 0;
     for (const c of cards) {
       if (g && c.group !== g) continue;
       if (r && c.trophic !== r) continue;
-      if (camp && !camp.has(c.id)) continue;
+      if (ranking && !(rank && rank.has(c.id))) continue;
       if (starsOnly && !stars.has(c.id)) continue;
       if (needle && !c.name.toLowerCase().includes(needle) && !c.sci.toLowerCase().includes(needle)) continue;
       n++;
     }
     return n;
   };
-  const filterKey = `${needle}|${group}|${role}|${campOnly}|${starsOnly}`;
+  const filterKey = `${needle}|${group}|${role}|${rankKey}|${where}|${starsOnly}`;
   const shown = shownBy.key === filterKey ? shownBy.n : PAGE;
 
   const header = (
@@ -81,6 +97,17 @@ export default function PolygroveDB() {
       {/* the filters as Field Notes has them (user, 2026-10-06): dropdown
           boxes — label, count, value ▾ — the open one's options as chips
           below, and a box for "in your camp" */}
+      <View style={{ marginBottom: 12 }}>
+        <GlassSegments value={where} onChange={setWhere} items={[
+          { key: 'all', label: 'All' },
+          { key: 'pin', label: '📍 Pin' },
+          { key: 'tent', label: '⛺ Tent' },
+        ]} />
+      </View>
+      {where === 'pin' && !pin ? <Text style={s.hint}>Move the pin on the Map tab first — this lists what is seen near it.</Text> : null}
+      {where === 'tent' && !eco ? <Text style={s.hint}>Choose a camp first — this lists what is seen in its ecoregion.</Text> : null}
+      {where === 'pin' && pin ? <Text style={s.hint}>Most likely to be seen near the pin{pin.name ? ` · ${pin.name}` : ''}</Text> : null}
+      {where === 'tent' && eco ? <Text style={s.hint}>Most likely to be seen in {eco.name}</Text> : null}
       <View style={s.filterRow}>
         <FilterBtn label="Role" value={role ?? undefined} color={role ? TROPHIC_COLOR[role] : undefined} count={rows.length}
           open={open === 'role'} onPress={() => setOpen(open === 'role' ? null : 'role')} />
@@ -88,19 +115,6 @@ export default function PolygroveDB() {
           open={open === 'group'} onPress={() => setOpen(open === 'group' ? null : 'group')} />
         {/* the camp box in the tab bar's liquid glass (user, 2026-10-06): a frosted
             tile, and when on, the green-glass thumb with its top shine */}
-        <Pressable onPress={() => eco && setCampOnly(v => !v)} accessibilityRole="button" accessibilityLabel="In your camp only" style={s.glassWrap}>
-          <View style={[s.glass, campOnly && s.glassOn]}>
-            {/* transparent glass (user, 2026-10-06): a light blur, a faint sheen, no fill — the green only when on */}
-            <BlurView intensity={18} tint="light" style={StyleSheet.absoluteFill} />
-            <LinearGradient
-              colors={campOnly ? ['rgba(129,199,132,0.34)', 'rgba(76,175,80,0.12)', 'rgba(255,255,255,0.06)'] : ['rgba(255,255,255,0.10)', 'rgba(255,255,255,0.0)', 'rgba(255,255,255,0.05)']}
-              locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-            <View style={s.glassShine} />
-            <View style={s.glassRim} />
-            {/* the tent itself see-through (user, 2026-10-06) */}
-            <Text style={[s.campBtnTxt, { opacity: campOnly ? 0.75 : 0.45 }]}>⛺</Text>
-          </View>
-        </Pressable>
         <Pressable onPress={() => setStarsOnly(v => !v)} accessibilityRole="button" accessibilityLabel="Starred species only"
           style={[s.filterBtn, s.campBtn, starsOnly && { borderColor: `${C.yellow}80`, backgroundColor: `${C.yellow}1f` }]}>
           <Text style={[s.campBtnTxt, { fontSize: 22, lineHeight: 26 }, starsOnly && { color: C.yellow }]}>{starsOnly ? '★' : '☆'}</Text>
@@ -139,7 +153,7 @@ export default function PolygroveDB() {
           windowSize={7}
           onEndReachedThreshold={0.6}
           onEndReached={() => setShownBy(prev => ({ key: filterKey, n: Math.min(rows.length, (prev.key === filterKey ? prev.n : PAGE) + PAGE) }))}
-          ListEmptyComponent={ready ? <Text style={s.msg}>No species match.</Text> : <ActivityIndicator color={C.green} style={{ marginTop: 40 }} />}
+          ListEmptyComponent={!ready || rankLoading ? <ActivityIndicator color={C.green} style={{ marginTop: 40 }} /> : <Text style={s.msg}>No species match.</Text>}
           renderItem={({ item: c }) => {
             const tc = TROPHIC_COLOR[c.trophic] || C.greenSoft;
             return (
@@ -199,12 +213,7 @@ const s = StyleSheet.create({
   filterValue: { fontFamily: F.sansMed, fontSize: 12.5, color: C.text, marginTop: 1 },
   campBtn: { flex: 0, width: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 0 },
   campBtnTxt: { fontSize: 20, lineHeight: 24, color: '#777' },
-  // the tab bar's thumb, as a box: frosted glass, a soft gradient, the top shine, a rim and a drop shadow
-  glassWrap: { width: 52, shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
-  glass: { flex: 1, borderRadius: 999, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
-  glassOn: { backgroundColor: 'rgba(76,175,80,0.06)' },
-  glassShine: { position: 'absolute', top: 0, left: 12, right: 12, height: 1.5, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
-  glassRim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  hint: { fontFamily: F.sans, fontSize: 11.5, color: '#777', textAlign: 'center', marginBottom: 10 },
   chips: { gap: 7, paddingBottom: 12, paddingRight: 8 },
   chip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)' },
   chipOn: { borderColor: '#666666', backgroundColor: 'rgba(255,255,255,0.1)' },
