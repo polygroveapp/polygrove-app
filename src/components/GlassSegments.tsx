@@ -21,7 +21,9 @@ export default function GlassSegments<K extends string>({ items, value, onChange
   const idx = Math.max(0, items.findIndex(i => i.key === value));
   const x = useSharedValue(0);
   useEffect(() => { x.value = withSpring(idx, { damping: 16, stiffness: 170, mass: 0.6 }); }, [idx, x]);
-  const thumb = useAnimatedStyle(() => ({ transform: [{ translateX: PAD + x.value * slot }], width: slot }));
+  // `slot` is listed by hand: with the React Compiler on, the worklet kept the
+  // first render's 0 and the thumb drew as a sliver (2026-10-06)
+  const thumb = useAnimatedStyle(() => ({ transform: [{ translateX: PAD + x.value * slot }], width: slot }), [slot]);
   return (
     <BlurView intensity={28} tint="dark" blurMethod="dimezisBlurView" style={s.track} onLayout={e => setW(e.nativeEvent.layout.width)}>
       {slot > 0 ? (
