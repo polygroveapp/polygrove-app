@@ -15,7 +15,7 @@ import {
   Card, Frame, cardById, framingFor, loadCatalog, photoRemote, registerOfflineCard, unregisterLocalPhoto,
 } from './catalog';
 import { allOwned, loadCollection, owns, ownsAnywhere } from './collection';
-import { GlobiRow, fieldNote, globiRecords, seedDossier } from './dossier';
+import { GlobiRow, fieldNote, fieldNoteFresh, globiRecords, seedDossier } from './dossier';
 import { currentEco, ecoMembers, loadCurrentEco } from './ecoregions';
 
 export type Stashed = {
@@ -85,8 +85,33 @@ export function offlineReady() {
     Object.values(_snaps).forEach(register);
     const eco = await loadCurrentEco();
     if (eco) await loadQueue(eco.eid);
+    refreshNotes();   // in the background, when online
   })();
   return _init;
+}
+
+// FIELD NOTES CAN CHANGE (2026-10-06: the database re-picked every card's
+// sentence, and journaled cards kept showing the old one from their
+// snapshot). Once every 6 hours, each snapshot's note is compared with the
+// live shard and rewritten when it differs — one shard fetch per species
+// group, nothing while offline.
+const REFRESH_KEY = 'polygrove.notes.refreshedAt';
+const REFRESH_MS = 6 * 60 * 60 * 1000;
+async function refreshNotes() {
+  try {
+    const last = Number((await AsyncStorage.getItem(REFRESH_KEY)) || 0);
+    if (Date.now() - last < REFRESH_MS) return;
+    let changed = 0;
+    for (const s of Object.values(_snaps)) {
+      const fresh = await fieldNoteFresh(s.card.sci);
+      if (fresh !== null && fresh !== s.note) {
+        s.note = fresh; changed++;
+        await AsyncStorage.setItem(snapKey(s.card.species_id), JSON.stringify(s));
+      }
+    }
+    await AsyncStorage.setItem(REFRESH_KEY, String(Date.now()));
+    if (changed) console.log(`[offline] refreshed ${changed} field notes`);
+  } catch { /* offline — next launch */ }
 }
 
 export const packsReady = (eid: number) => Math.floor((_queues[eid]?.length || 0) / PACK_SIZE);

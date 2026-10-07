@@ -38,6 +38,10 @@ export async function globiRecords(sci: string): Promise<GlobiRow[]> {
 
 export async function fieldNote(sci: string): Promise<string | null> {
   if (sci in _notes) return _notes[sci];
+  return fieldNoteFresh(sci);
+}
+/** the note as the live shard has it now — past any seeded/snapshotted value */
+export async function fieldNoteFresh(sci: string): Promise<string | null> {
   const sh = djb2(sci);
   _shards[sh] ||= fetch(`${BASE}/${sh}.json`).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
   const shard = await _shards[sh];

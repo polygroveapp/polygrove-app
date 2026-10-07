@@ -142,11 +142,14 @@ export default function FieldNotes() {
 
   const filterBar = (
     <View style={s.filters}>
-      <View style={{ alignItems: 'center', marginBottom: 8 }}><ViewToggle mode={view} onChange={setView} /></View>
+      {/* the backdrop slice goes FIRST: as a later sibling it painted over the
+          Hexes/List switch, which showed as a blank band (user, 2026-10-06:
+          "too much space here") */}
       <Animated.View pointerEvents="none"
         style={[{ position: 'absolute', left: 0, top: -insets.top, width: win.width, height: win.height }, sliceStyle]}>
         <GreenBackdrop />
       </Animated.View>
+      <View style={{ alignItems: 'center', marginBottom: 8 }}><ViewToggle mode={view} onChange={setView} /></View>
       <View style={s.filterRow}>
         <FilterBtn label="Level" value={level ? levelOpts.find(o => o.key === level)?.label : undefined}
           color={level ? ALL_TIERS.find(m => m.key === level)?.border : undefined} count={rows.length}
@@ -391,9 +394,10 @@ const s = StyleSheet.create({
   filters: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, backgroundColor: GREEN_BG, overflow: 'hidden' },
   filterRow: { flexDirection: 'row', gap: 8 },
   // under the comb: the shown card's way into its quiz (gold 'Practice' once mastered)
-  quizBtn: { alignSelf: 'center', marginTop: 18, paddingVertical: 12, paddingHorizontal: 22, borderRadius: 22, backgroundColor: 'rgba(76,175,80,0.18)', borderWidth: 1, borderColor: 'rgba(76,175,80,0.45)' },
-  quizBtnGold: { backgroundColor: 'rgba(245,166,35,0.15)', borderColor: 'rgba(245,166,35,0.4)' },
-  quizTxt: { fontFamily: F.display, fontSize: 13, color: C.green },
+  // yellow button, yellow text (user, 2026-10-06); a touch more orange once mastered
+  quizBtn: { alignSelf: 'center', marginTop: 18, paddingVertical: 12, paddingHorizontal: 22, borderRadius: 22, backgroundColor: 'rgba(255,225,77,0.16)', borderWidth: 1, borderColor: 'rgba(255,225,77,0.5)' },
+  quizBtnGold: { backgroundColor: 'rgba(245,166,35,0.18)', borderColor: 'rgba(245,166,35,0.5)' },
+  quizTxt: { fontFamily: F.display, fontSize: 13, color: C.yellow },
   filterBtn: {
     flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,
     borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',
