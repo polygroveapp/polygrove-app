@@ -51,7 +51,9 @@ export function ShownCard({ cells, picked, onPick }: { cells: Comb[]; picked: st
       tx.value = withSpring(0, { damping: 18, stiffness: 170 });
     });
   const dragStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
-  const cardSize = { width: Math.min(win.width - 48, 340), height: Math.min(520, Math.round(win.height * 0.56)) };
+  // as tall as the gallery gives a card: shorter and the back's "Tap card to
+  // flip" fell off the bottom (user, 2026-10-06)
+  const cardSize = { width: Math.min(win.width - 48, 340), height: Math.min(530, Math.round(win.height * 0.61)) };
   if (!cur) return null;
   return (
     <View style={s.cardWrap}>
