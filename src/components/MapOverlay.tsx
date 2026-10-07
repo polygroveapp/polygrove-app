@@ -157,7 +157,6 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
       const deck = ecoMembers(eid);
       if (!deck.length) continue;
       progress[eid] = deck.reduce((n, c) => n + getLevel(scoreOf(c.species_id)), 0) / (deck.length * top);
-      if (eid === current?.eid) progress[eid] = 1;   // TEMP PREVIEW (user, 2026-10-06: 'keep the gold up for a while') — not committed
     }
     const completed = collected.filter(eid => (progress[eid] ?? 0) >= 1);
     const state = JSON.stringify({ current: current?.eid ?? null, camp: current?.eid ?? null, collected, completed, progress, fly, pad: { top: padTop, bottom: padBottom } });
