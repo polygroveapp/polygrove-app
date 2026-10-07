@@ -162,7 +162,8 @@ export function fmtImperial(v: number, unit: SizeVal['unit']): string {
   const f = (x: number, d = 1) => (x >= 100 ? Math.round(x).toLocaleString() : x >= 10 ? x.toFixed(0) : x.toFixed(d).replace(/\.0$/, ''));
   if (unit === 'g') {
     const oz = v / 28.3495, lb = v / 453.592;
-    return lb >= 2000 ? `${f(lb / 2000)} tons` : lb >= 1 ? `${f(lb)} lb` : `${f(oz, oz < 1 ? 2 : 1)} oz`;
+    if (lb >= 2000) { const t = f(lb / 2000); return `${t} ${t === "1" ? "ton" : "tons"}`; }
+    return lb >= 1 ? `${f(lb)} lb` : `${f(oz, oz < 1 ? 2 : 1)} oz`;
   }
   const inches = unit === 'cm' ? v / 2.54 : v / 25.4;
   if (inches >= 12) { const ft = inches / 12; return ft >= 100 ? `${f(ft)} ft` : `${f(ft)} ft`; }
