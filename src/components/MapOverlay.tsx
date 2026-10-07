@@ -33,7 +33,7 @@ import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
 import { C, F, getLevel, MASTERY } from '../constants/polygrove';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
-import { loadSightings, niceDate, syncSightings, useSightings } from '../lib/sightings';
+import { loadSightings, niceDate, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
 import { Spot, observation } from '../lib/inatPublic';
 import { ecoregionAt } from '../lib/locate';
 import { getCards, loadCatalog } from '../lib/catalog';
@@ -154,10 +154,24 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // page whenever they change; and when the map comes forward with an old
   // check (or none), your sightings are looked up again
   const sightings = useSightings();
+  const run = useSightingsRun();
   const marks = sightings.marks, meId = sightings.me?.id, checkedAt = sightings.checkedAt;
+  // THE MARKS GO OVER ONCE, NOT ONCE PER PAGE (2026-10-06: the phone locked up
+  // — a full check saves after every page, each save was a new array, and
+  // each array re-sent 12,000 ✕s through the bridge and rebuilt the layer).
+  // While a check runs nothing is sent; when it ends, or when the list is
+  // quiet for 4 s, the marks go once, and only if they actually changed.
+  const sentMarks = useRef<string>('');
   useEffect(() => {
-    if (pageReady) web.current?.injectJavaScript(`window.polygroveSetMarks && window.polygroveSetMarks(${JSON.stringify(marks ?? [])}); true;`);
-  }, [pageReady, marks]);
+    if (!pageReady || run.busy) return;
+    const t = setTimeout(() => {
+      const json = JSON.stringify(marks ?? []);
+      if (json === sentMarks.current) return;
+      sentMarks.current = json;
+      web.current?.injectJavaScript(`window.polygroveSetMarks && window.polygroveSetMarks(${json}); true;`);
+    }, sentMarks.current ? 4000 : 0);   // the first send is immediate
+    return () => clearTimeout(t);
+  }, [pageReady, marks, run.busy]);
   useEffect(() => {
     if (!visible) return;
     loadSightings().then(() => { if (meId != null && Date.now() - checkedAt > 60 * 60 * 1000) syncSightings(); });   // an hour; a cheap probe unless something changed
