@@ -13,9 +13,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackChevron from '../../components/BackChevron';
 import GreenBackdrop, { GREEN_BG } from '../../components/GreenBackdrop';
 import PolygroveCard from '../../components/PolygroveCard';
+import RangeMap from '../../components/RangeMap';
+import SeasonStrip from '../../components/SeasonStrip';
 import { C, F, TROPHIC_COLOR } from '../../constants/polygrove';
 import { cardById, getCards, loadCatalog } from '../../lib/catalog';
-import { DossierSection, dossierSections, rangeOf } from '../../lib/dossier';
+import { DossierSection, Seasonality, dossierSections, rangeOf, seasonalityOf } from '../../lib/dossier';
 import { EcoMeta, ecoMeta, loadEcoMeta } from '../../lib/ecoregions';
 import { offlineReady } from '../../lib/offline';
 import { openWeb } from '../../lib/web';
@@ -52,6 +54,15 @@ export default function Species() {
     dossierSections(sci).then(d => { if (on) setDossierFor({ sci, d }); }).catch(() => { if (on) setDossierFor({ sci, d: { globi: [], rest: [] } }); });
     return () => { on = false; };
   }, [sci]);
+  const cardId = card?.id;
+  const [seasFor, setSeasFor] = useState<{ id: string; d: Seasonality | null } | null>(null);
+  useEffect(() => {
+    if (!cardId) return;
+    let on = true;
+    seasonalityOf(cardId).then(d => { if (on) setSeasFor({ id: cardId, d }); }).catch(() => { if (on) setSeasFor({ id: cardId, d: null }); });
+    return () => { on = false; };
+  }, [cardId]);
+  const seas = seasFor && seasFor.id === cardId ? seasFor.d : undefined;
   const range = rangeFor && rangeFor.sci === sci ? rangeFor.items : null;
   const dossier = dossierFor && dossierFor.sci === sci ? dossierFor.d : null;
   const [pageFor, setPageFor] = useState<{ sci: string; page: number }>({ sci: '', page: 0 });
@@ -94,8 +105,10 @@ export default function Species() {
           <Text style={s.quizTxt}>Take a quiz</Text>
         </Pressable>
 
-        {/* 3 · Range — top ecoregions by records, one panel at a time */}
+        {/* 3 · Range — the map, then the top ecoregions by records, one panel at a time */}
         <H3 title="Range" />
+        <RangeMap sci={card.sci} />
+        <Text style={[s.dim, { marginTop: 6, marginBottom: 12, fontSize: 10 }]}>RESOLVE Ecoregions 2017 (CC-BY 4.0) · ✕ GBIF occurrences (CC0/CC-BY) · fill by share of records</Text>
         {range === null ? <ActivityIndicator color={C.green} style={{ marginVertical: 20 }} />
           : !cur ? <Text style={s.dim}>No ecoregion records yet.</Text> : (
           <>
@@ -120,6 +133,14 @@ export default function Species() {
               {climate.precipMm != null ? <Chip>🌧 {climate.precipMm.toLocaleString()} mm / {(climate.precipMm / 25.4).toFixed(1)} in rain a year</Chip> : null}
               {climate.zone ? <Chip>{climate.zone}</Chip> : null}
             </View>
+          </>
+        ) : null}
+
+        {/* 4½ · Seasonality — when it is reported, by month */}
+        {seas ? (
+          <>
+            <H3 title="Seasonality" src={`${seas.n.toLocaleString()} records, this species’ ecoregions`} />
+            <SeasonStrip data={seas} />
           </>
         ) : null}
 

@@ -82,3 +82,13 @@ export async function rangeOf(sci: string): Promise<[number, number][]> {
   _range[sh] ||= fetch(`${RANGE_BASE}/${sh}.json`).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
   return (await _range[sh])[sci] || [];
 }
+
+// SEASONALITY: when the species is reported, by month — raw share of records,
+// and corrected for how much people were looking (data/seasonality.json, by
+// card id). One file for every species, fetched once the first page needs it.
+export type Seasonality = { raw: number[]; corr: number[]; n: number };
+let _seas: Promise<Record<string, Seasonality>> | null = null;
+export function seasonalityOf(cardId: string): Promise<Seasonality | null> {
+  _seas ||= fetch('https://polygrovedb.pages.dev/data/seasonality.json').then(r => (r.ok ? r.json() : {})).catch(() => { _seas = null; return {}; });
+  return _seas.then(all => all[cardId] ?? null);
+}
