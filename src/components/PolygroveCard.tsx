@@ -361,7 +361,7 @@ function Box({ k, v, vColor, onPress, missing = false, extra }: { k: string; v: 
 function sizeLabel(size?: string | null): string {
   if (!size) return '—';
   const sz = parseSize(size);
-  return sz ? `${size} · ${fmtImperial(sz.v, sz.unit)}` : size;
+  return sz ? `${size}, ${fmtImperial(sz.v, sz.unit)}` : size;
 }
 
 // SIZE IN CONTEXT (user, 2026-10-06): under the size, a bar from the smallest
