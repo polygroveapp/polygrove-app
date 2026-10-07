@@ -97,7 +97,8 @@ export default function PolygroveDB() {
               locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
             <View style={s.glassShine} />
             <View style={s.glassRim} />
-            <Text style={[s.campBtnTxt, { opacity: campOnly ? 0.75 : 0.45 }]}>⛺</Text>   {/* the tent itself see-through (user, 2026-10-06) */}
+            {/* the tent itself see-through (user, 2026-10-06) */}
+            <Text style={[s.campBtnTxt, { opacity: campOnly ? 0.75 : 0.45 }]}>⛺</Text>
           </View>
         </Pressable>
         <Pressable onPress={() => setStarsOnly(v => !v)} accessibilityRole="button" accessibilityLabel="Starred species only"
