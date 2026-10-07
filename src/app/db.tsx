@@ -90,9 +90,10 @@ export default function PolygroveDB() {
             tile, and when on, the green-glass thumb with its top shine */}
         <Pressable onPress={() => eco && setCampOnly(v => !v)} accessibilityRole="button" accessibilityLabel="In your camp only" style={s.glassWrap}>
           <View style={[s.glass, campOnly && s.glassOn]}>
-            <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
+            {/* transparent glass (user, 2026-10-06): a light blur, a faint sheen, no fill — the green only when on */}
+            <BlurView intensity={18} tint="light" style={StyleSheet.absoluteFill} />
             <LinearGradient
-              colors={campOnly ? ['rgba(129,199,132,0.55)', 'rgba(76,175,80,0.25)', 'rgba(255,255,255,0.14)'] : ['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0.12)']}
+              colors={campOnly ? ['rgba(129,199,132,0.34)', 'rgba(76,175,80,0.12)', 'rgba(255,255,255,0.06)'] : ['rgba(255,255,255,0.10)', 'rgba(255,255,255,0.0)', 'rgba(255,255,255,0.05)']}
               locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
             <View style={s.glassShine} />
             <View style={s.glassRim} />
@@ -199,10 +200,10 @@ const s = StyleSheet.create({
   campBtnTxt: { fontSize: 20, lineHeight: 24, color: '#777' },
   // the tab bar's thumb, as a box: frosted glass, a soft gradient, the top shine, a rim and a drop shadow
   glassWrap: { width: 52, shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
-  glass: { flex: 1, borderRadius: 999, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.04)' },
-  glassOn: { backgroundColor: 'rgba(76,175,80,0.12)' },
-  glassShine: { position: 'absolute', top: 0, left: 12, right: 12, height: 1.5, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.45)' },
-  glassRim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' },
+  glass: { flex: 1, borderRadius: 999, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
+  glassOn: { backgroundColor: 'rgba(76,175,80,0.06)' },
+  glassShine: { position: 'absolute', top: 0, left: 12, right: 12, height: 1.5, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
+  glassRim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
   chips: { gap: 7, paddingBottom: 12, paddingRight: 8 },
   chip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)' },
   chipOn: { borderColor: '#666666', backgroundColor: 'rgba(255,255,255,0.1)' },
