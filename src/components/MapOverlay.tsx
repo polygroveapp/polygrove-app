@@ -298,7 +298,10 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     const deg = (r: number) => (r * 180) / Math.PI, clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
     DeviceMotion.isAvailableAsync().then(ok => {
       if (!ok || !live) return;   // simulators have no motion sensor
-      DeviceMotion.setUpdateInterval(50);
+      // 10 Hz and a half-degree dead band (2026-10-06): at 20 Hz with 0.15° every
+      // tremor of the hand re-rendered the whole map — the phone lagged with the
+      // marks hidden; the simulator never showed it (no sensor)
+      DeviceMotion.setUpdateInterval(100);
       sub = DeviceMotion.addListener(m => {
         if (!m.rotation) return;
         const b = deg(m.rotation.beta), g = deg(m.rotation.gamma);
@@ -309,7 +312,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
         const pitch = clamp(TILT_REST + (b - base[0]) * 0.37, 0, TILT_REST * 2);
         const bearing = clamp((g - base[1]) * 0.3, -5, 5);
         out = [out[0] + (pitch - out[0]) * 0.25, out[1] + (bearing - out[1]) * 0.25];
-        if (Math.abs(out[0] - sent[0]) < 0.15 && Math.abs(out[1] - sent[1]) < 0.15) return;
+        if (Math.abs(out[0] - sent[0]) < 0.5 && Math.abs(out[1] - sent[1]) < 0.5) return;
         sent = [out[0], out[1]];
         web.current?.injectJavaScript(`window.polygroveTilt && window.polygroveTilt(${out[0].toFixed(2)}, ${out[1].toFixed(2)}); true;`);
       });
