@@ -7,6 +7,8 @@
 
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
@@ -84,9 +86,19 @@ export default function PolygroveDB() {
           open={open === 'role'} onPress={() => setOpen(open === 'role' ? null : 'role')} />
         <FilterBtn label="Taxonomy" value={group ?? undefined} color={group ? C.greenSoft : undefined} count={rows.length}
           open={open === 'group'} onPress={() => setOpen(open === 'group' ? null : 'group')} />
+        {/* the camp box in the tab bar's liquid glass (user, 2026-10-06): a frosted
+            tile, and when on, the green-glass thumb with its top shine */}
         <Pressable onPress={() => eco && setCampOnly(v => !v)} accessibilityRole="button" accessibilityLabel="In your camp only"
-          style={[s.filterBtn, s.campBtn, campOnly && { borderColor: `${C.yellow}80`, backgroundColor: `${C.yellow}1f` }]}>
-          <Text style={[s.campBtnTxt, campOnly && { color: C.yellow }]}>⛺</Text>
+          style={[s.filterBtn, s.campBtn, s.glassBtn, campOnly && s.glassBtnOn]}>
+          <BlurView intensity={28} tint="dark" style={StyleSheet.absoluteFill} />
+          {campOnly ? (
+            <>
+              <LinearGradient colors={['rgba(129,199,132,0.38)', 'rgba(76,175,80,0.16)', 'rgba(255,255,255,0.08)']} locations={[0, 0.55, 1]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+              <View style={s.glassShine} />
+            </>
+          ) : null}
+          <Text style={[s.campBtnTxt, { opacity: campOnly ? 1 : 0.6 }]}>⛺</Text>
         </Pressable>
         <Pressable onPress={() => setStarsOnly(v => !v)} accessibilityRole="button" accessibilityLabel="Starred species only"
           style={[s.filterBtn, s.campBtn, starsOnly && { borderColor: `${C.yellow}80`, backgroundColor: `${C.yellow}1f` }]}>
@@ -186,6 +198,9 @@ const s = StyleSheet.create({
   filterValue: { fontFamily: F.sansMed, fontSize: 12.5, color: C.text, marginTop: 1 },
   campBtn: { flex: 0, width: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 0 },
   campBtnTxt: { fontSize: 20, lineHeight: 24, color: '#777' },
+  glassBtn: { overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.13)' },
+  glassBtnOn: { borderColor: 'rgba(255,255,255,0.22)' },
+  glassShine: { position: 'absolute', top: 0, left: 10, right: 10, height: 1, backgroundColor: 'rgba(255,255,255,0.28)' },
   chips: { gap: 7, paddingBottom: 12, paddingRight: 8 },
   chip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)' },
   chipOn: { borderColor: '#666666', backgroundColor: 'rgba(255,255,255,0.1)' },
