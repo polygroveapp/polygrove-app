@@ -72,6 +72,11 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
   const all = getCards();
   const c = card as Card & { role?: string; falseRole?: string; q3?: Q3; q4?: Q4 };
   const qs: (Q | null)[] = [];
+  // A TRUE-OR-FALSE STATEMENT FLIPS ON EVERY RETRY (user, 2026-10-07: "when you
+  // are going through the questions again after getting one wrong it shows you
+  // the answer" — the same statement came back, and the miss had just said which
+  // way it went). Odd attempts take the other variant, for Q2 and Q5 both.
+  const flip = attempt % 2 === 1;
 
   // Q1 taxonomy
   // LIKE WITH LIKE (user, 2026-10-07: "if it's a producer then the taxonomy is
@@ -92,11 +97,6 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
 
   // Q2 feeding guild
   if (c.role && c.falseRole) {
-    // A TRUE-OR-FALSE STATEMENT FLIPS ON EVERY RETRY (user, 2026-10-07: "when you
-    // are going through the questions again after getting one wrong it shows you
-    // the answer" — the same statement came back, and the miss had just said which
-    // way it went). Odd attempts take the other variant.
-    const flip = attempt % 2 === 1;
     const t2 = (rng() < 0.5) !== flip;
     qs.push({ type: 'tf', label: 'Q2 · Feeding guild', short: 'Guild', q: `The ${c.name} is ${t2 ? c.role : c.falseRole}.`, a: t2, explain: t2 ? undefined : `The ${c.name} is ${c.role}.` });
   } else qs.push(null);
