@@ -20,10 +20,12 @@
 // and its map stay alive behind Camp and About, so switching to the Map tab
 // is instant. The /map route itself is an empty backdrop.
 
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { openWeb } from '../lib/web';
-import { setEarthColours, useEarthColours } from '../lib/mapLook';
+import { setBorders, setEarthColours, useBorders, useEarthColours } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -37,7 +39,7 @@ import { loadSightings, niceDate, syncSightings, useSightings, useSightingsRun }
 import { setPin } from '../lib/pin';
 import { Spot, observation } from '../lib/inatPublic';
 import { ecoregionAt } from '../lib/locate';
-import { getCards, loadCatalog } from '../lib/catalog';
+import { getCards, loadCatalog, photoFor } from '../lib/catalog';
 import { collectedEcoregions, loadCollection, owns, useCollection } from '../lib/collection';
 import { cleanLead, ecoDeckSize, ecoMembers, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco, wikiUrl } from '../lib/ecoregions';
 
@@ -50,6 +52,30 @@ const SHEET_H = 198;   // (222 left a band of nothing under the button — user,
 
 type Pick = { eid: number; name: string; bbox: [number, number, number, number] };
 
+
+// THE AMERICAS (user, 2026-10-07): the icon for the earth-colours button — the
+// continents' real coastline traced from data/eco_simple.geojson (polygrovedb
+// scratch script americas.py: rasterised, closed, largest landmass, boundary
+// walked, simplified, one Chaikin pass), in a 24 × 32 box
+const AMERICAS = 'M15.8 1.5 L20.3 1.5 L22.5 1.7 L22.5 2.1 L21.5 2.4 L19.5 2.4 L18.5 2.4 L18.5 2.6 L18.3 2.7 L17.9 2.7 L17.7 2.8 L17.7 3.2 L17.6 3.4 L17.5 3.5 L17.2 3.5 L16.8 3.5 L16.5 3.4 L16.4 3.1 L16.2 3.1 L15.9 3.1 L16.0 3.3 L16.4 3.7 L16.9 3.9 L17.3 4.0 L17.6 4.1 L17.6 4.4 L17.8 4.5 L18.2 4.6 L18.4 4.9 L18.4 5.4 L18.3 5.6 L18.1 5.6 L18.0 5.8 L17.9 6.0 L18.0 6.4 L18.4 6.9 L18.7 7.2 L19.1 7.4 L19.4 8.0 L19.6 8.9 L19.4 9.4 L18.9 9.4 L18.7 9.5 L18.7 9.7 L18.5 9.8 L18.2 10.0 L17.8 10.1 L17.3 10.1 L17.1 10.2 L17.1 10.5 L17.0 10.6 L16.7 10.6 L16.5 10.7 L16.4 11.0 L16.3 11.3 L16.3 11.7 L16.1 12.0 L15.7 12.3 L15.5 12.8 L15.6 13.5 L16.1 14.0 L17.0 14.4 L17.4 14.7 L17.4 15.2 L16.9 15.4 L15.9 15.5 L15.3 15.3 L15.2 14.9 L15.0 14.7 L14.7 14.7 L14.5 14.8 L14.5 15.1 L14.7 15.2 L15.0 15.3 L15.2 15.7 L15.2 16.2 L15.3 16.5 L15.5 16.5 L15.8 16.3 L16.0 16.0 L16.3 15.9 L16.7 15.9 L17.1 16.0 L17.4 16.2 L17.6 16.1 L17.7 15.6 L17.9 15.4 L18.3 15.4 L18.5 15.7 L18.5 16.3 L18.8 16.8 L19.5 17.2 L19.9 17.6 L20.0 18.2 L20.7 18.7 L21.8 19.2 L22.3 19.9 L22.3 20.7 L22.2 21.3 L21.9 21.6 L21.7 22.2 L21.6 23.1 L21.2 23.8 L20.6 24.2 L20.3 24.6 L20.3 24.9 L20.1 25.4 L19.8 25.9 L19.5 26.2 L19.3 26.2 L19.1 26.4 L19.0 26.8 L18.7 27.2 L18.2 27.4 L17.8 27.9 L17.8 28.7 L17.6 29.1 L17.5 29.2 L17.5 29.5 L17.6 30.2 L17.3 30.5 L16.5 30.4 L16.0 30.1 L15.8 29.7 L15.9 27.8 L16.3 24.5 L16.2 22.6 L15.7 22.3 L15.3 21.7 L15.0 20.9 L14.9 20.0 L14.9 19.0 L15.0 18.3 L15.2 17.9 L15.0 17.5 L14.4 17.3 L14.0 17.0 L13.9 16.6 L13.4 16.2 L12.4 15.9 L11.7 15.6 L11.4 15.3 L11.2 15.0 L11.1 14.6 L10.8 14.3 L10.3 14.1 L9.9 13.6 L9.6 12.7 L9.3 12.2 L9.0 12.1 L8.7 11.8 L8.5 11.3 L8.3 10.6 L8.3 9.6 L8.2 9.0 L7.9 8.9 L7.7 8.6 L7.6 8.3 L7.4 8.1 L7.2 8.1 L7.1 8.0 L7.1 7.6 L7.0 7.5 L6.8 7.5 L6.7 7.3 L6.6 7.1 L6.1 6.9 L5.2 6.8 L4.7 7.0 L4.7 7.3 L4.1 7.6 L2.9 7.8 L2.3 7.7 L2.3 7.3 L2.4 7.0 L2.7 6.9 L2.6 6.8 L2.2 6.8 L2.0 6.6 L2.0 6.3 L1.9 6.1 L1.6 6.1 L1.5 5.8 L1.5 5.2 L1.6 4.8 L1.9 4.8 L2.0 4.7 L2.0 4.5 L2.1 4.2 L2.5 4.1 L4.0 4.0 L6.8 4.0 L8.3 3.7 L8.5 3.0 L9.0 2.6 L9.7 2.4 L10.4 2.4 L10.9 2.4 L11.2 2.4 L11.3 2.6 L11.4 2.6 L11.4 2.3 L11.6 2.2 L12.2 2.2 L12.5 2.1 L12.5 1.9 L12.8 1.8 L13.3 1.6 Z';
+
+// an ecoregion-shaped blob for the borders button, in a 24 × 24 box
+const ECOBLOB = 'M5 7.5 C6 4.5 10 3 13.5 4.2 C16.5 5.2 20.5 6 20 10 C19.6 13 17 13.5 17.5 16.5 C18 19.5 14.5 21 11.5 20.2 C8.5 19.4 3.8 18.5 3.6 14.5 C3.4 11.5 4.2 10 5 7.5 Z';
+
+// the tab bar's liquid glass as a round tile (user, 2026-10-07): frosted, and
+// when on, the green-glass thumb with its top shine
+function GlassTile({ on, onPress, label, children }: { on: boolean; onPress: () => void; label: string; children: React.ReactNode }) {
+  return (
+    <Pressable onPress={onPress} hitSlop={6} accessibilityRole="button" accessibilityLabel={label}>
+      <BlurView intensity={28} tint="dark" blurMethod="dimezisBlurView" style={[s.lookBtn, on && s.lookBtnOn]}>
+        {on && <LinearGradient colors={['rgba(129,199,132,0.38)', 'rgba(76,175,80,0.16)', 'rgba(255,255,255,0.08)']}
+          locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />}
+        {on && <View style={s.lookShine} />}
+        {children}
+      </BlurView>
+    </Pressable>
+  );
+}
 
 export default function MapOverlay({ visible }: { visible: boolean }) {
   const router = useRouter();
@@ -94,7 +120,12 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     // the shown one and its neighbours are fetched ahead, so stepping is instant; the rest as you reach them
     const at = Math.min(underAt, Math.max(0, under.length - 1));
     for (const u of under.slice(Math.max(0, at - 1), at + 4)) {
-      if (u.name || u.id in obsCache || fetching.current.has(u.id)) continue;   // named marks (v8) are ready as they are
+      if (u.id in obsCache || fetching.current.has(u.id)) continue;
+      // named marks (v8) are ready as they are — unless the strip has no picture
+      // for them (user, 2026-10-07: "a preview picture"): a species that is not a
+      // deck card has no cached card photo, so its observation is fetched (one
+      // small JSON per sighting, remembered for the session)
+      if (u.name) { const sci = u.sci?.toLowerCase(); const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined; if (card && photoFor(card.id, 250)) continue; }
       fetching.current.add(u.id);
       observation(u.id).then(o => setObsCache(c => ({ ...c, [u.id]: o }))).catch(() => setObsCache(c => ({ ...c, [u.id]: null })))
         .finally(() => fetching.current.delete(u.id));
@@ -299,12 +330,18 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // with the marks hidden. The map is flat and still now; the pin still
   // leans against a drag (that comes from the page's pan messages).
 
-  const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom && window.polygroveZoom(${d}); true;`);
+  
+const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom && window.polygroveZoom(${d}); true;`);
   // earth colours or grey/black (user, 2026-10-07) — a remembered preference, sent to the page whenever it changes or the page comes up
   const earth = useEarthColours();
   useEffect(() => {
     if (pageReady) web.current?.injectJavaScript(`window.polygroveRelief && window.polygroveRelief(${earth}); true;`);
   }, [pageReady, earth]);
+  // every ecoregion's outline on or off (user, 2026-10-07)
+  const borders = useBorders();
+  useEffect(() => {
+    if (pageReady) web.current?.injectJavaScript(`window.polygroveBorders && window.polygroveBorders(${borders}); true;`);
+  }, [pageReady, borders]);
 
   const enter = async () => {
     if (!pick) return;
@@ -419,9 +456,21 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]}>
           {/* above the plus: earth colours ⇄ grey/black (user, 2026-10-07) */}
-          <Pressable onPress={() => setEarthColours(!earth)} hitSlop={6} style={[s.zoomBtn, earth && s.zoomBtnOn]} accessibilityLabel={earth ? 'Grey map' : 'Earth colours'}>
-            <Text style={s.lookTxt}>{earth ? '🌑' : '🌎'}</Text>
-          </Pressable>
+          {/* two glass tiles above − +, one row (user, 2026-10-07): ecoregion borders
+              to the left, the Americas outline for earth colours ⇄ grey/black right */}
+          <View style={s.zoomRow}>
+          <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
+            <Svg width={24} height={24} viewBox="0 0 24 24">
+              <Path d={ECOBLOB} fill={borders ? 'rgba(129,199,132,0.22)' : 'rgba(255,255,255,0.1)'} stroke={borders ? C.greenSoft : 'rgba(255,255,255,0.85)'}
+                strokeWidth={1.3} strokeDasharray="2.2 1.8" strokeLinejoin="round" strokeLinecap="round" />
+            </Svg>
+          </GlassTile>
+          <GlassTile on={earth} onPress={() => setEarthColours(!earth)} label={earth ? 'Grey map' : 'Earth colours'}>
+            <Svg width={22} height={28} viewBox="0 0 24 32">
+              <Path d={AMERICAS} fill={earth ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={earth ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
+            </Svg>
+          </GlassTile>
+          </View>
           <View style={s.zoomRow}>
             <Pressable onPress={() => zoom(-1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>−</Text></Pressable>
             <Pressable onPress={() => zoom(1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>+</Text></Pressable>
@@ -433,7 +482,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
       {/* the ✕ mark under the pin, to the LEFT of − and +: one at a time, ‹ › for the others */}
       {under.length > 0 && (() => {
         const at = Math.min(underAt, under.length - 1), u = under[at];
-        const o = spotOf(u) ?? obsCache[u.id];
+        const o = obsCache[u.id] ?? spotOf(u);   // the fetched one first: it carries the photo
         const sci = o?.sci?.toLowerCase();
         const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
         const color = u.kind === 0 ? '#5fe35a' : u.kind === 2 ? '#aaaaaa' : C.yellow;
@@ -443,16 +492,21 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
               <Pressable onPress={() => setUnderAt(a => Math.max(0, a - 1))} disabled={at === 0} hitSlop={8} style={s.underArrow}>
                 <Text style={[s.underArrowTxt, at === 0 && { opacity: 0.25 }]}>‹</Text>
               </Pressable>
-              {/* no photo here (user, 2026-10-06): the strip changes with every settle of the
-                  map, and a photo per settle was a steady drip of downloads while panning —
-                  a colour dot for the kind, the name, and the card one tap away */}
+              {/* a preview picture and more info, the height of both control rows
+                  (user, 2026-10-07). The picture is the species' CARD photo (cached
+                  on the phone for the deck) unless the observation's own photo is
+                  already fetched — so panning still downloads nothing new */}
               <Pressable onPress={() => o && openObs(o)} disabled={!o} style={s.underRow}>
-                <View style={[s.underDot, { backgroundColor: color }]} />
-                <View style={{ flex: 1 }}>
+                {(() => { const uri = o?.photo || (card ? photoFor(card.id, 250) : undefined);
+                  return uri ? <Image source={{ uri }} style={s.underPhoto} contentFit="cover" transition={150} />
+                    : <View style={[s.underPhoto, { alignItems: 'center', justifyContent: 'center' }]}><View style={[s.underDot, { backgroundColor: color }]} /></View>; })()}
+                <View style={{ flex: 1, gap: 1 }}>
                   <Text style={s.underName} numberOfLines={1}>{o === undefined ? 'Loading…' : o === null ? 'Unavailable' : card?.name ?? o.name}</Text>
+                  {o?.sci ? <Text style={s.underSci} numberOfLines={1}>{o.sci}</Text> : null}
                   <Text style={[s.underMeta, { color }]} numberOfLines={1}>
-                    {u.kind === 0 ? 'waiting' : u.kind === 2 ? 'potential' : 'confirmed'}{o?.date ? ` · ${niceDate(o.date)}` : ''}{under.length > 1 ? ` · ${at + 1}/${under.length}` : ''}
+                    {u.kind === 0 ? 'waiting' : u.kind === 2 ? 'potential' : 'confirmed'}{o?.date ? ` · ${niceDate(o.date)}` : ''}
                   </Text>
+                  {o ? <Text style={s.underHint} numberOfLines={1}>{under.length > 1 ? `${at + 1} of ${under.length} · ` : ''}{card ? `${card.group} · ` : ''}tap for more ›</Text> : null}
                 </View>
               </Pressable>
               <Pressable onPress={() => setUnderAt(a => Math.min(under.length - 1, a + 1))} disabled={at >= under.length - 1} hitSlop={8} style={s.underArrow}>
@@ -537,19 +591,28 @@ const s = StyleSheet.create({
   zoomRow: { gap: 8, flexDirection: 'row' },
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
   underWrap: { position: 'absolute', left: 14, right: 118, alignItems: 'flex-start', justifyContent: 'flex-end' },
-  under: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 4, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
-  underRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
-  underDot: { width: 10, height: 10, borderRadius: 5, marginLeft: 4 },
-  underName: { fontFamily: F.sansBold, fontSize: 12.5, color: C.text },
-  underMeta: { fontFamily: F.sans, fontSize: 10.5 },
-  underArrow: { width: 26, height: 36, alignItems: 'center', justifyContent: 'center' },
+  // 92 = the two control rows (42 + 8 + 42) to its right (user, 2026-10-07)
+  under: { alignSelf: 'stretch', height: 92, flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 4, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
+  underRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  underPhoto: { width: 82, height: 82, borderRadius: 12, backgroundColor: '#1c2a1c' },
+  underDot: { width: 12, height: 12, borderRadius: 6 },
+  underName: { fontFamily: F.sansBold, fontSize: 13, color: C.text },
+  underSci: { fontFamily: F.sans, fontSize: 11, color: '#9a9', fontStyle: 'italic' },
+  underMeta: { fontFamily: F.sans, fontSize: 11.5 },
+  underHint: { fontFamily: F.sans, fontSize: 10.5, color: '#777' },
+  underArrow: { width: 18, height: 84, alignItems: 'center', justifyContent: 'center' },
   underArrowTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
 
   // the + / − green (user, 2026-09-30: brown for a minute, then "green again")
   zoomBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(10,15,10,0.85)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
-  zoomBtnOn: { borderColor: 'rgba(129,199,132,0.6)' },
-  lookTxt: { fontSize: 19, lineHeight: 24 },
+  lookBtn: {
+    width: 42, height: 42, borderRadius: 21, overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Platform.OS === 'android' ? 'rgba(20,24,20,0.72)' : 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.13)',
+  },
+  lookBtnOn: { borderColor: 'rgba(255,255,255,0.22)', shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
+  lookShine: { position: 'absolute', top: 0, left: 10, right: 10, height: 1, backgroundColor: 'rgba(255,255,255,0.28)' },
   sheet: {
     position: 'absolute', left: 0, right: 0, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12,
     backgroundColor: 'rgba(10,15,10,0.94)', borderTopLeftRadius: 22, borderTopRightRadius: 22,
