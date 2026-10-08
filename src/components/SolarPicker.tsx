@@ -11,7 +11,7 @@ import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'r
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { Easing, SharedValue, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { C, F, getTier } from '../constants/polygrove';
+import { C, F, TROPHIC_COLOR, getTier } from '../constants/polygrove';
 import { Card, cardById } from '../lib/catalog';
 import { Owned } from '../lib/collection';
 import { countsOf, isFullyLocked, scoreOf } from '../lib/mastery';
@@ -95,8 +95,9 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
         <Text style={s.sub}>Swipe between three of your cards · ace a question to earn Sol</Text>
 
         <View style={s.dots}>
+          {/* the active dot wears its card's colour — red for a carnivore (user, 2026-10-07; it was always yellow) */}
           {cards.map((c, i) => (
-            <Pressable key={c.id} onPress={() => go(i)} hitSlop={4} style={[s.dot, i === idx && { width: 16, backgroundColor: '#FFD700' }]} />
+            <Pressable key={c.id} onPress={() => go(i)} hitSlop={4} style={[s.dot, i === idx && { width: 16, backgroundColor: TROPHIC_COLOR[c.trophic] || '#FFD700' }]} />
           ))}
         </View>
         <GestureDetector gesture={pan}>
