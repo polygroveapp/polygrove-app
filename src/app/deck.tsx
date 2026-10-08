@@ -246,12 +246,13 @@ export default function FieldNotes() {
         <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
           {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
           <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} picked={shownKey} onPick={setPicked} />
-          {/* the Camp page's green Solar Quiz button (user, 2026-10-07: "make the take solar
-              quiz on the journal page like this"); a mastered card's reads Practice */}
+          {/* a mastered card's reads Practice */}
           {shownCard ? (
             <Pressable onPress={() => toQuiz(shownCard)} style={s.quizBtn}>
-              <LinearGradient colors={shownMastered ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.quizGrad}>
-                <Text style={s.quizTxt}>{shownMastered ? 'Practice Solar Quiz ☀️' : 'Take Solar Quiz ☀️'}</Text>
+              {/* the Camp page's Solar Pack style (user, 2026-10-08): orange → yellow, dark type */}
+              <LinearGradient colors={['#FF6F00', '#FFC107', '#FFD54F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.quizGrad}>
+                <Text style={s.quizTxt}>{shownMastered ? 'Practice Solar Quiz' : 'Take Solar Quiz'}</Text>
+                <Text style={{ fontSize: 20 }}>☀️</Text>
               </LinearGradient>
             </Pressable>
           ) : null}
@@ -403,8 +404,8 @@ const s = StyleSheet.create({
   // under the comb: the shown card's way into its quiz (gold 'Practice' once mastered)
   // yellow button, yellow text (user, 2026-10-06); a touch more orange once mastered
   quizBtn: { alignSelf: 'stretch', marginTop: 18, borderRadius: 16, overflow: 'hidden' },
-  quizGrad: { paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center' },
-  quizTxt: { fontFamily: F.display, fontSize: 13, color: C.text },
+  quizGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 18, paddingHorizontal: 20, borderRadius: 16, borderWidth: 1, borderColor: '#FFC107' },
+  quizTxt: { fontFamily: F.display, fontSize: 16, color: '#1a1a1a' },
   filterBtn: {
     flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,
     borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',
