@@ -448,7 +448,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         </View>
       )}
 
-      <View style={[s.top, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
+      <View style={[s.top, { paddingTop: insets.top + 8 }, showObs && under.length > 0 && { opacity: 0 }]} pointerEvents="box-none">
         <View style={s.titleWrap}>
           <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>Where do you want to camp?</Text>
           <Text style={s.sub}>{pageReady ? 'move the map under the pin 🏕️' : err ? 'map unavailable' : 'loading ecoregions…'}</Text>
@@ -507,7 +507,8 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
       )}
 
 
-      {/* the ✕ mark under the pin, to the LEFT of − and +: one at a time, ‹ › for the others */}
+      {/* the ✕ mark under the pin: one at a time, ‹ › for the others. AT THE TOP, over the
+          "Where do you want to camp?" title, which steps aside while it shows (user, 2026-10-07) */}
       {showObs && under.length > 0 && (() => {
         const at = Math.min(underAt, under.length - 1), u = under[at];
         const o = spotOf(u) ?? obsCache[u.id];
@@ -515,7 +516,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
         const color = u.kind === 0 ? '#5fe35a' : u.kind === 2 ? '#aaaaaa' : C.yellow;
         return (
-          <View style={[s.underWrap, { right: zoomOpen ? 118 : 66, bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
+          <View style={[s.underWrap, { top: insets.top + 4 }]} pointerEvents="box-none">
             <View style={s.under}>
               <Pressable onPress={() => setUnderAt(a => Math.max(0, a - 1))} disabled={at === 0} hitSlop={8} style={s.underArrow}>
                 <Text style={[s.underArrowTxt, at === 0 && { opacity: 0.25 }]}>‹</Text>
@@ -627,7 +628,7 @@ const s = StyleSheet.create({
   zoomCol: { gap: 8, alignItems: 'center' },
   obsX: { fontFamily: F.sansBold, fontSize: 17, color: C.yellow, lineHeight: 21 },   // the marks' yellow (user, 2026-10-07: green for a minute, then "yellow again")
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
-  underWrap: { position: 'absolute', left: 14, right: 118, alignItems: 'flex-start', justifyContent: 'flex-end' },
+  underWrap: { position: 'absolute', left: 14, right: 70, alignItems: 'flex-start' },
   // 92 = the two control rows (42 + 8 + 42) to its right (user, 2026-10-07)
   under: { alignSelf: 'stretch', height: 92, flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 4, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   underRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
