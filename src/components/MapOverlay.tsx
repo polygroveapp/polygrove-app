@@ -28,7 +28,7 @@ import { openWeb } from '../lib/web';
 import { setBorders, setEarthColours, setShowObs, useBorders, useEarthColours, useShowObs } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeInDown, FadeOutDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp, FadeOutDown, FadeOutUp, withTiming, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
@@ -358,6 +358,20 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // every ecoregion's outline on or off (user, 2026-10-07)
   const borders = useBorders();
   const [menuOpen, setMenuOpen] = useState(false);
+  // the title lifts off the top of the screen while a sighting's strip is up, and
+  // drops back when it goes (user, 2026-10-07); the strip itself slides down in
+  const stripOn = showObs && under.length > 0;
+  const titleUp = useSharedValue(0);
+  useEffect(() => { titleUp.value = withTiming(stripOn ? 1 : 0, { duration: 320 }); }, [stripOn, titleUp]);
+  // INTO THE DYNAMIC ISLAND (user, 2026-10-07): on an iPhone that has one (its
+  // top inset is 59 pt; a notch gives 44–50, Android less) the title shrinks up
+  // into the island instead — its centre travels to the island's, ~29 pt from
+  // the top — and grows back out of it. Elsewhere it slides off the top.
+  const island = Platform.OS === 'ios' && insets.top >= 59;
+  const toIsland = 29 - (insets.top + 8 + 30);
+  const titleStyle = useAnimatedStyle(() => island
+    ? { transform: [{ translateY: toIsland * titleUp.value }, { scale: 1 - 0.88 * titleUp.value }], opacity: 1 - titleUp.value * titleUp.value }
+    : { transform: [{ translateY: -160 * titleUp.value }], opacity: 1 - titleUp.value }, [island, toIsland]);
   useEffect(() => {
     if (pageReady) web.current?.injectJavaScript(`window.polygroveBorders && window.polygroveBorders(${borders}); true;`);
   }, [pageReady, borders]);
@@ -462,12 +476,12 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         </View>
       )}
 
-      <View style={[s.top, { paddingTop: insets.top + 8 }, showObs && under.length > 0 && { opacity: 0 }]} pointerEvents="box-none">
+      <Animated.View style={[s.top, { paddingTop: insets.top + 8 }, titleStyle]} pointerEvents="box-none">
         <View style={s.titleWrap}>
           <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>Where do you want to camp?</Text>
           <Text style={s.sub}>{pageReady ? 'move the map under the pin 🏕️' : err ? 'map unavailable' : 'loading ecoregions…'}</Text>
         </View>
-      </View>
+      </Animated.View>
 
       {/* MAP CONTROLS (user, 2026-10-07): − in the bottom-right corner, + above
           it, always there. In the bottom-LEFT corner, map preferences: open,
@@ -512,14 +526,14 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
 
       {/* the ✕ mark under the pin: one at a time, ‹ › for the others. AT THE TOP, over the
           "Where do you want to camp?" title, which steps aside while it shows (user, 2026-10-07) */}
-      {showObs && under.length > 0 && (() => {
+      {stripOn && (() => {
         const at = Math.min(underAt, under.length - 1), u = under[at];
         const o = spotOf(u) ?? obsCache[u.id];   // text from the mark itself; the cache only lends a photo
         const sci = o?.sci?.toLowerCase();
         const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
         const color = u.kind === 0 ? '#5fe35a' : u.kind === 2 ? '#aaaaaa' : C.yellow;
         return (
-          <View style={[s.underWrap, { top: insets.top + 4 }]} pointerEvents="box-none">
+          <Animated.View entering={FadeInUp.duration(240)} exiting={FadeOutUp.duration(180)} style={[s.underWrap, { top: insets.top + 4 }]} pointerEvents="box-none">
             <View style={s.under}>
               <Pressable onPress={() => setUnderAt(a => Math.max(0, a - 1))} disabled={at === 0} hitSlop={8} style={s.underArrow}>
                 <Text style={[s.underArrowTxt, at === 0 && { opacity: 0.25 }]}>‹</Text>
@@ -547,7 +561,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                 <Text style={[s.underArrowTxt, at >= under.length - 1 && { opacity: 0.25 }]}>›</Text>
               </Pressable>
             </View>
-          </View>
+          </Animated.View>
         );
       })()}
 
