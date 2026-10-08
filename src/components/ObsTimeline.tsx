@@ -72,8 +72,9 @@ export default function ObsTimeline({ marks, onUntil }: { marks: Mark[]; onUntil
   );
   return (
     <View style={s.wrap} pointerEvents="box-none">
-      {/* what the thumb means, above it: shown while dragging or whenever the map is cut short */}
-      {(drag || cur < t.max) && (
+      {/* what the thumb means, above it — only while your finger is on the bar (user, 2026-10-07:
+          "this should disappear if you're not scrolling"); the thumb and the lit bars still show the cut */}
+      {drag && (
         <View pointerEvents="none" style={s.tipRow}>
           <View style={s.tip}>
             <Text style={s.tipTxt}>{cur < t.min ? 'before your first sighting' : `up to ${label}`}</Text>
