@@ -168,7 +168,8 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
             else if (isActive) { bg = 'rgba(255,255,255,0.08)'; border = '#444'; color = C.text; }
             const label = qq?.short ?? ['Taxonomy', 'Guild', 'Size', 'Food web', 'Place', 'Your card'][i];
             return (
-              <View key={i} style={[s.tab, { backgroundColor: bg, borderColor: border }]}>
+              // a gold tab GLOWS, steadily — no pulse (user, 2026-10-08)
+              <View key={i} style={[s.tab, { backgroundColor: bg, borderColor: border }, isLocked && s.tabGlow]}>
                 <Text style={[s.tabTxt, { color }]} numberOfLines={1}>{label}</Text>
               </View>
             );
@@ -504,6 +505,7 @@ const s = StyleSheet.create({
   solFlash: { fontFamily: F.display, fontSize: 14, color: '#FFD700', marginLeft: 8 },
   tabs: { flexDirection: 'row', gap: 4, marginBottom: 14 },
   tab: { flex: 1, paddingVertical: 4, borderRadius: 6, borderWidth: 1, alignItems: 'center' },
+  tabGlow: { shadowColor: '#FFD700', shadowOpacity: 0.85, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 5 },
   tabTxt: { fontFamily: F.sansBold, fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 0.4 },
   qBox: { backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#333' },
   qLabel: { fontFamily: F.sansBold, fontSize: 9, color: C.greenSoft, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
