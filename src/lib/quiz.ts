@@ -108,10 +108,10 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
       : measure === 'height' ? `How tall does the ${c.name} grow?`
       : measure === 'wingspan' ? `How wide is the ${c.name}'s wingspan?`
       : `How long is the ${c.name}, on average?`;
-    // THREE SIZES, SMALLEST AT THE TOP, EACH A REAL SPECIES (user, 2026-10-07:
+    // FIVE SIZES, SMALLEST AT THE TOP, EACH A REAL SPECIES (user, 2026-10-07:
     // "smallest to largest from top to bottom … have every option be an example of
-    // a species", each with the card's scale bar beside it; five options for a few
-    // minutes, then "actually only make it 3"). The wrong sizes are the real sizes of other cards in
+    // a species", each with the card's scale bar beside it; three for an hour in
+    // between). The wrong sizes are the real sizes of other cards in
     // the same group, picked near steps of 1.9–2.6× below and above the answer and
     // never within 1.5× of one another, each named ("like a Mallard"). The right
     // one is named after its nearest neighbour in size, when one is within 12% —
@@ -128,7 +128,7 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
     const near = pool.filter(o => Math.max(o.v, sv.v) / Math.min(o.v, sv.v) <= 1.12 && withImperial(o.size) !== right)
       .sort((a, b) => Math.abs(Math.log(a.v / sv.v)) - Math.abs(Math.log(b.v / sv.v)))[0];
     if (near) { rows[0].eg = near.name; rows[0].egId = near.id; }
-    const N = 3, at = Math.floor(rng() * N), step = 1.9 + rng() * 0.7;   // where the answer sits among them
+    const N = 5, at = Math.floor(rng() * N), step = 1.9 + rng() * 0.7;   // five of them (user, 2026-10-07, after three); where the answer sits among them
     for (let i = 0; i < N; i++) {
       if (i === at) continue;
       const target = sv.v * step ** (i - at);

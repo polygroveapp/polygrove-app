@@ -39,22 +39,33 @@ let _glowSeq = 0;
 // missing: an INCOMPLETE card, previewed "as it could be" — the facts the
 // database doesn't have yet are written in red.
 const MISSING_RED = '#E57373';
-export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, nameAs, demoFrame = false, sighting, missing }:
-  { card: Card; anonymous?: boolean; noteFrom?: Card; nameAs?: { name: string; sci: string }; demoFrame?: boolean;
+// photoFrom (user, 2026-10-07: the pick question's cards each showed their
+// OWN role and group — "an acorn woodpecker is an herbivore so it shouldn't
+// be omnivore, it gives it away. the only thing different should be the photo
+// or the field note, or audio"): the facts on the card are `card`'s, while
+// the photo — and with it the framing, the Commons credit, the recording and
+// the name shown when the names are revealed — come from this other card. A
+// recording always belongs to the photo it plays over (user, same day: "a
+// woodpecker audio should always go with a woodpecker photo").
+export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, photoFrom, nameAs, demoFrame = false, sighting, missing }:
+  { card: Card; anonymous?: boolean; noteFrom?: Card; photoFrom?: Card; nameAs?: { name: string; sci: string }; demoFrame?: boolean;
     sighting?: SightingInfo; missing?: FactKey[] }) {
   const lacks = (k: FactKey) => !!missing?.includes(k);
-  const card = nameAs ? { ...raw, name: `${nameAs.name}?`, sci: nameAs.sci } : anonymous ? { ...raw, name: '???', sci: '· · ·' } : raw;
+  const face = photoFrom ?? raw;   // whose picture (and sound) this is
+  const card = nameAs ? { ...raw, name: `${nameAs.name}?`, sci: nameAs.sci } : anonymous ? { ...raw, name: '???', sci: '· · ·' } : { ...raw, name: face.name, sci: face.sci };
   const hideNames = anonymous || !!nameAs;
   const noteCard = noteFrom ?? raw;
   // explorer's troColor: purple = trophic role is INFERRED (GloBI prey records),
   // not measured — the accent itself flags the uncertainty.
   const tc = card.provenance?.feeding?.confidence === 'inferred'
     ? '#c084fc' : TROPHIC_COLOR[card.trophic] || '#81C784';
-  const sound = hideNames ? undefined : soundsFor(raw.sci)[0];   // not on a quiz card: the call would give it away
+  // the recording plays on quiz cards too (user, 2026-10-07: "let them play it on the
+  // question if it comes up") — it is the photo species' call, so it tells no more than the photo
+  const sound = soundsFor(face.sci)[0];
   const own = sighting?.photo || undefined;             // your photo, uncropped by our framing data
-  const photo = own ?? photoFor(card.id, 500);
-  const frame = own ? undefined : framingFor(raw.id);
-  const commons = sighting ? sighting.uri : photoCommonsPage(card.id);
+  const photo = own ?? photoFor(face.id, 500);
+  const frame = own ? undefined : framingFor(face.id);
+  const commons = sighting ? sighting.uri : photoCommonsPage(face.id);
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => {
     let on = true;
@@ -191,7 +202,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
       {/* BACK — .face.back */}
       <Animated.View style={[s.phone, demoFrame && s.phoneDemo, backStyle]}>
         <View style={s.head}>
-          <HexPhoto uri={own ?? photoFor(card.id, 120)} frame={frame} width={46} height={52} borderColor={tc} borderWidth={4} />
+          <HexPhoto uri={own ?? photoFor(face.id, 120)} frame={frame} width={46} height={52} borderColor={tc} borderWidth={4} />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.name} numberOfLines={1}>{card.name}</Text>
             <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
