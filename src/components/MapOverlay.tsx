@@ -25,7 +25,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { openWeb } from '../lib/web';
-import { setBorders, setEarthColours, setShowObs, useBorders, useEarthColours, useShowObs } from '../lib/mapLook';
+import { setBorders, setEarthColours, setPinDraw, setShowObs, useBorders, useEarthColours, usePinDraw, useShowObs } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOutDown, FadeOutUp, withTiming, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -116,6 +116,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // observations") — a remembered preference in the map preferences; an
   // earlier top-bar toggle lived for an hour on 2026-10-06
   const showObs = useShowObs();
+  const pinDraw = usePinDraw();
   useEffect(() => {
     if (pageReady) web.current?.injectJavaScript(`window.polygroveShowMarks && window.polygroveShowMarks(${showObs}); true;`);
   }, [pageReady, showObs]);
@@ -527,8 +528,8 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
 
       {/* MAP CONTROLS (user, 2026-10-07): + in the bottom-right corner, − to its
           left, always there. In the bottom-LEFT corner, map preferences: open,
-          three tiles rise above it — sightings ✕ on/off, ecoregion borders,
-          earth colours ⇄ grey/black. (Zoom came 2026-09-28; the compass came
+          four tiles rise above it — packs around the pin, sightings ✕ on/off,
+          ecoregion borders, earth colours ⇄ grey/black. (Zoom came 2026-09-28; the compass came
           and went 2026-09-29.) */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
@@ -549,6 +550,14 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         <View style={[s.prefs, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
+              {/* DRAW AROUND THE PIN, top of the list (user, 2026-10-08): packs come from the
+                  pin's ecoregion, the species recorded around the pin first */}
+              <GlassTile on={pinDraw} onPress={() => setPinDraw(!pinDraw)} label={pinDraw ? 'Packs from the camp deck' : 'Packs from around the pin'}>
+                <Svg width={24} height={24} viewBox="0 0 24 24">
+                  <Path d="M12 2.5 C8.4 2.5 5.8 5.2 5.8 8.6 C5.8 13.2 12 21 12 21 C12 21 18.2 13.2 18.2 8.6 C18.2 5.2 15.6 2.5 12 2.5 Z" fill={pinDraw ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.3} strokeLinejoin="round" />
+                  <Circle cx={12} cy={8.8} r={2.4} fill="none" stroke={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.3} />
+                </Svg>
+              </GlassTile>
               <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
                 <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
               </GlassTile>

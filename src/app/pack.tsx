@@ -34,6 +34,9 @@ import { fieldNote } from '../lib/dossier';
 import { SOLAR_PACK_COST, canAffordSolar, loadSol, spendSol } from '../lib/sol';
 import { loadTips, markTip, queuePacksPopup, tipSeen } from '../lib/tips';
 import { currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
+import { getPinDraw } from '../lib/mapLook';
+import { pinRanking } from '../lib/nearby';
+import { getPin } from '../lib/pin';
 import {
   PACK_SIZE, Stashed, offlineReady, popCards, popPack, releaseStashed, returnCards, snapshotStashed, topUp,
 } from '../lib/offline';
@@ -60,6 +63,29 @@ function drawLive(eid: number, n: number, exclude: Set<number>): Card[] {
   return out;
 }
 
+// AROUND THE PIN (user, 2026-10-08: "if you put a pin down at Lake Tahoe you
+// draw cards around Lake Tahoe"): the pin's ecoregion's deck, weighted by the
+// records in the 1° cells around the pin (the PolygroveDB tab's Pin ranking,
+// square-rooted so the commonest few don't own every pack). A species with no
+// record near the pin is drawn only when the near ones run out.
+async function drawNear(eid: number, lng: number, lat: number, n: number, exclude: Set<number>): Promise<Card[]> {
+  const near = new Map(await pinRanking(lng, lat));
+  const all = ecoMembers(eid);
+  let pool = all.filter(c => !owns(eid, c.species_id) && !exclude.has(c.species_id));
+  if (pool.length < n) pool = all.filter(c => !exclude.has(c.species_id));
+  const out: Card[] = [];
+  let weighted = pool.filter(c => (near.get(c.id) ?? 0) > 0).map(c => ({ c, w: Math.sqrt(near.get(c.id) as number) }));
+  while (out.length < n && weighted.length) {
+    const total = weighted.reduce((s, x) => s + x.w, 0);
+    let r = Math.random() * total, i = 0;
+    while (i < weighted.length - 1 && (r -= weighted[i].w) > 0) i++;
+    out.push(weighted[i].c); weighted = weighted.filter((_, k) => k !== i);
+  }
+  const rest = pool.filter(c => !out.includes(c));
+  while (out.length < n && rest.length) out.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]);
+  return out;
+}
+
 const liveStash = (card: Card): Stashed =>
   ({ card, note: null, globi: [], photoUrl: photoFor(card.id, 500) });
 
@@ -83,27 +109,32 @@ export default function PackOpening() {
   useEffect(() => {
     (async () => {
       await offlineReady();
-      const eco = await loadCurrentEco();
-      if (!eco) { router.replace('/map'); return; }   // no ecoregion = nothing to draw from
+      const camp = await loadCurrentEco();
+      if (!camp) { router.replace('/map'); return; }   // no ecoregion = nothing to draw from
       await Promise.all([loadDaily(), loadSol(), loadTips()]);
       if (solar ? !canAffordSolar() : !discoveryReady()) { router.replace('/'); return; }
+      // the pin's ecoregion when "packs around the pin" is on and the pin is on land (user, 2026-10-08)
+      const pin = getPin();
+      const near = getPinDraw() && pin && pin.eid != null ? pin : null;
+      const eco = near ? { eid: near.eid as number } : camp;
       setEid(eco.eid);
       // 5 keeps + up to 3 skip spares, queue first, live draw for the rest
-      let p = popPack(eco.eid);
+      // (the pin draw is always live: the queue was dealt from the camp's deck)
+      let p = near ? null : popPack(eco.eid);
       if (!p) {
         try {
           await loadCatalog();
-          p = drawLive(eco.eid, PACK_SIZE, new Set()).map(liveStash);
-          topUp();
+          p = (near ? await drawNear(eco.eid, near.lng, near.lat, PACK_SIZE, new Set()) : drawLive(eco.eid, PACK_SIZE, new Set())).map(liveStash);
+          if (!near) topUp();
         } catch { setNoNet(true); return; }
       }
       if (!p.length) { setNoNet(true); return; }
-      const spares = popCards(eco.eid, SKIPS);
+      const spares = near ? [] : popCards(eco.eid, SKIPS);
       if (spares.length < SKIPS) {
         try {
           await loadCatalog();
           const have = new Set([...p, ...spares].map(st => st.card.species_id));
-          spares.push(...drawLive(eco.eid, SKIPS - spares.length, have).map(liveStash));
+          spares.push(...(near ? await drawNear(eco.eid, near.lng, near.lat, SKIPS - spares.length, have) : drawLive(eco.eid, SKIPS - spares.length, have)).map(liveStash));
         } catch { /* offline — fewer skips this pack */ }
       }
       // the pack is paid for the moment it's dealt
