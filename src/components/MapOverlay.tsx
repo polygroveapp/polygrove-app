@@ -23,6 +23,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { openWeb } from '../lib/web';
+import { setEarthColours, useEarthColours } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -299,6 +300,11 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // leans against a drag (that comes from the page's pan messages).
 
   const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom && window.polygroveZoom(${d}); true;`);
+  // earth colours or grey/black (user, 2026-10-07) — a remembered preference, sent to the page whenever it changes or the page comes up
+  const earth = useEarthColours();
+  useEffect(() => {
+    if (pageReady) web.current?.injectJavaScript(`window.polygroveRelief && window.polygroveRelief(${earth}); true;`);
+  }, [pageReady, earth]);
 
   const enter = async () => {
     if (!pick) return;
@@ -412,8 +418,14 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
           the same day (user, 2026-09-29); the map stays north-up */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]}>
-          <Pressable onPress={() => zoom(-1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>−</Text></Pressable>
-          <Pressable onPress={() => zoom(1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>+</Text></Pressable>
+          {/* above the plus: earth colours ⇄ grey/black (user, 2026-10-07) */}
+          <Pressable onPress={() => setEarthColours(!earth)} hitSlop={6} style={[s.zoomBtn, earth && s.zoomBtnOn]} accessibilityLabel={earth ? 'Grey map' : 'Earth colours'}>
+            <Text style={s.lookTxt}>{earth ? '🌑' : '🌎'}</Text>
+          </Pressable>
+          <View style={s.zoomRow}>
+            <Pressable onPress={() => zoom(-1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>−</Text></Pressable>
+            <Pressable onPress={() => zoom(1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>+</Text></Pressable>
+          </View>
         </View>
       )}
 
@@ -521,7 +533,8 @@ const s = StyleSheet.create({
   title: { fontFamily: F.display, fontSize: 15, color: '#ffe14d' },   // yellow (user, 2026-09-30 — after the ecoregion brown, white, dimmer white)
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#ffffff' },   // white (user, 2026-09-30; was grey)
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
-  zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row' },
+  zoom: { position: 'absolute', right: 14, gap: 8, alignItems: 'flex-end' },
+  zoomRow: { gap: 8, flexDirection: 'row' },
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
   underWrap: { position: 'absolute', left: 14, right: 118, alignItems: 'flex-start', justifyContent: 'flex-end' },
   under: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 4, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
@@ -535,6 +548,8 @@ const s = StyleSheet.create({
   // the + / − green (user, 2026-09-30: brown for a minute, then "green again")
   zoomBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(10,15,10,0.85)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
+  zoomBtnOn: { borderColor: 'rgba(129,199,132,0.6)' },
+  lookTxt: { fontSize: 19, lineHeight: 24 },
   sheet: {
     position: 'absolute', left: 0, right: 0, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12,
     backgroundColor: 'rgba(10,15,10,0.94)', borderTopLeftRadius: 22, borderTopRightRadius: 22,
