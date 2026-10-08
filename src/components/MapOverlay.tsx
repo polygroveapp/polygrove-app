@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
+import ObsTimeline from './ObsTimeline';
 import { C, F, getLevel, MASTERY } from '../constants/polygrove';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import { loadSightings, niceDate, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
@@ -358,6 +359,28 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // every ecoregion's outline on or off (user, 2026-10-07)
   const borders = useBorders();
   const [menuOpen, setMenuOpen] = useState(false);
+  // the timeline's cut (user, 2026-10-07): only sightings up to this date are on the map; null = all.
+  // With the ✕s switched off the timeline is gone, and so is its cut.
+  const [until, setUntil] = useState<string | null>(null);
+  // the timeline unrolls from its left edge, where the fold-out tile is: scaled
+  // from nothing, and slid left by half of what is missing so that edge stays put
+  const timelineIn = (v: { targetWidth: number }) => {
+    'worklet';
+    return {
+      initialValues: { opacity: 0, transform: [{ translateX: -v.targetWidth / 2 - 26 }, { scaleX: 0.02 }] },
+      animations: { opacity: withTiming(1, { duration: 140 }), transform: [{ translateX: withTiming(0, { duration: 260 }) }, { scaleX: withTiming(1, { duration: 260 }) }] },
+    };
+  };
+  const timelineOut = (v: { currentWidth: number }) => {
+    'worklet';
+    return {
+      initialValues: { opacity: 1, transform: [{ translateX: 0 }, { scaleX: 1 }] },
+      animations: { opacity: withTiming(0, { duration: 200 }), transform: [{ translateX: withTiming(-v.currentWidth / 2 - 26, { duration: 200 }) }, { scaleX: withTiming(0.02, { duration: 200 }) }] },
+    };
+  };
+  useEffect(() => {
+    if (pageReady) web.current?.injectJavaScript(`window.polygroveMarksUntil && window.polygroveMarksUntil(${showObs && until ? JSON.stringify(until) : 'null'}); true;`);
+  }, [pageReady, until, showObs]);
   // the title fades out while a sighting's strip is up and back in when it goes (user, 2026-10-07)
   const stripOn = showObs && under.length > 0;
   // the fade keeps step with the strip's own animation: 160 ms in, 240 ms out.
@@ -503,6 +526,16 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
           <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
         </View>
       )}
+      {/* the sightings' timeline, between the preferences tile and − (user, 2026-10-07) */}
+      {/* IT COMES OUT OF THE FOLD-OUT BUTTON (user, 2026-10-07): part of the menu —
+          it grows rightward from the bottom-left tile when the menu opens (with the
+          ✕s on) and folds back into it. While it holds a cut it stays out, menu
+          open or not, so a shortened map is never left without its explanation. */}
+      {pageReady && showObs && (menuOpen || until != null) && (
+        <Animated.View entering={timelineIn} exiting={timelineOut} style={[s.timeline, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
+          <ObsTimeline marks={marks} onUntil={setUntil} />
+        </Animated.View>
+      )}
       {pageReady && (
         <View style={[s.prefs, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           {menuOpen && (
@@ -646,6 +679,7 @@ const s = StyleSheet.create({
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
   zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row', alignItems: 'center' },
   prefs: { position: 'absolute', left: 14, gap: 8, alignItems: 'center' },
+  timeline: { position: 'absolute', left: 14 + 42 + 10, right: 14 + 42 + 8 + 42 + 10 },
   zoomCol: { gap: 8, alignItems: 'center' },
   obsX: { fontFamily: F.sansBold, fontSize: 17, color: C.yellow, lineHeight: 21 },   // the marks' yellow (user, 2026-10-07: green for a minute, then "yellow again")
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
