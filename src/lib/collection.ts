@@ -58,6 +58,8 @@ export function addToCollection(eid: number, card: Card): boolean {
 }
 
 export const owns = (eid: number, speciesId: number) => !!_decks[eid]?.[speciesId];
+/** when the card was journaled there (ms), 0 if it isn't */
+export const ownedAt = (eid: number, speciesId: number) => _decks[eid]?.[speciesId]?.at ?? 0;
 export const ownsAnywhere = (speciesId: number) =>
   Object.values(_decks).some(deck => !!deck[speciesId]);
 export const collectionCount = (eid: number) => Object.keys(_decks[eid] || {}).length;

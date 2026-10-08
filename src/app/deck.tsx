@@ -20,7 +20,7 @@ import Honeycomb, { Comb, ShownCard } from '../components/Honeycomb';
 import PolygroveCard from '../components/PolygroveCard';
 import { ALL_TIERS, C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
 import { Card, framingFor, loadCatalog, photoFor } from '../lib/catalog';
-import { loadCollection, owns, useCollection } from '../lib/collection';
+import { loadCollection, owns, useCollection, ownedAt } from '../lib/collection';
 import { CurrentEco, ecoMembers, ecoMeta, loadCurrentEco, loadEcoMeta, useCurrentEco } from '../lib/ecoregions';
 import { countsOf, isFullyLocked, loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
@@ -59,12 +59,14 @@ export default function FieldNotes() {
   useEffect(() => { load(); }, []);
   const retry = () => { setError(null); load(); };
 
-  // only what the user actually has (user, 2026-09-26): journaled cards, by
-  // name; the deck's full size stays in the subtitle so progress still reads
+  // only what the user actually has (user, 2026-09-26): journaled cards, in
+  // the ORDER THEY WERE OPENED, newest first (user, 2026-10-08: "for both hexes
+  // and list they should be in order of which cards they opened"; by name
+  // before). The deck's full size stays in the subtitle so progress still reads
   const deckSize = ready && eco ? ecoMembers(eco.eid).length : 0;
   const cards = useMemo(
     () => (ready && eco
-      ? ecoMembers(eco.eid).filter(c => owns(eco.eid, c.species_id)).sort((a, b) => a.name.localeCompare(b.name))
+      ? ecoMembers(eco.eid).filter(c => owns(eco.eid, c.species_id)).sort((a, b) => ownedAt(eco.eid, b.species_id) - ownedAt(eco.eid, a.species_id) || a.name.localeCompare(b.name))
       : []),
     [ready, eco, owned],   // eslint-disable-line react-hooks/exhaustive-deps
   );
