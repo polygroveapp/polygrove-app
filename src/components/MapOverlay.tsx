@@ -527,11 +527,10 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         </View>
       )}
       {/* the sightings' timeline, between the preferences tile and − (user, 2026-10-07) */}
-      {/* IT COMES OUT OF THE FOLD-OUT BUTTON (user, 2026-10-07): part of the menu —
-          it grows rightward from the bottom-left tile when the menu opens (with the
-          ✕s on) and folds back into it. While it holds a cut it stays out, menu
-          open or not, so a shortened map is never left without its explanation. */}
-      {pageReady && showObs && (menuOpen || until != null) && (
+      {/* ALWAYS OUT WHILE THE ✕s ARE ON (user, 2026-10-07 — it was tied to the open
+          menu for a few minutes): it unrolls rightward out of the bottom-left tile
+          when the ✕s are switched on and folds back into it when they go off */}
+      {pageReady && showObs && (
         <Animated.View entering={timelineIn} exiting={timelineOut} style={[s.timeline, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           <ObsTimeline marks={marks} onUntil={setUntil} />
         </Animated.View>
