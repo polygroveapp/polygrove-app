@@ -554,7 +554,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   pin's ecoregion, the species recorded around the pin first */}
               <GlassTile on={pinDraw} onPress={() => setPinDraw(!pinDraw)} label={pinDraw ? 'Packs from the camp deck' : 'Packs from around the pin'}>
                 {/* the map's own push pin — ball, collar and needle (user, 2026-10-08: "make this the shape of the red pin") */}
-                <Svg width={20} height={30} viewBox="0 0 20 33">
+                <Svg width={16} height={25} viewBox="0 0 20 33">
                   <Path d="M8.8 13.4 L11.2 13.4 L10.25 29.7 L9.75 29.7 Z" fill={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} />
                   <Ellipse cx="10" cy="13.2" rx="2.3" ry="0.9" fill={pinDraw ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={0.9} />
                   <Circle cx="10" cy="7" r="6.5" fill={pinDraw ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.4} />
