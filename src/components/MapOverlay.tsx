@@ -25,7 +25,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { openWeb } from '../lib/web';
-import { setBorders, setEarthColours, useBorders, useEarthColours } from '../lib/mapLook';
+import { setBorders, setEarthColours, setShowObs, useBorders, useEarthColours, useShowObs } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -111,12 +111,13 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // step through the rest under the pin
   const [underAt, setUnderAt] = useState(0);
   const [obsCache, setObsCache] = useState<Record<number, (Spot & { grade: string }) | null>>({});
-  // the ✕ obs on/off button lived here for an hour on 2026-10-06 (removed:
-  // "remove this" once the 3D terrain turned out to be the lag); the page
-  // still honours polygroveShowMarks, and marks are always on
+  // the ✕ sighting marks on or off (user, 2026-10-07: "an x button to turn off
+  // observations") — a remembered preference in the map preferences; an
+  // earlier top-bar toggle lived for an hour on 2026-10-06
+  const showObs = useShowObs();
   useEffect(() => {
-    if (pageReady) web.current?.injectJavaScript(`window.polygroveShowMarks && window.polygroveShowMarks(true); true;`);
-  }, [pageReady]);
+    if (pageReady) web.current?.injectJavaScript(`window.polygroveShowMarks && window.polygroveShowMarks(${showObs}); true;`);
+  }, [pageReady, showObs]);
   // a mark that carries its name needs no fetch: the page passes name/sci/date
   // along from the saved marks (user, 2026-10-06: nothing loads under the pin)
   const spotOf = (u: Under): (Spot & { grade: string }) | null => u.name
@@ -458,14 +459,18 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         </View>
       </View>
 
-      {/* MAP CONTROLS (user, 2026-10-07): + and − are always there, bottom-right.
-          Above them one glass tile for map preferences; open, ecoregion borders
-          and earth colours ⇄ grey/black rise above it and it becomes a ✕.
-          (Zoom came 2026-09-28; the compass came and went 2026-09-29.) */}
+      {/* MAP CONTROLS (user, 2026-10-07): + bottom-right, − to its left, always
+          there. Above the + one glass tile for map preferences; open, three
+          tiles rise above it — sightings ✕ on/off, ecoregion borders, earth
+          colours ⇄ grey/black. (Zoom came 2026-09-28; the compass came and
+          went 2026-09-29.) */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
+              <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
+                <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
+              </GlassTile>
               <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
                 <Svg width={24} height={24} viewBox="0 0 24 24">
                   <Path d={ECOBLOB} fill={borders ? 'rgba(129,199,132,0.22)' : 'rgba(255,255,255,0.1)'} stroke={borders ? C.greenSoft : 'rgba(255,255,255,0.85)'}
@@ -480,16 +485,15 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
             </Animated.View>
           )}
           <GlassTile on={menuOpen} onPress={() => setMenuOpen(v => !v)} label={menuOpen ? 'Close map preferences' : 'Map preferences'}>
-            {menuOpen
-              ? <Text style={s.menuX}>✕</Text>
-              : <Svg width={24} height={24} viewBox="0 0 24 24">
-                  <Path d="M12 4 L20 8.5 L12 13 L4 8.5 Z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.85)" strokeWidth={1.3} strokeLinejoin="round" />
-                  <Path d="M4.5 12.5 L12 16.7 L19.5 12.5 M4.5 16 L12 20.2 L19.5 16" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" />
-                </Svg>}
+            <Svg width={24} height={24} viewBox="0 0 24 24">
+              <Path d="M12 4 L20 8.5 L12 13 L4 8.5 Z" fill={menuOpen ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={menuOpen ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.3} strokeLinejoin="round" />
+              <Path d="M4.5 12.5 L12 16.7 L19.5 12.5 M4.5 16 L12 20.2 L19.5 16" fill="none" stroke={menuOpen ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" />
+            </Svg>
           </GlassTile>
-          {/* ALWAYS THERE (user, 2026-10-07: "always have the plus and minus"): zoom, below the preferences button */}
-          <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
-          <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
+          <View style={s.zoomRow}>
+            <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
+            <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
+          </View>
         </View>
       )}
 
@@ -604,9 +608,10 @@ const s = StyleSheet.create({
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
   zoom: { position: 'absolute', right: 14, gap: 8, alignItems: 'flex-end' },
   zoomCol: { gap: 8, alignItems: 'center' },
-  menuX: { fontFamily: F.sansBold, fontSize: 16, color: C.greenSoft, lineHeight: 20 },
+  zoomRow: { gap: 8, flexDirection: 'row' },
+  obsX: { fontFamily: F.sansBold, fontSize: 17, color: C.yellow, lineHeight: 21 },
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
-  underWrap: { position: 'absolute', left: 14, right: 66, alignItems: 'flex-start', justifyContent: 'flex-end' },
+  underWrap: { position: 'absolute', left: 14, right: 118, alignItems: 'flex-start', justifyContent: 'flex-end' },
   // 92 = the two control rows (42 + 8 + 42) to its right (user, 2026-10-07)
   under: { alignSelf: 'stretch', height: 92, flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 4, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   underRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },

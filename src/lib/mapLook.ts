@@ -11,6 +11,8 @@ const KEY = 'polygrove.mapLook.v1';
 const KEY_B = 'polygrove.mapBorders.v1';
 let _earth = false;
 let _borders = false;
+let _obs = true;   // the ✕ sighting marks: on unless turned off
+const KEY_O = 'polygrove.mapObs.v1';
 let _loaded = false;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());
@@ -18,6 +20,7 @@ function load() {
   if (_loaded) return;
   _loaded = true;
   AsyncStorage.getItem(KEY).then(v => { if (v != null) { _earth = v === '1'; emit(); } }).catch(() => {});
+  AsyncStorage.getItem(KEY_O).then(v => { if (v != null) { _obs = v === '1'; emit(); } }).catch(() => {});
   AsyncStorage.getItem(KEY_B).then(v => { if (v != null) { _borders = v === '1'; emit(); } }).catch(() => {});
 }
 export function setBorders(on: boolean) {
@@ -33,4 +36,11 @@ export function setEarthColours(on: boolean) {
 }
 export function useEarthColours(): boolean {
   return useSyncExternalStore(l => { load(); listeners.add(l); return () => { listeners.delete(l); }; }, () => _earth, () => false);
+}
+export function setShowObs(on: boolean) {
+  _obs = on; emit();
+  AsyncStorage.setItem(KEY_O, on ? '1' : '0').catch(() => {});
+}
+export function useShowObs(): boolean {
+  return useSyncExternalStore(l => { load(); listeners.add(l); return () => { listeners.delete(l); }; }, () => _obs, () => true);
 }
