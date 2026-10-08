@@ -456,7 +456,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
 
       {/* MAP CONTROLS (user, 2026-10-07): − in the bottom-right corner, + above
           it, always there. In the bottom-LEFT corner, map preferences: open,
-          three tiles rise above it — ecoregion borders, sightings ✕ on/off,
+          three tiles rise above it — sightings ✕ on/off, ecoregion borders,
           earth colours ⇄ grey/black. (Zoom came 2026-09-28; the compass came
           and went 2026-09-29.) */}
       {pageReady && (
@@ -469,14 +469,14 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         <View style={[s.prefs, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
+              <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
+                <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
+              </GlassTile>
               <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
                 <Svg width={24} height={24} viewBox="0 0 24 24">
                   <Path d={ECOBLOB} fill={borders ? 'rgba(129,199,132,0.22)' : 'rgba(255,255,255,0.1)'} stroke={borders ? C.greenSoft : 'rgba(255,255,255,0.85)'}
                     strokeWidth={1.3} strokeDasharray="2.2 1.8" strokeLinejoin="round" strokeLinecap="round" />
                 </Svg>
-              </GlassTile>
-              <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
-                <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
               </GlassTile>
               <GlassTile on={earth} onPress={() => setEarthColours(!earth)} label={earth ? 'Grey map' : 'Earth colours'}>
                 <Svg width={22} height={28} viewBox="0 0 24 32">
