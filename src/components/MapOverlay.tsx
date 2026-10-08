@@ -173,7 +173,9 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
       if (eid != null && sightings.potential.some(p => p.key === `${card.species_id}@${eid}`)) { router.push({ pathname: '/preview', params: { kind: 'potential', key: `${card.species_id}@${eid}`, slide: 'right' } }); return; }
     } else if (sci && sightings.potential.some(p => p.key === sci)) { router.push({ pathname: '/preview', params: { kind: 'potential', key: sci, slide: 'right' } }); return; }
     if (sightings.waiting.some(w => w.obsId === o.id)) { router.push({ pathname: '/preview', params: { kind: 'waiting', key: String(o.id), slide: 'right' } }); return; }
-    openWeb(o.uri);   // nothing in the game for it yet: the observation itself
+    // in none of the lists (they are capped): still its would-be card, not a web page (user, 2026-10-07)
+    if (o.name) { router.push({ pathname: '/preview', params: { kind: 'obs', key: String(o.id), name: o.name, sci: o.sci ?? '', date: o.date ?? '', uri: o.uri, slide: 'right' } }); return; }
+    openWeb(o.uri);   // not even a name: the observation itself
   };
   const [catalogReady, setCatalogReady] = useState(false);
   const [metaReady, setMetaReady] = useState(false);

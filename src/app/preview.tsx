@@ -16,7 +16,7 @@ import CloseX from '../components/CloseX';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 import PolygroveCard from '../components/PolygroveCard';
 import { C, F } from '../constants/polygrove';
-import { cardById, loadCatalog } from '../lib/catalog';
+import { cardById, getCards, loadCatalog } from '../lib/catalog';
 import { ALL_FACTS as ALL, FACT_LABEL, Facts, SightingInfo, loadSightings, partialCard, useSightings } from '../lib/sightings';
 import { openWeb } from '../lib/web';
 
@@ -26,7 +26,7 @@ export default function Preview() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const win = useWindowDimensions();
-  const { kind, key } = useLocalSearchParams<{ kind?: string; key?: string }>();
+  const { kind, key, name: pName, sci: pSci, date: pDate, uri: pUri } = useLocalSearchParams<{ kind?: string; key?: string; name?: string; sci?: string; date?: string; uri?: string }>();
   const st = useSightings();
   const [ready, setReady] = useState(false);
   useEffect(() => { Promise.allSettled([loadSightings(), loadCatalog()]).then(() => setReady(true)); }, []);
@@ -48,6 +48,19 @@ export default function Preview() {
           : `Waiting to be confirmed — and the game can’t make this card yet${lacking.length ? `: it’s missing its ${listOf(lacking.map(k => FACT_LABEL[k]))}` : ''}.`,
       };
     }
+  } else if (kind === 'obs') {
+    // A ✕ FROM THE MAP THAT IS IN NONE OF THE LISTS (user, 2026-10-07: "if it's a
+    // green x it should go to the potential card like the grey x") — the lists
+    // on the phone are capped, and an unconfirmed sighting can sit outside all of
+    // them. It still gets its would-be card, made from what the mark carries;
+    // it used to open iNaturalist instead.
+    const c = pSci ? getCards().find(x => x.sci.toLowerCase() === pSci.toLowerCase()) : undefined;
+    if (pName) found = {
+      name: c?.name ?? pName, sci: pSci ?? '', cardId: c?.id ?? null, facts: null,
+      obs: { obsId: +(key ?? 0), uri: pUri, date: pDate || null },
+      say: c ? 'You’ve seen it. Once the iNaturalist community confirms what it is, this could be your card.'
+        : 'You’ve seen it, but the game can’t make this card yet.',
+    };
   } else {
     const p = st.potential.find(x => x.key === key);
     if (p) {
