@@ -185,7 +185,7 @@ export default function Sightings() {
             {!run.busy && st.checkedAt > 0 ? (
               <Text style={s.note}>
                 {st.confirmed.toLocaleString()} confirmed sighting{st.confirmed === 1 ? '' : 's'}
-                {st.already ? ` · ${st.already} already in your journals` : ''}
+                {st.already ? ` · ${st.already} of them already in your journals` : ''}
                 {st.unplaced ? ` · ${st.unplaced} with no ecoregion at that spot` : ''}
               </Text>
             ) : null}

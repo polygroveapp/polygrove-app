@@ -44,7 +44,7 @@ export type Facts = {
   edge: string | null;    // the database's best food-web line ("eats California Mouse")
   missing: FactKey[];
 };
-export type Earned = SightingInfo & { cardId: string; speciesId: number; name: string; eid: number; eco: string; at: number };
+export type Earned = SightingInfo & { cardId: string; speciesId: number; name: string; eid: number; eco: string; at: number; already?: boolean };   // already: the card was in that journal before the sighting
 // one entry per (ecoregion, species), first one wins — a check interrupted and
 // re-run could list a pair twice (duplicate-key error in the comb, 2026-10-06)
 const uniqEarned = (list: Earned[]) => { const seen = new Set<string>(); return list.filter(e => { const k = `${e.eid}:${e.speciesId}`; if (seen.has(k)) return false; seen.add(k); return true; }); };
@@ -259,12 +259,20 @@ export function syncSightings(force = false): Promise<void> {
           mark(o, 1);
           const pair = `${eid}:${card.species_id}`;
           if (mine.has(pair)) { (seenAs.get(pair) ?? seenAs.set(pair, []).get(pair)!).push(o); continue; }   // a duplicate does nothing
-          if (owns(eid, card.species_id)) { had.add(pair); continue; }                                       // …nor does one you had anyway
+          // A CARD YOU ALREADY HELD THERE (user, 2026-10-07: a confirmed redwood with no
+          // sighting card — "all these yellow x's should be observation cards with their
+          // related journaled card"): the sighting is kept as one all the same, tied to
+          // the card you have, and counted in `already`; it just does not journal
+          // the card a second time
+          const already = owns(eid, card.species_id);
+          if (already) had.add(pair);
           mine.add(pair); seenAs.set(pair, [o]);
-          addToCollection(eid, card);
-          // journaled cards are readable offline forever: photo, note and food web are fetched and kept
-          snapshotStashed({ card, note: null, globi: [], photoUrl: photoRemote(card.id, 500), frame: framingFor(card.id) });
-          fresh.push({ ...info(o), cardId: card.id, speciesId: card.species_id, name: card.name, eid, eco, at: Date.now() });
+          if (!already) {
+            addToCollection(eid, card);
+            // journaled cards are readable offline forever: photo, note and food web are fetched and kept
+            snapshotStashed({ card, note: null, globi: [], photoUrl: photoRemote(card.id, 500), frame: framingFor(card.id) });
+          }
+          fresh.push({ ...info(o), cardId: card.id, speciesId: card.species_id, name: card.name, eid, eco, at: Date.now(), ...(already ? { already: true } : {}) });
         }
         partial();
         if (list.length < PAGE) break;

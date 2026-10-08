@@ -37,7 +37,8 @@ export default function Preview() {
   if (kind === 'earned') {
     const e = st.earned.find(x => `${x.eid}:${x.speciesId}` === key);
     if (e) found = { name: e.name, sci: cardById(e.cardId)?.sci ?? '', cardId: e.cardId, facts: null, obs: e, eid: e.eid,
-      say: `Your sighting earned this card. It’s in the ${e.eco} journal${e.seen && e.seen > 1 ? ` — seen there ${e.seen} times` : ''}.` };
+      say: e.already ? `Your sighting. This card was already in the ${e.eco} journal${e.seen && e.seen > 1 ? ` — seen there ${e.seen} times` : ''}.`
+        : `Your sighting earned this card. It’s in the ${e.eco} journal${e.seen && e.seen > 1 ? ` — seen there ${e.seen} times` : ''}.` };
   } else if (kind === 'waiting') {
     const w = st.waiting.find(x => String(x.obsId) === key);
     if (w) {
