@@ -11,7 +11,8 @@ import { useEffect, useSyncExternalStore } from 'react';
 // older pictures are left behind and redrawn on the next visit
 // v5 (2026-10-07): a colour relief of the world, the region in gold
 // v6 (2026-10-07, later): the region green again, and the sea a true mask (bays are water)
-const KEY = (eid: number) => `polygrove.minimap.v6.${eid}`;
+// v7 (2026-10-07, later still): v6 pictures caught the sea mask's blue wedges
+const KEY = (eid: number) => `polygrove.minimap.v7.${eid}`;
 const mem: Record<number, string | null> = {};   // null = looked, nothing stored
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());
