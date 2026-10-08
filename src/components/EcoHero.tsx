@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { openWeb } from '../lib/web';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { WebFrame as WebView } from './WebFrame';
 import { F } from '../constants/polygrove';
 import { cleanLead, CurrentEco, ecoMeta, loadEcoMeta, wikiUrl } from '../lib/ecoregions';
 import { MINI_VERSION, saveMiniMap, useMiniMap } from '../lib/minimap';

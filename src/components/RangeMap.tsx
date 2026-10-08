@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WebView } from 'react-native-webview';
+import { WebFrame as WebView } from './WebFrame';
 import { C, F } from '../constants/polygrove';
 
 const URL = (sci: string, live: boolean) => `https://polygrovedb.pages.dev/map?range=${encodeURIComponent(sci)}${live ? '&live=1' : ''}`;

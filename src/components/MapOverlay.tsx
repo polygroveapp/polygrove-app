@@ -31,7 +31,7 @@ import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDime
 import Animated, { FadeIn, FadeInDown, FadeOutDown, FadeOutUp, withTiming, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
-import { WebView, WebViewMessageEvent } from 'react-native-webview';
+import { WebFrame as WebView, type FrameMessage, type WebFrameRef } from './WebFrame';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
 import ObsTimeline from './ObsTimeline';
 import { C, F, getLevel, MASTERY } from '../constants/polygrove';
@@ -90,7 +90,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const current = useCurrentEco();
-  const web = useRef<WebView>(null);
+  const web = useRef<WebFrameRef>(null);
   const [pageReady, setPageReady] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pick, setPick] = useState<Pick | null>(null);      // what's under the pin
@@ -340,7 +340,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     transform: [{ translateX: 23 * Math.sin((leanZ.value * Math.PI) / 180) }, { translateY: 5 * Math.sin((leanX.value * Math.PI) / 180) }],
   }));
 
-  const onMessage = (e: WebViewMessageEvent) => {
+  const onMessage = (e: FrameMessage) => {
     let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox']; dx?: number; dy?: number; ids?: unknown[]; ok?: number; marks?: unknown[]; lng?: number; lat?: number };
     try { m = JSON.parse(e.nativeEvent.data); } catch { return; }
     if (m.type === 'ready') setPageReady(true);
@@ -428,7 +428,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   };
 
   const have = useCollection(pick?.eid).length;   // journaled there — "x / N species in deck" (user, 2026-10-05)
-  if (Platform.OS === 'web') return null;
+  // (in a browser this returned null until 2026-10-08 — no web view there; WebFrame.web.tsx is an iframe now)
   const size = pick && catalogReady ? ecoDeckSize(pick.eid) : null;
   const meta = pick && metaReady ? ecoMeta(pick.eid) : undefined;
   const here = !!pick && current?.eid === pick.eid;
