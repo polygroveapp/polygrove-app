@@ -424,10 +424,26 @@ function QuestionBody({ q, card, done, onAnswer }: { q: Exclude<Q, { type: 'pick
           </View>
         ) : q.type === 'mc' ? q.opts.map(o => {
           const st = optStyle(o === q.a, sel === o);
+          const row = q.rows?.[o];
           return (
             <Pressable key={o} disabled={done} onPress={() => { setSel(o); onAnswer(o === q.a); }}
-              style={[s.opt, { backgroundColor: st.bg, borderColor: st.bc }]}>
-              <Text style={[s.optTxt, { color: st.tc }]}>{o}</Text>
+              style={[s.opt, { backgroundColor: st.bg, borderColor: st.bc }, row && s.sizeOpt]}>
+              {row ? (
+                <>
+                  {/* the size question (user, 2026-10-07): the figure and a species of that size on the
+                      left, and on the right the card back's scale bar — where it sits in the group */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.optTxt, { color: st.tc }]}>{o}</Text>
+                    {row.eg ? <Text style={[s.sizeEg, { color: st.tc }]} numberOfLines={1}>like a {row.eg}</Text> : null}
+                  </View>
+                  {row.frac != null ? (
+                    <View style={s.sizeTrack}>
+                      <View style={[s.sizeFill, { width: `${Math.round(row.frac * 100)}%`, backgroundColor: st.tc }]} />
+                      <View style={[s.sizeDot, { left: `${Math.round(row.frac * 100)}%`, backgroundColor: st.tc }]} />
+                    </View>
+                  ) : null}
+                </>
+              ) : <Text style={[s.optTxt, { color: st.tc }]}>{o}</Text>}
             </Pressable>
           );
         }) : (hash % 2 === 0 ? [true, false] : [false, true]).map(v => {
@@ -475,6 +491,11 @@ const s = StyleSheet.create({
   qTxt: { fontFamily: F.sans, fontSize: 15, color: C.text, lineHeight: 21 },
   sideTitle: { fontFamily: F.sansBold, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
   opt: { borderWidth: 2, borderRadius: 11, paddingVertical: 12, paddingHorizontal: 14 },
+  sizeOpt: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 10 },
+  sizeEg: { fontFamily: F.sans, fontSize: 11.5, lineHeight: 15, opacity: 0.7, marginTop: 1 },
+  sizeTrack: { width: '36%', height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center' },
+  sizeFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 3, opacity: 0.55 },
+  sizeDot: { position: 'absolute', width: 9, height: 9, borderRadius: 5, marginLeft: -4.5 },
   optTxt: { fontFamily: F.sans, fontSize: 14, lineHeight: 18 },
   fwRow: { flexDirection: 'row', gap: 8 },
   fwTile: { flex: 1, alignItems: 'center', gap: 6 },

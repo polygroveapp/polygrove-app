@@ -125,18 +125,23 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     ? { id: u.id, uri: `https://www.inaturalist.org/observations/${u.id}`, date: u.date ?? null, name: u.name, sci: u.sci ?? null, lng: u.lng ?? null, lat: u.lat ?? null, place: null, photo: null, credit: '', agree: 0, iconic: null, grade: '' }
     : null;
   const sightings = useSightings();   // declared here: the strip's picture below reads it
-  // THE STRIP'S PICTURE, ALWAYS ONE (user, 2026-10-07: "always display the image
-  // whether or not it's confirmed"): the deck card's photo first; else the photo
-  // kept with that sighting's own card in Sightings (potential / waiting /
-  // earned); and only when the phone holds neither, the observation is looked
-  // up once for its photo (the effect below) — your own picture, shown back to you
-  const pictureOf = (u: Under): string | undefined => {
+  // THE STRIP'S PICTURE IS YOUR OWN PHOTO OF THAT SIGHTING (user, 2026-10-07, of a
+  // Mule Deer strip wearing the deck's stock photo: "this is not the photo I took
+  // of a deer — aren't these supposed to be from the account"). First the photo
+  // kept on the phone with THIS observation (earned / waiting / potential, matched
+  // by its id); failing that the observation is looked up once for its photo (the
+  // effect below). The deck card's photo only stands in while that lookup is out,
+  // or when the sighting has no photo at all. (An earlier reading of "an image of
+  // the card not iNaturalist" had put the card's photo first; that was about where
+  // a TAP goes.)
+  const ownPhoto = (u: Under): string | undefined => smallPhoto(
+    sightings.earned.find(x => x.obsId === u.id)?.photo
+    ?? sightings.waiting.find(x => x.obsId === u.id)?.photo
+    ?? sightings.potential.find(x => x.obs.obsId === u.id)?.obs.photo);
+  const cardPhoto = (u: Under): string | undefined => {
     const sci = u.sci?.toLowerCase();
     const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
-    const own = sightings.earned.find(x => x.obsId === u.id)?.photo
-      ?? sightings.waiting.find(x => x.obsId === u.id || (!!sci && x.sci.toLowerCase() === sci))?.photo
-      ?? (sci ? sightings.potential.find(x => x.sci.toLowerCase() === sci)?.obs.photo : undefined);
-    return (card ? photoFor(card.id, 250) : undefined) ?? smallPhoto(own);
+    return card ? photoFor(card.id, 250) : undefined;
   };
   const fetching = useRef(new Set<number>());
   useEffect(() => {
@@ -144,12 +149,12 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     const at = Math.min(underAt, Math.max(0, under.length - 1));
     for (const u of under.slice(Math.max(0, at - 1), at + 4)) {
       if (u.id in obsCache || fetching.current.has(u.id)) continue;
-      if (u.name && pictureOf(u)) continue;   // named marks (v8) with a picture on the phone need no lookup
+      if (u.name && ownPhoto(u)) continue;   // your photo of it is already on the phone: no lookup
       fetching.current.add(u.id);
       observation(u.id).then(o => setObsCache(c => ({ ...c, [u.id]: o }))).catch(() => setObsCache(c => ({ ...c, [u.id]: null })))
         .finally(() => fetching.current.delete(u.id));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- pictureOf reads the sightings store, listed below
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- ownPhoto reads the sightings store, listed below
   }, [under, underAt, obsCache, sightings]);
   // a tap on a ✕ puts those marks at the head of the list
   const onMark = (ids: number[], ok: number, marks?: Under[]) => {
@@ -589,7 +594,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   A species with no deck card shows its Sightings card's picture; failing that, its ✕. */}
               <Pressable onPress={() => o && openObs(o)} disabled={!o} style={s.underRow}>
                 {(() => {
-                  const uri = pictureOf(u) ?? smallPhoto(obsCache[u.id]?.photo);
+                  const uri = ownPhoto(u) ?? smallPhoto(obsCache[u.id]?.photo) ?? cardPhoto(u);
                   return uri ? <Image source={{ uri }} style={s.underPhoto} contentFit="cover" transition={150} />
                     : <View style={[s.underPhoto, { alignItems: 'center', justifyContent: 'center' }]}><Text style={[s.underNoCard, { color }]}>✕</Text></View>; })()}
                 <View style={{ flex: 1, gap: 1 }}>

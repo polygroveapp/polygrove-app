@@ -1,14 +1,15 @@
 // The card's six questions, asked the way the explorer's mock quiz asks them
 // (index.html buildQuiz, itself ported from the demo's getQuestion). All the
-// facts come from the catalog card: Q1 group · Q2 feeding guild T/F · Q3 size (3 values, 1 correct)
+// facts come from the catalog card: Q1 group · Q2 feeding guild T/F · Q3 size (3 real sizes, 1 correct)
 // vs a same-measure opponent · Q4 food web (consumes / consumed by) · Q5
 // habitat|origin|biome T/F · Q6 "is this your card?" among look-alikes.
 // Deterministic per (card, attempt) so a retry re-rolls the T/F variants.
 
-import { Card, cardByName, fmtImperial, fmtSize as niceMetric, getCards, parseSize as parseUnit, photoFor } from './catalog';
+import { Card, cardByName, fmtImperial, fmtSize as niceMetric, getCards, parseSize as parseUnit, photoFor, sizeFrac, sizeRange } from './catalog';
 
 export type Q =
-  | { type: 'mc'; label: string; short: string; q: string; opts: string[]; a: string; explain?: string }
+  // rows (the size question): per option, an example species of that size and where it sits on the group's scale
+  | { type: 'mc'; label: string; short: string; q: string; opts: string[]; a: string; explain?: string; rows?: Record<string, { eg?: string; frac: number | null }> }
   | { type: 'tf'; label: string; short: string; q: string; a: boolean; explain?: string }
   | { type: 'dual'; label: string; short: string;
       s1: { title: string; opts: string[]; a: string }; s2: { title: string; opts: string[]; a: string } }
@@ -80,7 +81,7 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
     qs.push({ type: 'tf', label: 'Q2 · Feeding guild', short: 'Guild', q: `The ${c.name} is ${t2 ? c.role : c.falseRole}.`, a: t2, explain: t2 ? undefined : `The ${c.name} is ${c.role}.` });
   } else qs.push(null);
 
-  // Q3 size: THREE VALUES, one correct (user, 2026-09-28: "just do like 3
+  // Q3 size: VALUES, one correct (user, 2026-09-28: "just do like 3
   // weights and one should be correct, instead of comparisons"). Decoys sit
   // 2–4× below and above the real figure on a log scale, formatted like the
   // catalog's own size string. The old bigger/smaller opponents stay in the
@@ -92,12 +93,42 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
       : measure === 'height' ? `How tall does the ${c.name} grow?`
       : measure === 'wingspan' ? `How wide is the ${c.name}'s wingspan?`
       : `How long is the ${c.name}, on average?`;
-    const decoy = (f: number) => { let d = fmtSize(sv.v * f, sv.unit), tries = 0;
-      while (d === c.size && tries++ < 4) d = fmtSize(sv.v * (f > 1 ? f * 1.5 : f / 1.5), sv.unit); return d; };
-    const lo = decoy(1 / (2 + rng() * 2)), hi = decoy(2 + rng() * 2);
+    // THREE SIZES, SMALLEST AT THE TOP, EACH A REAL SPECIES (user, 2026-10-07:
+    // "smallest to largest from top to bottom … have every option be an example of
+    // a species", each with the card's scale bar beside it; five options for a few
+    // minutes, then "actually only make it 3"). The wrong sizes are the real sizes of other cards in
+    // the same group, picked near steps of 1.9–2.6× below and above the answer and
+    // never within 1.5× of one another, each named ("like a Mallard"). The right
+    // one is named after its nearest neighbour in size, when one is within 12% —
+    // never after itself. Where the deck has no species near a step (or offline),
+    // that step is a plain figure, as the three options used to be.
     const right = withImperial(c.size as string);
+    const cs = parseUnit(c.size);
+    const range = cs ? sizeRange(c.group, cs.unit) : null;
+    const pool = cs ? getCards().filter(o => o.group === c.group && o.sci !== c.sci && parseUnit(o.size)?.unit === cs.unit)
+      .map(o => ({ name: o.name, size: o.size as string, v: parseUnit(o.size)!.v })) : [];
+    type Row = { label: string; v: number; eg?: string };
+    const rows: Row[] = [{ label: right, v: sv.v }];
+    const far = (v: number) => rows.every(r => Math.max(v, r.v) / Math.min(v, r.v) >= 1.5);
+    const near = pool.filter(o => Math.max(o.v, sv.v) / Math.min(o.v, sv.v) <= 1.12 && withImperial(o.size) !== right)
+      .sort((a, b) => Math.abs(Math.log(a.v / sv.v)) - Math.abs(Math.log(b.v / sv.v)))[0];
+    if (near) rows[0].eg = near.name;
+    const N = 3, at = Math.floor(rng() * N), step = 1.9 + rng() * 0.7;   // where the answer sits among them
+    for (let i = 0; i < N; i++) {
+      if (i === at) continue;
+      const target = sv.v * step ** (i - at);
+      const pick = pool.filter(o => far(o.v) && Math.max(o.v, target) / Math.min(o.v, target) <= 1.45 && !rows.some(r => r.label === withImperial(o.size)))
+        .sort((a, b) => Math.abs(Math.log(a.v / target)) - Math.abs(Math.log(b.v / target)))[0];
+      if (pick) rows.push({ label: withImperial(pick.size), v: pick.v, eg: pick.name });
+      else { let lbl = withImperial(fmtSize(target, sv.unit)), f = target, tries = 0;
+        while (rows.some(r => r.label === lbl) && tries++ < 4) { f *= i < at ? 1 / 1.4 : 1.4; lbl = withImperial(fmtSize(f, sv.unit)); }
+        rows.push({ label: lbl, v: f }); }
+    }
+    rows.sort((a, b) => a.v - b.v);
     qs.push({ type: 'mc', label: 'Q3 · Size', short: 'Size', q: ask,
-      opts: shuf([right, withImperial(lo), withImperial(hi)]), a: right, explain: `${c.name}: ${right}` });
+      opts: rows.map(r => r.label), a: right, explain: `${c.name}: ${right}`,
+      // the scale bar per option: where that size sits between the group's smallest and largest (log scale)
+      rows: Object.fromEntries(rows.map(r => [r.label, { eg: r.eg, frac: range ? sizeFrac(r.v, range) : null }])) });
   } else qs.push(null);
 
   // Q4 food web
