@@ -120,8 +120,10 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
     const right = withImperial(c.size as string);
     const cs = parseUnit(c.size);
     const range = cs ? sizeRange(c.group, cs.unit) : null;
-    const pool = cs ? getCards().filter(o => o.group === c.group && o.sci !== c.sci && parseUnit(o.size)?.unit === cs.unit)
-      .map(o => ({ id: o.id, name: o.name, size: o.size as string, v: parseUnit(o.size)!.v })) : [];
+    // examples with a common name only ("like a Red Fox", not "like a Metachirus nudicaudatus"), unless the group has none
+    const same = cs ? getCards().filter(o => o.group === c.group && o.sci !== c.sci && parseUnit(o.size)?.unit === cs.unit) : [];
+    const named = same.filter(o => o.name.toLowerCase() !== o.sci.toLowerCase());
+    const pool = (named.length >= 8 ? named : same).map(o => ({ id: o.id, name: o.name, size: o.size as string, v: parseUnit(o.size)!.v }));
     type Row = { label: string; v: number; eg?: string; egId?: string };
     const rows: Row[] = [{ label: right, v: sv.v }];
     const far = (v: number) => rows.every(r => Math.max(v, r.v) / Math.min(v, r.v) >= 1.5);
