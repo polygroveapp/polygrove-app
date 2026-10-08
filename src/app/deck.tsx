@@ -251,7 +251,7 @@ export default function FieldNotes() {
           {shownCard ? (
             <Pressable onPress={() => toQuiz(shownCard)} style={s.quizBtn}>
               <LinearGradient colors={shownMastered ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.quizGrad}>
-                <Text style={s.quizTxt}>{shownMastered ? '☀️ Practice Solar Quiz' : '☀️ Solar Quiz'}</Text>
+                <Text style={s.quizTxt}>{shownMastered ? '☀️ Practice Solar Quiz' : '☀️ Take Solar Quiz'}</Text>
               </LinearGradient>
             </Pressable>
           ) : null}
