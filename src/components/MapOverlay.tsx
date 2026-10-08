@@ -28,7 +28,7 @@ import { openWeb } from '../lib/web';
 import { setBorders, setEarthColours, useBorders, useEarthColours } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
@@ -65,14 +65,21 @@ const ECOBLOB = 'M5 7.5 C6 4.5 10 3 13.5 4.2 C16.5 5.2 20.5 6 20 10 C19.6 13 17 
 // the tab bar's liquid glass as a round tile (user, 2026-10-07): frosted, and
 // when on, the green-glass thumb with its top shine
 function GlassTile({ on, onPress, label, children }: { on: boolean; onPress: () => void; label: string; children: React.ReactNode }) {
+  const tileInner = (
+    <>
+      {on && <LinearGradient colors={['rgba(129,199,132,0.38)', 'rgba(76,175,80,0.16)', 'rgba(255,255,255,0.08)']}
+        locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />}
+      {on && <View style={s.lookShine} />}
+      {children}
+    </>
+  );
   return (
-    <Pressable onPress={onPress} hitSlop={6} accessibilityRole="button" accessibilityLabel={label}>
-      <BlurView intensity={28} tint="dark" blurMethod="dimezisBlurView" style={[s.lookBtn, on && s.lookBtnOn]}>
-        {on && <LinearGradient colors={['rgba(129,199,132,0.38)', 'rgba(76,175,80,0.16)', 'rgba(255,255,255,0.08)']}
-          locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />}
-        {on && <View style={s.lookShine} />}
-        {children}
-      </BlurView>
+    <Pressable onPress={onPress} hitSlop={6} accessibilityRole="button" accessibilityLabel={label} android_ripple={{ color: 'rgba(129,199,132,0.25)', borderless: true, radius: 21 }}>
+      {/* ANDROID: a plain dark-glass tile — expo-blur cannot sample the map WebView's
+          surface there and costs frames; iOS gets the real frosted blur */}
+      {Platform.OS === 'ios'
+        ? <BlurView intensity={28} tint="dark" style={[s.lookBtn, on && s.lookBtnOn]}>{tileInner}</BlurView>
+        : <View style={[s.lookBtn, on && s.lookBtnOn]}>{tileInner}</View>}
     </Pressable>
   );
 }
@@ -339,6 +346,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   }, [pageReady, earth]);
   // every ecoregion's outline on or off (user, 2026-10-07)
   const borders = useBorders();
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     if (pageReady) web.current?.injectJavaScript(`window.polygroveBorders && window.polygroveBorders(${borders}); true;`);
   }, [pageReady, borders]);
@@ -450,31 +458,39 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         </View>
       </View>
 
-      {/* zoom in / out (user, 2026-09-28) — zooms around the pin */}
-      {/* bottom-right: − then + (plus outermost). The compass came and went
-          the same day (user, 2026-09-29); the map stays north-up */}
+      {/* ONE BUTTON (user, 2026-10-07: "one button where the color map button is.
+          when you click that it expands out to the four buttons"): a glass
+          tile bottom-right; open, the four controls rise in a column above it —
+          zoom in, zoom out, ecoregion borders, earth colours ⇄ grey/black — and
+          the tile becomes a ✕ to fold them away. (Zoom came 2026-09-28; the
+          compass came and went 2026-09-29, the map stays north-up.) */}
       {pageReady && (
-        <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]}>
-          {/* above the plus: earth colours ⇄ grey/black (user, 2026-10-07) */}
-          <View style={s.zoomRow}>
-            <Pressable onPress={() => zoom(-1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>−</Text></Pressable>
-            <Pressable onPress={() => zoom(1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>+</Text></Pressable>
-          </View>
-          {/* two glass tiles BELOW − + (user, 2026-10-07: "switch the plus and minus"): ecoregion borders
-              to the left, the Americas outline for earth colours ⇄ grey/black right */}
-          <View style={s.zoomRow}>
-          <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
-            <Svg width={24} height={24} viewBox="0 0 24 24">
-              <Path d={ECOBLOB} fill={borders ? 'rgba(129,199,132,0.22)' : 'rgba(255,255,255,0.1)'} stroke={borders ? C.greenSoft : 'rgba(255,255,255,0.85)'}
-                strokeWidth={1.3} strokeDasharray="2.2 1.8" strokeLinejoin="round" strokeLinecap="round" />
-            </Svg>
+        <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
+          {menuOpen && (
+            <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
+              <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
+              <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
+              <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
+                <Svg width={24} height={24} viewBox="0 0 24 24">
+                  <Path d={ECOBLOB} fill={borders ? 'rgba(129,199,132,0.22)' : 'rgba(255,255,255,0.1)'} stroke={borders ? C.greenSoft : 'rgba(255,255,255,0.85)'}
+                    strokeWidth={1.3} strokeDasharray="2.2 1.8" strokeLinejoin="round" strokeLinecap="round" />
+                </Svg>
+              </GlassTile>
+              <GlassTile on={earth} onPress={() => setEarthColours(!earth)} label={earth ? 'Grey map' : 'Earth colours'}>
+                <Svg width={22} height={28} viewBox="0 0 24 32">
+                  <Path d={AMERICAS} fill={earth ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={earth ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
+                </Svg>
+              </GlassTile>
+            </Animated.View>
+          )}
+          <GlassTile on={menuOpen} onPress={() => setMenuOpen(v => !v)} label={menuOpen ? 'Close map controls' : 'Map controls'}>
+            {menuOpen
+              ? <Text style={s.menuX}>✕</Text>
+              : <Svg width={24} height={24} viewBox="0 0 24 24">
+                  <Path d="M12 4 L20 8.5 L12 13 L4 8.5 Z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.85)" strokeWidth={1.3} strokeLinejoin="round" />
+                  <Path d="M4.5 12.5 L12 16.7 L19.5 12.5 M4.5 16 L12 20.2 L19.5 16" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" />
+                </Svg>}
           </GlassTile>
-          <GlassTile on={earth} onPress={() => setEarthColours(!earth)} label={earth ? 'Grey map' : 'Earth colours'}>
-            <Svg width={22} height={28} viewBox="0 0 24 32">
-              <Path d={AMERICAS} fill={earth ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={earth ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
-            </Svg>
-          </GlassTile>
-          </View>
         </View>
       )}
 
@@ -588,9 +604,10 @@ const s = StyleSheet.create({
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#ffffff' },   // white (user, 2026-09-30; was grey)
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
   zoom: { position: 'absolute', right: 14, gap: 8, alignItems: 'flex-end' },
-  zoomRow: { gap: 8, flexDirection: 'row' },
+  zoomCol: { gap: 8, alignItems: 'center' },
+  menuX: { fontFamily: F.sansBold, fontSize: 16, color: C.greenSoft, lineHeight: 20 },
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
-  underWrap: { position: 'absolute', left: 14, right: 118, alignItems: 'flex-start', justifyContent: 'flex-end' },
+  underWrap: { position: 'absolute', left: 14, right: 66, alignItems: 'flex-start', justifyContent: 'flex-end' },
   // 92 = the two control rows (42 + 8 + 42) to its right (user, 2026-10-07)
   under: { alignSelf: 'stretch', height: 92, flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 4, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   underRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -604,11 +621,10 @@ const s = StyleSheet.create({
   underArrowTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
 
   // the + / − green (user, 2026-09-30: brown for a minute, then "green again")
-  zoomBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(10,15,10,0.85)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
   lookBtn: {
     width: 42, height: 42, borderRadius: 21, overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: Platform.OS === 'android' ? 'rgba(20,24,20,0.72)' : 'rgba(255,255,255,0.06)',
+    backgroundColor: Platform.OS === 'android' ? 'rgba(16,22,16,0.9)' : 'rgba(255,255,255,0.06)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.13)',
   },
   lookBtnOn: { borderColor: 'rgba(255,255,255,0.22)', shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
