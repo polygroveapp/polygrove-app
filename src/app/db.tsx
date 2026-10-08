@@ -14,7 +14,7 @@ import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 import GlassSegments from '../components/GlassSegments';
 import HexThumb from '../components/HexThumb';
 import { C, F, TROPHIC_COLOR, TROPHIC_ORDER } from '../constants/polygrove';
-import { Card, getCards, loadCatalog, photoFor } from '../lib/catalog';
+import { Card, getCards, loadCatalog, photoForDb } from '../lib/catalog';
 import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 import { ecoRanking, pinRanking } from '../lib/nearby';
 import { usePin } from '../lib/pin';
@@ -59,7 +59,8 @@ export default function PolygroveDB() {
   // ONLY CARDS WITH A PHOTO (user, 2026-10-08, of a blank Acantholycosa pedestris
   // card): the deck has always left photo-less species out (ecoregions.ts), and
   // so do sightings; this list showed them anyway. A trading card is its picture.
-  const cards = useMemo(() => (ready ? getCards().filter(c => !!photoFor(c.id)) : []), [ready]);
+  // Here, and only here, an iNaturalist fill-in counts as the picture.
+  const cards = useMemo(() => (ready ? getCards().filter(c => !!photoForDb(c.id)) : []), [ready]);
   const groups = useMemo(() => [...new Set(cards.map(c => c.group))].sort(), [cards]);
   const needle = q.trim().toLowerCase();
   const rows = useMemo(() => {
@@ -176,7 +177,7 @@ export default function PolygroveDB() {
             const tc = TROPHIC_COLOR[c.trophic] || C.greenSoft;
             return (
               <Pressable onPress={() => router.push({ pathname: '/species/[id]', params: { id: c.id } })} style={s.row}>
-                <HexThumb uri={photoFor(c.id, 120)} width={46} height={52} borderColor={tc} borderWidth={2.5} />
+                <HexThumb uri={photoForDb(c.id, 120)} width={46} height={52} borderColor={tc} borderWidth={2.5} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.name} numberOfLines={1}>{c.name}</Text>
                   <Text style={s.sci} numberOfLines={1}>{c.sci}</Text>

@@ -16,7 +16,7 @@ import PolygroveCard from '../../components/PolygroveCard';
 import RangeMap from '../../components/RangeMap';
 import SeasonStrip from '../../components/SeasonStrip';
 import { C, F, TROPHIC_COLOR } from '../../constants/polygrove';
-import { cardById, getCards, loadCatalog } from '../../lib/catalog';
+import { cardById, getCards, inatPhotoOf, loadCatalog } from '../../lib/catalog';
 import { DossierSection, Seasonality, dossierSections, rangeOf, seasonalityOf } from '../../lib/dossier';
 import { EcoMeta, ecoMeta, loadEcoMeta } from '../../lib/ecoregions';
 import { offlineReady } from '../../lib/offline';
@@ -100,7 +100,11 @@ export default function Species() {
         </View>
 
         {/* 2 · the card itself */}
-        <View style={[cardSize, { alignSelf: 'center', marginTop: 14 }]}><PolygroveCard card={card} /></View>
+        <View style={[cardSize, { alignSelf: 'center', marginTop: 14 }]}><PolygroveCard card={card} dbPhoto /></View>
+        {/* an iNaturalist fill-in photo is credited in the open, as CC BY asks (user, 2026-10-08: "don't we run into licensing issues") */}
+        {(() => { const ip = inatPhotoOf(card.id); return ip ? (
+          <Pressable onPress={() => openWeb(ip.page)}><Text style={[s.credit, { textAlign: 'center', marginTop: 8 }]}>photo{ip.by && ip.by !== 'no rights reserved' ? `: ${ip.by}` : ''} · {ip.lic} · iNaturalist ›</Text></Pressable>
+        ) : null; })()}
         <Pressable onPress={() => router.push({ pathname: '/quiz/[id]', params: { id: card.id } })} style={s.quiz}>
           <Text style={s.quizTxt}>Take a quiz</Text>
         </Pressable>

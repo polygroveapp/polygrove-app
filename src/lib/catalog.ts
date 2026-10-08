@@ -33,6 +33,10 @@ let _photos: Record<string, string> = {};
 // for a card Wikipedia has no lead image for, a licensed iNaturalist taxon
 // photo — CC0, CC BY or CC BY-SA only — with its page, credit and licence.
 // Built by polygrovedb's fetch_inat_taxa.py into data/inat_photos.json.
+// ONLY FOR THE POLYGROVEDB TAB (user, 2026-10-08: "make sure that none of the
+// cards you collect have iNaturalist photos, only the DB"): photoFor() — the
+// deck, packs, the journal, sightings, the quiz — never sees them; photoForDb()
+// does, for the database list and its species pages.
 export type InatPhoto = { url: string; page: string; by: string; lic: string };
 let _inat: Record<string, InatPhoto> = {};
 export const inatPhotoOf = (id: string): InatPhoto | undefined => (_photos[id] ? undefined : _inat[id]);
@@ -126,10 +130,14 @@ export function photoFor(id: string, px = 120): string | undefined {
 }
 // the CDN url regardless of any on-disk copy (offline.ts downloads + commons)
 export function photoRemote(id: string, px = 120): string | undefined {
-  const u = _photos[id] || _extraPhotoUrl[id] || _inat[id]?.url;
+  const u = _photos[id] || _extraPhotoUrl[id];
   if (!u) return undefined;
   const bucket = THUMB_BUCKETS.find(b => b >= px) ?? 1280;
-  return u.replace(/\/\d+px-/, `/${bucket}px-`);   // an iNaturalist URL has no size segment: served as it is (500 px)
+  return u.replace(/\/\d+px-/, `/${bucket}px-`);
+}
+/** the DB tab's photo: Wikipedia's, else the iNaturalist fill-in (served as it is, 500 px) */
+export function photoForDb(id: string, px = 120): string | undefined {
+  return photoFor(id, px) ?? _inat[id]?.url;
 }
 
 // the photo's Wikimedia Commons file page — the attribution/license source.
