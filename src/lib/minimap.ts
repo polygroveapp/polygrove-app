@@ -9,7 +9,8 @@ import { useEffect, useSyncExternalStore } from 'react';
 // v3 (2026-10-05): the map went back to black and grey (v1 pictures were in
 // the earth colours), and v2 pictures caught the picker's white highlight —
 // older pictures are left behind and redrawn on the next visit
-const KEY = (eid: number) => `polygrove.minimap.v3.${eid}`;
+// v4 (2026-10-07): the picture is a colour relief of the world now
+const KEY = (eid: number) => `polygrove.minimap.v4.${eid}`;
 const mem: Record<number, string | null> = {};   // null = looked, nothing stored
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());
