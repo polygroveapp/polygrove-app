@@ -29,6 +29,13 @@ const BASE = 'https://polygrovedb.pages.dev/data';
 
 let _cards: Card[] | null = null;
 let _photos: Record<string, string> = {};
+// iNATURALIST FILL-INS (2026-10-08, of a blank "Acantholycosa pedestris" card):
+// for a card Wikipedia has no lead image for, a licensed iNaturalist taxon
+// photo — CC0, CC BY or CC BY-SA only — with its page, credit and licence.
+// Built by polygrovedb's fetch_inat_taxa.py into data/inat_photos.json.
+export type InatPhoto = { url: string; page: string; by: string; lic: string };
+let _inat: Record<string, InatPhoto> = {};
+export const inatPhotoOf = (id: string): InatPhoto | undefined => (_photos[id] ? undefined : _inat[id]);
 // how each photo sits in the card's hexagon (framing.json — only the cards
 // whose subject a centre crop would cut): [aspect, scale, cx, cy]
 export type Frame = [number, number, number, number];
@@ -51,7 +58,7 @@ export function loadCatalog(onStage?: (s: string) => void) {
     ]);
     for (const c of cards) { const q = quiz[c.id]; if (q) Object.assign(c, q); }
     onStage?.('Fetching photos…');
-    const photos: Record<string, string> = await fetchPhotos();
+    const [photos, inat] = await Promise.all([fetchPhotos(), fetchInat()]);   // together: deck membership reads both
     // a failed photo index must not stick (2026-10-06: a sheet read "37 / 0
     // species in deck" — with no index every deck counted as empty, while the
     // journaled cards still showed from their on-disk photos): retry quietly
@@ -62,7 +69,7 @@ export function loadCatalog(onStage?: (s: string) => void) {
     fetch(`${BASE}/audio.json`).then(r => (r.ok ? r.json() : {})).then((a: Record<string, Sound[]>) => { _audio = a || {}; }).catch(() => {});
     // framing is a nicety: without it photos fall back to the centre crop
     fetch(`${BASE}/framing.json`).then(r => (r.ok ? r.json() : {})).then((f: Record<string, Frame>) => { _framing = f || {}; }).catch(() => {});
-    _cards = cards; _photos = photos;
+    _cards = cards; _photos = photos; _inat = inat;
     _byName = Object.fromEntries(cards.map(c => [c.name.toLowerCase(), c]));
     return { cards, photos };
   })().catch(e => { _inflight = null; throw e; });
@@ -91,6 +98,7 @@ let _audio: Record<string, Sound[]> = {};
 export const soundsFor = (sci: string): Sound[] => _audio[sci] ?? [];
 export const getCards = () => _cards ?? [];
 const fetchPhotos = (): Promise<Record<string, string>> => fetch(`${BASE}/photos.json`).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+const fetchInat = (): Promise<Record<string, InatPhoto>> => fetch(`${BASE}/inat_photos.json`).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
 let _photoRetry = 0;
 function retryPhotos() {
   if (_photoRetry++ > 5) return;
@@ -118,10 +126,10 @@ export function photoFor(id: string, px = 120): string | undefined {
 }
 // the CDN url regardless of any on-disk copy (offline.ts downloads + commons)
 export function photoRemote(id: string, px = 120): string | undefined {
-  const u = _photos[id] || _extraPhotoUrl[id];
+  const u = _photos[id] || _extraPhotoUrl[id] || _inat[id]?.url;
   if (!u) return undefined;
   const bucket = THUMB_BUCKETS.find(b => b >= px) ?? 1280;
-  return u.replace(/\/\d+px-/, `/${bucket}px-`);
+  return u.replace(/\/\d+px-/, `/${bucket}px-`);   // an iNaturalist URL has no size segment: served as it is (500 px)
 }
 
 // the photo's Wikimedia Commons file page — the attribution/license source.
@@ -129,7 +137,7 @@ export function photoRemote(id: string, px = 120): string | undefined {
 export function photoCommonsPage(id: string): string | undefined {
   const u = _photos[id] || _extraPhotoUrl[id];
   const m = u?.match(/\/thumb\/[0-9a-f]\/[0-9a-f]{2}\/([^/]+)\//);
-  return m ? `https://commons.wikimedia.org/wiki/File:${m[1]}` : undefined;
+  return m ? `https://commons.wikimedia.org/wiki/File:${m[1]}` : _inat[id]?.page;   // or the iNaturalist photo page, credited there
 }
 
 // SIZE IN CONTEXT (user, 2026-10-06: "a bar indicating the minimum of its
