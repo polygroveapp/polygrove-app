@@ -456,7 +456,11 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]}>
           {/* above the plus: earth colours ⇄ grey/black (user, 2026-10-07) */}
-          {/* two glass tiles above − +, one row (user, 2026-10-07): ecoregion borders
+          <View style={s.zoomRow}>
+            <Pressable onPress={() => zoom(-1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>−</Text></Pressable>
+            <Pressable onPress={() => zoom(1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>+</Text></Pressable>
+          </View>
+          {/* two glass tiles BELOW − + (user, 2026-10-07: "switch the plus and minus"): ecoregion borders
               to the left, the Americas outline for earth colours ⇄ grey/black right */}
           <View style={s.zoomRow}>
           <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
@@ -470,10 +474,6 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
               <Path d={AMERICAS} fill={earth ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={earth ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
             </Svg>
           </GlassTile>
-          </View>
-          <View style={s.zoomRow}>
-            <Pressable onPress={() => zoom(-1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>−</Text></Pressable>
-            <Pressable onPress={() => zoom(1)} hitSlop={6} style={s.zoomBtn}><Text style={s.zoomTxt}>+</Text></Pressable>
           </View>
         </View>
       )}
