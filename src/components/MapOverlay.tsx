@@ -123,17 +123,33 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   const spotOf = (u: Under): (Spot & { grade: string }) | null => u.name
     ? { id: u.id, uri: `https://www.inaturalist.org/observations/${u.id}`, date: u.date ?? null, name: u.name, sci: u.sci ?? null, lng: u.lng ?? null, lat: u.lat ?? null, place: null, photo: null, credit: '', agree: 0, iconic: null, grade: '' }
     : null;
+  const sightings = useSightings();   // declared here: the strip's picture below reads it
+  // THE STRIP'S PICTURE, ALWAYS ONE (user, 2026-10-07: "always display the image
+  // whether or not it's confirmed"): the deck card's photo first; else the photo
+  // kept with that sighting's own card in Sightings (potential / waiting /
+  // earned); and only when the phone holds neither, the observation is looked
+  // up once for its photo (the effect below) — your own picture, shown back to you
+  const pictureOf = (u: Under): string | undefined => {
+    const sci = u.sci?.toLowerCase();
+    const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
+    const own = sightings.earned.find(x => x.obsId === u.id)?.photo
+      ?? sightings.waiting.find(x => x.obsId === u.id || (!!sci && x.sci.toLowerCase() === sci))?.photo
+      ?? (sci ? sightings.potential.find(x => x.sci.toLowerCase() === sci)?.obs.photo : undefined);
+    return (card ? photoFor(card.id, 250) : undefined) ?? smallPhoto(own);
+  };
   const fetching = useRef(new Set<number>());
   useEffect(() => {
     // the shown one and its neighbours are fetched ahead, so stepping is instant; the rest as you reach them
     const at = Math.min(underAt, Math.max(0, under.length - 1));
     for (const u of under.slice(Math.max(0, at - 1), at + 4)) {
-      if (u.name || u.id in obsCache || fetching.current.has(u.id)) continue;   // named marks (v8) are ready as they are — the picture is the card's, never a fetch
+      if (u.id in obsCache || fetching.current.has(u.id)) continue;
+      if (u.name && pictureOf(u)) continue;   // named marks (v8) with a picture on the phone need no lookup
       fetching.current.add(u.id);
       observation(u.id).then(o => setObsCache(c => ({ ...c, [u.id]: o }))).catch(() => setObsCache(c => ({ ...c, [u.id]: null })))
         .finally(() => fetching.current.delete(u.id));
     }
-  }, [under, underAt, obsCache]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- pictureOf reads the sightings store, listed below
+  }, [under, underAt, obsCache, sightings]);
   // a tap on a ✕ puts those marks at the head of the list
   const onMark = (ids: number[], ok: number, marks?: Under[]) => {
     if (!ids.length) return;
@@ -203,7 +219,6 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // YOUR SIGHTINGS as yellow ✕ marks (user, 2026-10-05): the spots go to the
   // page whenever they change; and when the map comes forward with an old
   // check (or none), your sightings are looked up again
-  const sightings = useSightings();
   const run = useSightingsRun();
   const marks = sightings.marks, meId = sightings.me?.id, checkedAt = sightings.checkedAt;
   // THE MARKS GO OVER ONCE, NOT ONCE PER PAGE (2026-10-06: the phone locked up
@@ -499,7 +514,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
           "Where do you want to camp?" title, which steps aside while it shows (user, 2026-10-07) */}
       {showObs && under.length > 0 && (() => {
         const at = Math.min(underAt, under.length - 1), u = under[at];
-        const o = spotOf(u) ?? obsCache[u.id];
+        const o = spotOf(u) ?? obsCache[u.id];   // text from the mark itself; the cache only lends a photo
         const sci = o?.sci?.toLowerCase();
         const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
         const color = u.kind === 0 ? '#5fe35a' : u.kind === 2 ? '#aaaaaa' : C.yellow;
@@ -516,13 +531,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   A species with no deck card shows its Sightings card's picture; failing that, its ✕. */}
               <Pressable onPress={() => o && openObs(o)} disabled={!o} style={s.underRow}>
                 {(() => {
-                  // a species with no deck card still has a card of its own in Sightings — the
-                  // potential / waiting card, which wears YOUR photo (kept on the phone with the
-                  // sighting, no lookup): the strip shows that same picture (user, 2026-10-07)
-                  const own = sightings.potential.find(x => x.sci.toLowerCase() === sci)?.obs.photo
-                    ?? sightings.waiting.find(x => x.obsId === u.id || x.sci.toLowerCase() === sci)?.photo
-                    ?? sightings.earned.find(x => x.obsId === u.id)?.photo;
-                  const uri = (card ? photoFor(card.id, 250) : undefined) ?? smallPhoto(own);
+                  const uri = pictureOf(u) ?? smallPhoto(obsCache[u.id]?.photo);
                   return uri ? <Image source={{ uri }} style={s.underPhoto} contentFit="cover" transition={150} />
                     : <View style={[s.underPhoto, { alignItems: 'center', justifyContent: 'center' }]}><Text style={[s.underNoCard, { color }]}>✕</Text></View>; })()}
                 <View style={{ flex: 1, gap: 1 }}>
