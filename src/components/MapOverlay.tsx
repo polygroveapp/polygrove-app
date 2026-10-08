@@ -456,8 +456,8 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
 
       {/* MAP CONTROLS (user, 2026-10-07): + in the bottom-right corner, − to its
           left, always there. Above the +, map preferences: open, three tiles
-          rise above it — ecoregion borders, earth colours ⇄ grey/black,
-          sightings ✕ on/off. (Zoom came 2026-09-28; the compass came and went
+          rise above it — ecoregion borders, sightings ✕ on/off, earth colours
+          ⇄ grey/black. (Zoom came 2026-09-28; the compass came and went
           2026-09-29.) */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
@@ -472,13 +472,13 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                     strokeWidth={1.3} strokeDasharray="2.2 1.8" strokeLinejoin="round" strokeLinecap="round" />
                 </Svg>
               </GlassTile>
+              <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
+                <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
+              </GlassTile>
               <GlassTile on={earth} onPress={() => setEarthColours(!earth)} label={earth ? 'Grey map' : 'Earth colours'}>
                 <Svg width={22} height={28} viewBox="0 0 24 32">
                   <Path d={AMERICAS} fill={earth ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={earth ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
                 </Svg>
-              </GlassTile>
-              <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
-                <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
               </GlassTile>
             </Animated.View>
           )}
