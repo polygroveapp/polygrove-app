@@ -458,13 +458,10 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         </View>
       </View>
 
-      {/* ONE BUTTON (user, 2026-10-07: "one button where the color map button is.
-          when you click that it expands out to the four buttons"): a glass
-          tile bottom-right; open, the four controls rise in a column above it —
-          ecoregion borders, earth colours ⇄ grey/black, then zoom in, zoom out
-          nearest the thumb (user, 2026-10-07: "switch") — and
-          the tile becomes a ✕ to fold them away. (Zoom came 2026-09-28; the
-          compass came and went 2026-09-29, the map stays north-up.) */}
+      {/* MAP CONTROLS (user, 2026-10-07): + and − are always there, bottom-right.
+          Above them one glass tile for map preferences; open, ecoregion borders
+          and earth colours ⇄ grey/black rise above it and it becomes a ✕.
+          (Zoom came 2026-09-28; the compass came and went 2026-09-29.) */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           {menuOpen && (
@@ -480,11 +477,9 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   <Path d={AMERICAS} fill={earth ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={earth ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
                 </Svg>
               </GlassTile>
-              <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
-              <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
             </Animated.View>
           )}
-          <GlassTile on={menuOpen} onPress={() => setMenuOpen(v => !v)} label={menuOpen ? 'Close map controls' : 'Map controls'}>
+          <GlassTile on={menuOpen} onPress={() => setMenuOpen(v => !v)} label={menuOpen ? 'Close map preferences' : 'Map preferences'}>
             {menuOpen
               ? <Text style={s.menuX}>✕</Text>
               : <Svg width={24} height={24} viewBox="0 0 24 24">
@@ -492,6 +487,9 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   <Path d="M4.5 12.5 L12 16.7 L19.5 12.5 M4.5 16 L12 20.2 L19.5 16" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" />
                 </Svg>}
           </GlassTile>
+          {/* ALWAYS THERE (user, 2026-10-07: "always have the plus and minus"): zoom, below the preferences button */}
+          <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
+          <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
         </View>
       )}
 
