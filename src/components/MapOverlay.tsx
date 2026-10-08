@@ -28,7 +28,7 @@ import { openWeb } from '../lib/web';
 import { setBorders, setEarthColours, setShowObs, useBorders, useEarthColours, useShowObs } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeInDown, FadeInUp, FadeOutDown, FadeOutUp, withTiming, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeOutDown, FadeOutUp, withTiming, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
@@ -358,20 +358,29 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // every ecoregion's outline on or off (user, 2026-10-07)
   const borders = useBorders();
   const [menuOpen, setMenuOpen] = useState(false);
-  // the title lifts off the top of the screen while a sighting's strip is up, and
-  // drops back when it goes (user, 2026-10-07); the strip itself slides down in
+  // the title fades out while a sighting's strip is up and back in when it goes (user, 2026-10-07)
   const stripOn = showObs && under.length > 0;
-  const titleUp = useSharedValue(0);
-  useEffect(() => { titleUp.value = withTiming(stripOn ? 1 : 0, { duration: 320 }); }, [stripOn, titleUp]);
-  // INTO THE DYNAMIC ISLAND (user, 2026-10-07): on an iPhone that has one (its
-  // top inset is 59 pt; a notch gives 44–50, Android less) the title shrinks up
-  // into the island instead — its centre travels to the island's, ~29 pt from
-  // the top — and grows back out of it. Elsewhere it slides off the top.
+  // the fade keeps step with the strip's own animation: 160 ms in, 240 ms out.
+  // DERIVED from stripOn on every render, not set from an effect (2026-10-07: the
+  // title went missing on an iPhone 13 — an effect that only fires when stripOn
+  // CHANGES left the value stuck at "hidden" after a code refresh mid-strip)
+  const titleUp = useDerivedValue(() => withTiming(stripOn ? 1 : 0, { duration: stripOn ? 160 : 240 }), [stripOn]);
+  // THE STRIP APPEARS OUT OF NOWHERE AND LEAVES INTO THE DYNAMIC ISLAND (user,
+  // 2026-10-07): it fades in where it sits; when the pin leaves the ✕ it folds
+  // up into the island on an iPhone that has one (top inset 59 pt; a notch
+  // gives 44–50, Android less) — its centre travels to the island's, ~29 pt
+  // from the top — and slides off the top of the screen on any other phone.
+  // The title only fades out and back, in place.
   const island = Platform.OS === 'ios' && insets.top >= 59;
-  const toIsland = 29 - (insets.top + 8 + 30);
-  const titleStyle = useAnimatedStyle(() => island
-    ? { transform: [{ translateY: toIsland * titleUp.value }, { scale: 1 - 0.88 * titleUp.value }], opacity: 1 - titleUp.value * titleUp.value }
-    : { transform: [{ translateY: -160 * titleUp.value }], opacity: 1 - titleUp.value }, [island, toIsland]);
+  const fromIsland = 29 - (insets.top + 4 + 46);
+  const titleStyle = useAnimatedStyle(() => ({ opacity: 1 - titleUp.value }));
+  const stripOut = () => {
+    'worklet';
+    return {
+      initialValues: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }] },
+      animations: { opacity: withTiming(0, { duration: 240 }), transform: [{ translateY: withTiming(fromIsland, { duration: 240 }) }, { scale: withTiming(0.1, { duration: 240 }) }] },
+    };
+  };
   useEffect(() => {
     if (pageReady) web.current?.injectJavaScript(`window.polygroveBorders && window.polygroveBorders(${borders}); true;`);
   }, [pageReady, borders]);
@@ -533,7 +542,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
         const color = u.kind === 0 ? '#5fe35a' : u.kind === 2 ? '#aaaaaa' : C.yellow;
         return (
-          <Animated.View entering={FadeInUp.duration(240)} exiting={FadeOutUp.duration(180)} style={[s.underWrap, { top: insets.top + 4 }]} pointerEvents="box-none">
+          <Animated.View entering={FadeIn.duration(160)} exiting={island ? stripOut : FadeOutUp.duration(240)} style={[s.underWrap, { top: insets.top + 4 }]} pointerEvents="box-none">
             <View style={s.under}>
               <Pressable onPress={() => setUnderAt(a => Math.max(0, a - 1))} disabled={at === 0} hitSlop={8} style={s.underArrow}>
                 <Text style={[s.underArrowTxt, at === 0 && { opacity: 0.25 }]}>‹</Text>
