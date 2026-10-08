@@ -92,7 +92,12 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
 
   // Q2 feeding guild
   if (c.role && c.falseRole) {
-    const t2 = rng() < 0.5;
+    // A TRUE-OR-FALSE STATEMENT FLIPS ON EVERY RETRY (user, 2026-10-07: "when you
+    // are going through the questions again after getting one wrong it shows you
+    // the answer" — the same statement came back, and the miss had just said which
+    // way it went). Odd attempts take the other variant.
+    const flip = attempt % 2 === 1;
+    const t2 = (rng() < 0.5) !== flip;
     qs.push({ type: 'tf', label: 'Q2 · Feeding guild', short: 'Guild', q: `The ${c.name} is ${t2 ? c.role : c.falseRole}.`, a: t2, explain: t2 ? undefined : `The ${c.name} is ${c.role}.` });
   } else qs.push(null);
 
@@ -161,7 +166,7 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
   // Q5 habitat / origin / biome
   if (c.slot5) {
     const pool = all.filter(o => o.slot5type === c.slot5type && o.slot5 && o.slot5 !== c.slot5);
-    const t5 = rng() < 0.5;
+    const t5 = (rng() < 0.5) !== flip;   // flips on a retry too
     const wrong = pool.length ? pool[Math.floor(rng() * pool.length)].slot5 : null;
     const truth = t5 || !wrong;
     const loc = truth ? c.slot5 : wrong;
