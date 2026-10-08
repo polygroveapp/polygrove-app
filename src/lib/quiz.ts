@@ -36,6 +36,9 @@ function mulberry(a: number) {
 const GROUPS = ['Mammal', 'Bird', 'Reptile', 'Amphibian', 'Fish', 'Insect', 'Arachnid', 'Crustacean', 'Mollusk',
   'Tree', 'Tree/Shrub', 'Shrub', 'Subshrub', 'Perennial Herb', 'Bi/Annual Herb', 'Geophyte', 'Epiphyte', 'Fungus'];
 
+// the plant-side groups, for when the catalog isn't loaded (offline)
+const PLANT_GROUPS = ['Tree', 'Tree/Shrub', 'Shrub', 'Subshrub', 'Perennial Herb', 'Bi/Annual Herb', 'Geophyte', 'Epiphyte', 'Plant', 'Fungus'];
+
 type Q4Side = { question: string; answer: string; options: string[] };
 type Q4 = { eats?: Q4Side; eatenBy?: Q4Side };
 type Q3 = { measure?: string; bigger: string; smaller: string; opponents: { name: string; size: string; answer: string }[] };
@@ -71,7 +74,19 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
   const qs: (Q | null)[] = [];
 
   // Q1 taxonomy
-  const groupPool = all.length ? [...new Set(all.map(o => o.group))] : GROUPS;
+  // LIKE WITH LIKE (user, 2026-10-07: "if it's a producer then the taxonomy is
+  // only plant related, like bi/annual, or decomposer. if not a plant then do
+  // any other category"): a plant or fungus is offered only plant and fungus
+  // groups, an animal only animal groups — "Bullsnake: Bi/Annual Herb?" was a
+  // free elimination. A group counts as plant-side when its cards are
+  // producers or decomposers; one-card groups (Ginkgoopsida, Worm) are never
+  // offered as decoys.
+  const GREEN = (t?: string) => t === 'Producer' || t === 'Decomposer';
+  const sizes = new Map<string, number>(), greenGroups = new Set<string>(PLANT_GROUPS);
+  for (const o of all) { sizes.set(o.group, (sizes.get(o.group) ?? 0) + 1); if (GREEN(o.trophic)) greenGroups.add(o.group); }
+  const mine = GREEN(c.trophic) || greenGroups.has(c.group);
+  // …and FUNGUS is offered on both sides (user, same day): a fungus is neither, and a fair guess for either
+  const groupPool = [...new Set([...(all.length ? [...sizes.keys()].filter(g => (sizes.get(g) ?? 0) >= 5) : GROUPS).filter(g => greenGroups.has(g) === mine), 'Fungus'])];
   const groups = shuf(groupPool.filter(g => g !== c.group)).slice(0, 3);
   qs.push({ type: 'mc', label: 'Q1 · Taxonomy', short: 'Taxonomy', q: `Which group does the ${c.name} belong to?`, opts: shuf([c.group, ...groups]), a: c.group });
 

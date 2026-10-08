@@ -176,7 +176,7 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
         </View>
 
         {q ? (
-          <Question key={q.type === 'pick' ? `${level}-${round}` : `${level}-${attempt}-${round}`} q={q} card={card} done={result !== null} onAnswer={onAnswer}
+          <Question key={q.type === 'pick' ? `${level}-${round}` : `${level}-${attempt}-${round}`} q={q} card={card} done={result !== null} right={!!result?.right} onAnswer={onAnswer}
             // a wrong pick RESTARTS THE LADDER (user, 2026-10-06: "it didn't bring
             // me back to the beginning"): once the hand has dropped out of sight,
             // the questions re-roll and the level snaps to the first unlocked one
@@ -189,7 +189,8 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
         {result && !result.right && (
           <View style={s.wrong}>
             <Text style={s.wrongTitle}>✗ Not quite</Text>
-            {q && <Text style={s.wrongTxt}>{explainFor(q, card)}</Text>}
+            {/* no answer here either: the question is coming back */}
+            <Text style={s.wrongTxt}>{q?.type === 'pick' ? explainFor(q, card) : 'Back to the first question. This one will come round again.'}</Text>
             <Pressable onPress={retry} style={s.retry}><Text style={s.retryTxt}>Try Again</Text></Pressable>
           </View>
         )}
@@ -351,28 +352,37 @@ function cardByName(name: string): Card | undefined {
   if (!_byName.size) for (const c of getCards()) _byName.set(c.name, c);
   return _byName.get(name);
 }
-function FoodWebOption({ name, st, disabled, onPress }: { name: string; st: { bg: string; bc: string; tc: string }; disabled: boolean; onPress: () => void }) {
+// ALL OR NONE (user, 2026-10-07: "where is there no photo, I feel like the
+// answer always has no photo"): the answer is whatever species the records
+// name, a deck card or not, while the decoys were mostly cards — so an empty
+// hexagon gave the answer away. A row shows its photos only when every option
+// has one. (The catalog now also matches decoys to the answer on this, so most
+// rows keep their photos.)
+const hasPhoto = (name: string) => { const c = cardByName(name); return !!(c && photoFor(c.id, 250)); };
+function FoodWebOption({ name, st, disabled, onPress, photos }: { name: string; st: { bg: string; bc: string; tc: string }; disabled: boolean; onPress: () => void; photos: boolean }) {
   const c = cardByName(name);
   return (
     <Pressable disabled={disabled} onPress={onPress} style={s.fwTile}>
       <View style={[s.opt, s.fwBox, { backgroundColor: st.bg, borderColor: st.bc }]}>
         <Text style={[s.fwTxt, { color: st.tc }]} numberOfLines={3}>{name}</Text>
       </View>
-      <View style={s.fwPhoto}>
-        <HexPhoto uri={c ? photoFor(c.id, 250) : undefined} frame={c ? framingFor(c.id) : undefined} width={64} height={72} borderColor={st.bc === '#333' ? '#3a3a3a' : st.bc} borderWidth={3} />
-      </View>
+      {photos && (
+        <View style={s.fwPhoto}>
+          <HexPhoto uri={c ? photoFor(c.id, 250) : undefined} frame={c ? framingFor(c.id) : undefined} width={64} height={72} borderColor={st.bc === '#333' ? '#3a3a3a' : st.bc} borderWidth={3} />
+        </View>
+      )}
     </Pressable>
   );
 }
 
 // one question — mc / tf / dual / pick, with the demo's option-state colors:
 // dark → gold selected → green right / red wrong
-function Question({ q, card, done, onAnswer, onReshuffle }: { q: Q; card: Card; done: boolean; onAnswer: (r: boolean) => void; onReshuffle: () => void }) {
+function Question({ q, card, done, right, onAnswer, onReshuffle }: { q: Q; card: Card; done: boolean; right: boolean; onAnswer: (r: boolean) => void; onReshuffle: () => void }) {
   if (q.type === 'pick') return <PickCards q={q} done={done} onAnswer={onAnswer} onReshuffle={onReshuffle} />;
-  return <QuestionBody q={q} card={card} done={done} onAnswer={onAnswer} />;
+  return <QuestionBody q={q} card={card} done={done} right={right} onAnswer={onAnswer} />;
 }
 
-function QuestionBody({ q, card, done, onAnswer }: { q: Exclude<Q, { type: 'pick' }>; card: Card; done: boolean; onAnswer: (r: boolean) => void }) {
+function QuestionBody({ q, card, done, right, onAnswer }: { q: Exclude<Q, { type: 'pick' }>; card: Card; done: boolean; right: boolean; onAnswer: (r: boolean) => void }) {
   const [sel, setSel] = useState<string | boolean | null>(null);
   const [s1, setS1] = useState<string | null>(null);
   const [s2, setS2] = useState<string | null>(null);
@@ -380,8 +390,12 @@ function QuestionBody({ q, card, done, onAnswer }: { q: Exclude<Q, { type: 'pick
 
   const optStyle = (isCorrect: boolean, isSelected: boolean) => {
     let bg = 'rgba(0,0,0,0.4)', bc = '#333', tc = '#ccc';
-    if (done && isCorrect) { bg = 'rgba(76,175,80,0.25)'; bc = '#4CAF50'; tc = '#4CAF50'; }
-    else if (done && isSelected && !isCorrect) { bg = 'rgba(229,57,53,0.25)'; bc = '#E53935'; tc = '#E53935'; }
+    // THE ANSWER IS NOT GIVEN AWAY ON A MISS (user, 2026-10-07: "the correct one gets
+    // highlighted on a second try after failing a later one"): a miss sends you back
+    // down the ladder and the same question comes round again, so the right option
+    // turns green only when you got it right; a miss marks your pick red, nothing else
+    if (done && right && isCorrect) { bg = 'rgba(76,175,80,0.25)'; bc = '#4CAF50'; tc = '#4CAF50'; }
+    else if (done && !right && isSelected && !isCorrect) { bg = 'rgba(229,57,53,0.25)'; bc = '#E53935'; tc = '#E53935'; }
     else if (isSelected) { bg = 'rgba(255,215,0,0.1)'; bc = '#FFD700'; tc = '#FFD700'; }
     return { bg, bc, tc };
   };
@@ -395,7 +409,7 @@ function QuestionBody({ q, card, done, onAnswer }: { q: Exclude<Q, { type: 'pick
             <Text style={[s.sideTitle, { color }]}>{side.title}</Text>
             <View style={s.fwRow}>
               {side.opts.map(o => (
-                <FoodWebOption key={o} name={o} st={optStyle(o === side.a, sv === o)} disabled={done} onPress={() => set(o)} />
+                <FoodWebOption key={o} name={o} st={optStyle(o === side.a, sv === o)} disabled={done} onPress={() => set(o)} photos={side.opts.every(hasPhoto)} />
               ))}
             </View>
           </View>
@@ -420,7 +434,7 @@ function QuestionBody({ q, card, done, onAnswer }: { q: Exclude<Q, { type: 'pick
         {q.type === 'mc' && q.short === 'Food web' ? (
           <View style={s.fwRow}>
             {q.opts.map(o => (
-              <FoodWebOption key={o} name={o} st={optStyle(o === q.a, sel === o)} disabled={done} onPress={() => { setSel(o); onAnswer(o === q.a); }} />
+              <FoodWebOption key={o} name={o} st={optStyle(o === q.a, sel === o)} disabled={done} onPress={() => { setSel(o); onAnswer(o === q.a); }} photos={q.opts.every(hasPhoto)} />
             ))}
           </View>
         ) : q.type === 'mc' ? q.opts.map(o => {

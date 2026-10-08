@@ -4,6 +4,7 @@
 // with a ❓ and "???" until you find them. Needs the catalog → online-only;
 // the Journal is the offline view.
 
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, SectionList, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -243,9 +244,13 @@ export default function FieldNotes() {
         <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
           {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
           <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} picked={shownKey} onPick={setPicked} />
+          {/* the Camp page's green Solar Quiz button (user, 2026-10-07: "make the take solar
+              quiz on the journal page like this"); a mastered card's reads Practice */}
           {shownCard ? (
-            <Pressable onPress={() => toQuiz(shownCard)} style={[s.quizBtn, shownMastered && s.quizBtnGold]}>
-              <Text style={[s.quizTxt, shownMastered && { color: C.gold }]}>{shownMastered ? '☀️ Practice the Solar quiz' : '☀️ Take the Solar quiz'}</Text>
+            <Pressable onPress={() => toQuiz(shownCard)} style={s.quizBtn}>
+              <LinearGradient colors={shownMastered ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.quizGrad}>
+                <Text style={s.quizTxt}>{shownMastered ? '☀️ Practice Solar Quiz' : '☀️ Solar Quiz'}</Text>
+              </LinearGradient>
             </Pressable>
           ) : null}
         </View>
@@ -395,9 +400,9 @@ const s = StyleSheet.create({
   filterRow: { flexDirection: 'row', gap: 8 },
   // under the comb: the shown card's way into its quiz (gold 'Practice' once mastered)
   // yellow button, yellow text (user, 2026-10-06); a touch more orange once mastered
-  quizBtn: { alignSelf: 'center', marginTop: 18, paddingVertical: 12, paddingHorizontal: 22, borderRadius: 22, backgroundColor: 'rgba(255,225,77,0.16)', borderWidth: 1, borderColor: 'rgba(255,225,77,0.5)' },
-  quizBtnGold: { backgroundColor: 'rgba(245,166,35,0.18)', borderColor: 'rgba(245,166,35,0.5)' },
-  quizTxt: { fontFamily: F.display, fontSize: 13, color: C.yellow },
+  quizBtn: { alignSelf: 'stretch', marginTop: 18, borderRadius: 16, overflow: 'hidden' },
+  quizGrad: { paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center' },
+  quizTxt: { fontFamily: F.display, fontSize: 13, color: C.text },
   filterBtn: {
     flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,
     borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',

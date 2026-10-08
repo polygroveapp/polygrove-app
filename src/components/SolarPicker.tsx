@@ -6,10 +6,10 @@
 // Solar-locked are left out while any others remain.
 
 import { useRouter } from 'expo-router';
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { SharedValue, runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { Easing, SharedValue, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F, getTier } from '../constants/polygrove';
 import { Card, cardById } from '../lib/catalog';
@@ -64,14 +64,28 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
       runOnJS(setIdx)(target);
     });
   const reset = () => { pos.value = 1; setIdx(1); };
+  // DEALT FROM THE BOTTOM, LIKE OUT OF A DECK (user, 2026-10-07): the three
+  // cards start below the screen and rise one after another — middle first,
+  // then left, then right — each with a small tilt that straightens as it
+  // lands. `deal` runs 0 → 1; each Slot takes its own share of it. Randomize
+  // sends them back down the same way, swaps the three while they are out of
+  // sight, and deals again.
+  const deal = useSharedValue(0);
+  const DROP = win.height;
+  const dealIn = () => { deal.value = 0; deal.value = withDelay(80, withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) })); };
+  useEffect(() => { if (visible) dealIn(); }, [visible]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const quiz = () => { if (!cur) return; onClose(); router.push({ pathname: '/quiz/[id]', params: { id: cur.id } }); };
   const journal = () => { onClose(); router.push('/deck'); };
-  const randomize = () => { setSeed(k => k + 1); reset(); };
+  const [dealing, setDealing] = useState(false);
+  // eslint-disable-next-line react-hooks/immutability -- a shared value is meant to be written from a handler
+  const dealOut = (then: () => void) => { deal.value = withTiming(0, { duration: 420, easing: Easing.in(Easing.cubic) }, done => { if (done) runOnJS(then)(); }); };
+  const randomize = () => { if (dealing) return; setDealing(true); dealOut(afterDown); };
+  const afterDown = () => { setSeed(k => k + 1); reset(); dealIn(); setTimeout(() => setDealing(false), 700); };
   const tier = cur ? getTier(scoreOf(cur.species_id)) : null;
 
   return (
-    <Modal visible={visible} animationType="fade" onRequestClose={onClose} onShow={reset}>
+    <Modal visible={visible} animationType="fade" onRequestClose={onClose} onShow={() => { reset(); dealIn(); }}>
       <View style={[s.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
         <GreenBackdrop />
         <CloseX onPress={onClose} />
@@ -87,12 +101,12 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
         </View>
         <GestureDetector gesture={pan}>
           <Animated.View style={{ height: cardSize.height, alignItems: 'center' }}>
-            {cards.map((c, i) => <Slot key={c.id} i={i} pos={pos} step={step} active={i === idx} size={cardSize}><PolygroveCard card={c} /></Slot>)}
+            {cards.map((c, i) => <Slot key={c.id} i={i} pos={pos} step={step} active={i === idx} size={cardSize} deal={deal} drop={DROP}><PolygroveCard card={c} /></Slot>)}
           </Animated.View>
         </GestureDetector>
 
         <View style={s.bottom}>
-          <Pressable onPress={quiz} disabled={!cur} style={s.confirm}>
+          <Pressable onPress={quiz} disabled={!cur || dealing} style={s.confirm}>
             <Text style={s.confirmTxt}>Choose this card{tier ? ` · ${tier.label}` : ''}</Text>
           </Pressable>
           <View style={s.btns}>
@@ -105,9 +119,17 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
   );
 }
 
-// one card of the hand, placed by the hand's fractional position
-function Slot({ i, pos, step, active, size, children }: { i: number; pos: SharedValue<number>; step: number; active: boolean; size: { width: number; height: number }; children: ReactNode }) {
-  const at = useAnimatedStyle(() => ({ transform: [{ translateX: (i - pos.value) * step }] }));
+// one card of the hand, placed by the hand's fractional position — and dealt
+// up from below: its share of `deal` begins after the cards before it in the
+// deal order (middle, left, right) and lasts 60% of the whole
+const DEAL_ORDER = [1, 0, 2];
+function Slot({ i, pos, step, active, size, deal, drop, children }: { i: number; pos: SharedValue<number>; step: number; active: boolean; size: { width: number; height: number }; deal: SharedValue<number>; drop: number; children: ReactNode }) {
+  const k = DEAL_ORDER.indexOf(i), startAt = k * 0.2;
+  const at = useAnimatedStyle(() => {
+    const t = Math.max(0, Math.min(1, (deal.value - startAt) / 0.6));
+    const e = 1 - Math.pow(1 - t, 3);   // ease out
+    return { transform: [{ translateX: (i - pos.value) * step }, { translateY: (1 - e) * drop }, { rotate: `${(1 - e) * (i - 1) * 9}deg` }] };
+  });
   return <Animated.View pointerEvents={active ? 'auto' : 'none'} style={[size, { position: 'absolute', top: 0 }, at]}>{children}</Animated.View>;
 }
 
