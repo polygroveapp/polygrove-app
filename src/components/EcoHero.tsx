@@ -14,9 +14,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { F } from '../constants/polygrove';
 import { cleanLead, CurrentEco, ecoMeta, loadEcoMeta, wikiUrl } from '../lib/ecoregions';
-import { saveMiniMap, useMiniMap } from '../lib/minimap';
+import { MINI_VERSION, saveMiniMap, useMiniMap } from '../lib/minimap';
 
 const MINI_URL = 'https://polygrovedb.pages.dev/map?mini=';
+// the page's address carries the picture version, and the WebView keeps no cache: a redraw must
+// never come from a stale copy of the page (2026-10-07: v7 pictures were redrawn from an old one)
 
 export default function EcoHero({ eco }: { eco: CurrentEco }) {
   const router = useRouter();
@@ -47,7 +49,7 @@ export default function EcoHero({ eco }: { eco: CurrentEco }) {
           <Image source={{ uri: snap }} style={[s.pane, s.map]} contentFit="cover" />
         ) : mapOk && (
           <View style={[s.pane, s.map]} pointerEvents="none">
-            <WebView key={eco.eid} source={{ uri: MINI_URL + eco.eid }} style={s.web} onError={() => setMapOk(false)}
+            <WebView key={eco.eid} source={{ uri: `${MINI_URL}${eco.eid}&v=${MINI_VERSION}` }} cacheEnabled={false} style={s.web} onError={() => setMapOk(false)}
               onMessage={e => {
                 try {
                   const m = JSON.parse(e.nativeEvent.data);

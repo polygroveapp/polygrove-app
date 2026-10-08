@@ -12,7 +12,9 @@ import { useEffect, useSyncExternalStore } from 'react';
 // v5 (2026-10-07): a colour relief of the world, the region in gold
 // v6 (2026-10-07, later): the region green again, and the sea a true mask (bays are water)
 // v7 (2026-10-07, later still): v6 pictures caught the sea mask's blue wedges
-const KEY = (eid: number) => `polygrove.minimap.v7.${eid}`;
+// v8: v7 redraws came from a cached copy of the old page
+export const MINI_VERSION = 8;
+const KEY = (eid: number) => `polygrove.minimap.v${MINI_VERSION}.${eid}`;
 const mem: Record<number, string | null> = {};   // null = looked, nothing stored
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());
