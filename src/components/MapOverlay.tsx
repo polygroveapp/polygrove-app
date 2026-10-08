@@ -35,7 +35,7 @@ import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
 import { C, F, getLevel, MASTERY } from '../constants/polygrove';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
-import { loadSightings, niceDate, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
+import { loadSightings, niceDate, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
 import { setPin } from '../lib/pin';
 import { Spot, observation } from '../lib/inatPublic';
 import { ecoregionAt } from '../lib/locate';
@@ -524,9 +524,16 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   (user, 2026-10-07). The picture is ALWAYS THE CARD'S, never the
                   iNaturalist photo (user, 2026-10-07: "an image of the card not
                   inaturalist") — cached on the phone, so panning downloads nothing.
-                  A species with no card shows its ✕ in the mark's colour. */}
+                  A species with no deck card shows its Sightings card's picture; failing that, its ✕. */}
               <Pressable onPress={() => o && openObs(o)} disabled={!o} style={s.underRow}>
-                {(() => { const uri = card ? photoFor(card.id, 250) : undefined;
+                {(() => {
+                  // a species with no deck card still has a card of its own in Sightings — the
+                  // potential / waiting card, which wears YOUR photo (kept on the phone with the
+                  // sighting, no lookup): the strip shows that same picture (user, 2026-10-07)
+                  const own = sightings.potential.find(x => x.sci.toLowerCase() === sci)?.obs.photo
+                    ?? sightings.waiting.find(x => x.obsId === u.id || x.sci.toLowerCase() === sci)?.photo
+                    ?? sightings.earned.find(x => x.obsId === u.id)?.photo;
+                  const uri = (card ? photoFor(card.id, 250) : undefined) ?? smallPhoto(own);
                   return uri ? <Image source={{ uri }} style={s.underPhoto} contentFit="cover" transition={150} />
                     : <View style={[s.underPhoto, { alignItems: 'center', justifyContent: 'center' }]}><Text style={[s.underNoCard, { color }]}>✕</Text></View>; })()}
                 <View style={{ flex: 1, gap: 1 }}>
