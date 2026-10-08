@@ -116,7 +116,7 @@ export default function PolygroveDB() {
         <GlassSegments value={where} onChange={setWhere} items={[
           { key: 'all', label: 'All' },
           { key: 'pin', label: '📍 Pin' },
-          { key: 'tent', label: '⛺ Tent' },
+          { key: 'tent', label: '⛺ Ecoregion' }   // "Ecoregion" (user, 2026-10-07; was "Tent"),
         ]} />
       </View>
       {where === 'pin' && !pin ? <Text style={s.hint}>Move the pin on the Map tab first — this lists what is seen near it.</Text> : null}

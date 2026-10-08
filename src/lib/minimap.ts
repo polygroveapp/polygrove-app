@@ -10,7 +10,8 @@ import { useEffect, useSyncExternalStore } from 'react';
 // the earth colours), and v2 pictures caught the picker's white highlight —
 // older pictures are left behind and redrawn on the next visit
 // v5 (2026-10-07): a colour relief of the world, the region in gold
-const KEY = (eid: number) => `polygrove.minimap.v5.${eid}`;
+// v6 (2026-10-07, later): the region green again, and the sea a true mask (bays are water)
+const KEY = (eid: number) => `polygrove.minimap.v6.${eid}`;
 const mem: Record<number, string | null> = {};   // null = looked, nothing stored
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());

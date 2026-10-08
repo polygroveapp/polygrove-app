@@ -12,6 +12,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleProp, StyleSheet, Text, 
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { Easing, SharedValue, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import HexPhoto from '../../components/HexPhoto';
+import HexThumb from '../../components/HexThumb';
 import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SolarCelebration from '../../components/SolarCelebration';
@@ -430,8 +431,10 @@ function QuestionBody({ q, card, done, onAnswer }: { q: Exclude<Q, { type: 'pick
               style={[s.opt, { backgroundColor: st.bg, borderColor: st.bc }, row && s.sizeOpt]}>
               {row ? (
                 <>
-                  {/* the size question (user, 2026-10-07): the figure and a species of that size on the
-                      left, and on the right the card back's scale bar — where it sits in the group */}
+                  {/* the size question (user, 2026-10-07): the compared species' picture, the figure and
+                      that species' name on the left, and on the right the card back's scale bar — where
+                      it sits in the group */}
+                  {row.egId ? <HexThumb uri={photoFor(row.egId, 120)} width={40} height={46} borderColor={st.tc} borderWidth={2} /> : null}
                   <View style={{ flex: 1 }}>
                     <Text style={[s.optTxt, { color: st.tc }]}>{o}</Text>
                     {row.eg ? <Text style={[s.sizeEg, { color: st.tc }]} numberOfLines={1}>like a {row.eg}</Text> : null}

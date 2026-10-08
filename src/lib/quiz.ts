@@ -9,7 +9,7 @@ import { Card, cardByName, fmtImperial, fmtSize as niceMetric, getCards, parseSi
 
 export type Q =
   // rows (the size question): per option, an example species of that size and where it sits on the group's scale
-  | { type: 'mc'; label: string; short: string; q: string; opts: string[]; a: string; explain?: string; rows?: Record<string, { eg?: string; frac: number | null }> }
+  | { type: 'mc'; label: string; short: string; q: string; opts: string[]; a: string; explain?: string; rows?: Record<string, { eg?: string; egId?: string; frac: number | null }> }
   | { type: 'tf'; label: string; short: string; q: string; a: boolean; explain?: string }
   | { type: 'dual'; label: string; short: string;
       s1: { title: string; opts: string[]; a: string }; s2: { title: string; opts: string[]; a: string } }
@@ -106,20 +106,20 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
     const cs = parseUnit(c.size);
     const range = cs ? sizeRange(c.group, cs.unit) : null;
     const pool = cs ? getCards().filter(o => o.group === c.group && o.sci !== c.sci && parseUnit(o.size)?.unit === cs.unit)
-      .map(o => ({ name: o.name, size: o.size as string, v: parseUnit(o.size)!.v })) : [];
-    type Row = { label: string; v: number; eg?: string };
+      .map(o => ({ id: o.id, name: o.name, size: o.size as string, v: parseUnit(o.size)!.v })) : [];
+    type Row = { label: string; v: number; eg?: string; egId?: string };
     const rows: Row[] = [{ label: right, v: sv.v }];
     const far = (v: number) => rows.every(r => Math.max(v, r.v) / Math.min(v, r.v) >= 1.5);
     const near = pool.filter(o => Math.max(o.v, sv.v) / Math.min(o.v, sv.v) <= 1.12 && withImperial(o.size) !== right)
       .sort((a, b) => Math.abs(Math.log(a.v / sv.v)) - Math.abs(Math.log(b.v / sv.v)))[0];
-    if (near) rows[0].eg = near.name;
+    if (near) { rows[0].eg = near.name; rows[0].egId = near.id; }
     const N = 3, at = Math.floor(rng() * N), step = 1.9 + rng() * 0.7;   // where the answer sits among them
     for (let i = 0; i < N; i++) {
       if (i === at) continue;
       const target = sv.v * step ** (i - at);
       const pick = pool.filter(o => far(o.v) && Math.max(o.v, target) / Math.min(o.v, target) <= 1.45 && !rows.some(r => r.label === withImperial(o.size)))
         .sort((a, b) => Math.abs(Math.log(a.v / target)) - Math.abs(Math.log(b.v / target)))[0];
-      if (pick) rows.push({ label: withImperial(pick.size), v: pick.v, eg: pick.name });
+      if (pick) rows.push({ label: withImperial(pick.size), v: pick.v, eg: pick.name, egId: pick.id });
       else { let lbl = withImperial(fmtSize(target, sv.unit)), f = target, tries = 0;
         while (rows.some(r => r.label === lbl) && tries++ < 4) { f *= i < at ? 1 / 1.4 : 1.4; lbl = withImperial(fmtSize(f, sv.unit)); }
         rows.push({ label: lbl, v: f }); }
@@ -128,7 +128,7 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
     qs.push({ type: 'mc', label: 'Q3 · Size', short: 'Size', q: ask,
       opts: rows.map(r => r.label), a: right, explain: `${c.name}: ${right}`,
       // the scale bar per option: where that size sits between the group's smallest and largest (log scale)
-      rows: Object.fromEntries(rows.map(r => [r.label, { eg: r.eg, frac: range ? sizeFrac(r.v, range) : null }])) });
+      rows: Object.fromEntries(rows.map(r => [r.label, { eg: r.eg, egId: r.egId, frac: range ? sizeFrac(r.v, range) : null }])) });
   } else qs.push(null);
 
   // Q4 food web

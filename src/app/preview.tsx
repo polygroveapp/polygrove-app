@@ -48,6 +48,12 @@ export default function Preview() {
           : `Waiting to be confirmed — and the game can’t make this card yet${lacking.length ? `: it’s missing its ${listOf(lacking.map(k => FACT_LABEL[k]))}` : ''}.`,
       };
     }
+  } else if (kind === 'card') {
+    // a card you already hold in that ecoregion's journal, reached from its ✕ on the map (user, 2026-10-07)
+    const [eidS, sidS] = (key ?? '').split(':'); const eid = +eidS, sid = +sidS;
+    const c = getCards().find(x => x.species_id === sid);
+    if (c) found = { name: c.name, sci: c.sci, cardId: c.id, facts: null, eid, obs: { obsId: 0, uri: pUri, date: pDate || null },
+      say: 'Your sighting. This card is already in your journal here.' };
   } else if (kind === 'obs') {
     // A ✕ FROM THE MAP THAT IS IN NONE OF THE LISTS (user, 2026-10-07: "if it's a
     // green x it should go to the potential card like the grey x") — the lists
@@ -90,15 +96,22 @@ export default function Preview() {
         : !found || !card ? <Text style={s.none}>That sighting isn’t in the list any more — check for new sightings.</Text>
         : (
           <>
-            <Text style={s.kind}>{kind === 'earned' ? 'YOUR SIGHTING' : real ? 'HOW YOUR CARD WOULD LOOK' : 'AN INCOMPLETE CARD'}</Text>
+            <Text style={s.kind}>{kind === 'earned' || kind === 'card' ? 'YOUR SIGHTING' : real ? 'HOW YOUR CARD WOULD LOOK' : 'AN INCOMPLETE CARD'}</Text>
             <Text style={s.say}>{found.say}</Text>
             <View style={cardSize}>
               <PolygroveCard card={card} sighting={found.obs} missing={missing} />
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              {kind === 'earned' && found.cardId ? (
+              {/* where to go from here (user, 2026-10-07): the journal, when the card is in it there; the
+                  database page, for any real card; and the observation itself, quietly */}
+              {(kind === 'earned' || kind === 'card') && found.cardId ? (
                 <Pressable onPress={() => found && router.push({ pathname: '/deck', params: { glow: found.cardId as string, eid: String(found.eid ?? ''), slide: 'right' } })} style={s.btn}>
-                  <Text style={s.btnTxt}>Find card in journal ›</Text>
+                  <Text style={s.btnTxt}>Go to journal ›</Text>
+                </Pressable>
+              ) : null}
+              {real ? (
+                <Pressable onPress={() => router.push({ pathname: '/species/[id]', params: { id: real.id } })} style={s.btn}>
+                  <Text style={s.btnTxt}>Go to PolygroveDB ›</Text>
                 </Pressable>
               ) : null}
               {found.obs.uri ? (

@@ -173,7 +173,10 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
       let eid: number | null = null;
       if (o.lng != null && o.lat != null) { try { eid = await ecoregionAt(o.lng, o.lat); } catch { /* no outline: fall through */ } }
       if (eid != null && sightings.earned.some(e => e.eid === eid && e.speciesId === card.species_id)) { router.push({ pathname: '/preview', params: { kind: 'earned', key: `${eid}:${card.species_id}`, slide: 'right' } }); return; }
-      if (eid != null && owns(eid, card.species_id)) { router.push({ pathname: '/deck', params: { glow: card.id, eid: String(eid), slide: 'right' } }); return; }
+      // A ✕ ALWAYS OPENS THE OBSERVATION CARD (user, 2026-10-07: "when you click on an x it
+      // should go to the observation card, you can then click on go to journal or go to
+      // polygroveDB") — a card you hold there used to jump straight into the journal
+      if (eid != null && owns(eid, card.species_id)) { router.push({ pathname: '/preview', params: { kind: 'card', key: `${eid}:${card.species_id}`, name: o.name, date: o.date ?? '', uri: o.uri, slide: 'right' } }); return; }
       // a card, but not yours there (not confirmed, or not in that deck): the preview knows which
       if (eid != null && sightings.potential.some(p => p.key === `${card.species_id}@${eid}`)) { router.push({ pathname: '/preview', params: { kind: 'potential', key: `${card.species_id}@${eid}`, slide: 'right' } }); return; }
     } else if (sci && sightings.potential.some(p => p.key === sci)) { router.push({ pathname: '/preview', params: { kind: 'potential', key: sci, slide: 'right' } }); return; }
