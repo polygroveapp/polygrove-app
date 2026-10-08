@@ -174,18 +174,18 @@ export default function PackOpening() {
     if (done && pack && eid != null && idx < pack.length) returnCards(eid, pack.slice(idx));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done]);
-  // the fifth card opens YOUR PACK: the cards you just journaled, to swipe
-  // through (user, 2026-09-29; the demo went straight home). A first pack
-  // still queues "How Packs Work" for the next time Camp comes forward.
+  // the fifth card goes home (user, 2026-10-08; from 2026-09-29 it opened a
+  // "Your Pack" gallery). A first pack still queues "How Packs Work" for the
+  // next time Camp comes forward.
   const keptIds = useRef<string[]>([]);
   const over = !!pack && (done || idx >= pack.length);
   useEffect(() => {
     if (!over) return;
     if (!tipSeen('firstPack')) { markTip('firstPack'); queuePacksPopup(); }
-    const ids = keptIds.current;
-    const t = setTimeout(() => router.replace(ids.length
-      ? { pathname: '/gallery', params: { ids: ids.join(','), start: '0', pack: '1', tab: '1' } }
-      : { pathname: '/', params: { tab: '1' } }), 100);
+    // STRAIGHT HOME (user, 2026-10-08: "remove this screen" — the pack's own
+    // gallery, "Your Pack · 5 journaled", with Take Solar Quiz / Journal, is gone;
+    // the cards are in the journal and the Camp page has both buttons)
+    const t = setTimeout(() => router.replace({ pathname: '/', params: { tab: '1' } }), 100);
     return () => clearTimeout(t);
   }, [over, router]);
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
