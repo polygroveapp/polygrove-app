@@ -97,7 +97,7 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
         <View style={s.dots}>
           {/* the active dot wears its card's colour — red for a carnivore (user, 2026-10-07; it was always yellow) */}
           {cards.map((c, i) => (
-            <Pressable key={c.id} onPress={() => go(i)} hitSlop={4} style={[s.dot, i === idx && { width: 16, backgroundColor: TROPHIC_COLOR[c.trophic] || '#FFD700' }]} />
+            <Pressable key={c.id} onPress={() => go(i)} hitSlop={4} style={[s.dot, i === idx && { width: 16, backgroundColor: c.provenance?.feeding?.confidence === 'inferred' ? '#c084fc' : TROPHIC_COLOR[c.trophic] || '#81C784' }]} />
           ))}
         </View>
         <GestureDetector gesture={pan}>
