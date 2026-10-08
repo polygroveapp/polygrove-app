@@ -17,7 +17,7 @@ import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SolarCelebration from '../../components/SolarCelebration';
 import { C, F, MASTERY, getLevel, getTier } from '../../constants/polygrove';
-import { Card, cardById, framingFor, getCards, loadCatalog, photoFor } from '../../lib/catalog';
+import { Card, cardById, framingFor, getCards, loadCatalog, optionPhoto, photoForDb } from '../../lib/catalog';
 import {
   LOCK_THRESHOLD, NUM_Q, countsOf, isFullyLocked, loadMastery, nextUnlocked, recordCorrect, scoreOf, useMastery,
 } from '../../lib/mastery';
@@ -349,21 +349,24 @@ function PickButton({ onPick, disabled }: { onPick: () => boolean; disabled?: bo
 
 // FOOD WEB options carry the species' PHOTO under the name box (user,
 // 2026-09-28): three tiles in a row, the box colours like any option, the
-// hexagon photo below it. Options that aren't deck cards get an empty hexagon.
-const _byName = new Map<string, Card>();
-function cardByName(name: string): Card | undefined {
-  if (!_byName.size) for (const c of getCards()) _byName.set(c.name, c);
-  return _byName.get(name);
-}
+// hexagon photo below it. The photo is the card's, or for a species that is not a
+// card (or has no Wikipedia photo) a licensed iNaturalist one (catalog.ts optionPhoto).
 // ALL OR NONE (user, 2026-10-07: "where is there no photo, I feel like the
 // answer always has no photo"): the answer is whatever species the records
 // name, a deck card or not, while the decoys were mostly cards — so an empty
 // hexagon gave the answer away. A row shows its photos only when every option
 // has one. (The catalog now also matches decoys to the answer on this, so most
 // rows keep their photos.)
-const hasPhoto = (name: string) => { const c = cardByName(name); return !!(c && photoFor(c.id, 250)); };
+const hasPhoto = (name: string) => !!optionPhoto(name);
+// iNaturalist photos are CC BY / BY-SA / CC0: the photographers are named under the row they appear in
+function FwCredits({ opts }: { opts: string[] }) {
+  if (!opts.every(hasPhoto)) return null;
+  const by = [...new Set(opts.map(o => optionPhoto(o)?.credit).filter((c): c is NonNullable<typeof c> => !!c)
+    .map(c => (c.by && c.by !== 'no rights reserved' ? `${c.by} (${c.lic})` : c.lic)))];
+  return by.length ? <Text style={s.fwCredit} numberOfLines={2}>photos via iNaturalist: {by.join(' · ')}</Text> : null;
+}
 function FoodWebOption({ name, st, disabled, onPress, photos }: { name: string; st: { bg: string; bc: string; tc: string }; disabled: boolean; onPress: () => void; photos: boolean }) {
-  const c = cardByName(name);
+  const ph = optionPhoto(name);
   return (
     <Pressable disabled={disabled} onPress={onPress} style={s.fwTile}>
       <View style={[s.opt, s.fwBox, { backgroundColor: st.bg, borderColor: st.bc }]}>
@@ -371,7 +374,7 @@ function FoodWebOption({ name, st, disabled, onPress, photos }: { name: string; 
       </View>
       {photos && (
         <View style={s.fwPhoto}>
-          <HexPhoto uri={c ? photoFor(c.id, 250) : undefined} frame={c ? framingFor(c.id) : undefined} width={64} height={72} borderColor={st.bc === '#333' ? '#3a3a3a' : st.bc} borderWidth={3} />
+          <HexPhoto uri={ph?.uri} frame={ph?.id ? framingFor(ph.id) : undefined} width={64} height={72} borderColor={st.bc === '#333' ? '#3a3a3a' : st.bc} borderWidth={3} />
         </View>
       )}
     </Pressable>
@@ -415,6 +418,7 @@ function QuestionBody({ q, card, done, right, onAnswer }: { q: Exclude<Q, { type
                 <FoodWebOption key={o} name={o} st={optStyle(o === side.a, sv === o)} disabled={done} onPress={() => set(o)} photos={side.opts.every(hasPhoto)} />
               ))}
             </View>
+            <FwCredits opts={side.opts} />
           </View>
         ))}
         {!done && (
@@ -435,11 +439,14 @@ function QuestionBody({ q, card, done, right, onAnswer }: { q: Exclude<Q, { type
       </View>
       <View style={{ gap: 7 }}>
         {q.type === 'mc' && q.short === 'Food web' ? (
+          <>
           <View style={s.fwRow}>
             {q.opts.map(o => (
               <FoodWebOption key={o} name={o} st={optStyle(o === q.a, sel === o)} disabled={done} onPress={() => { setSel(o); onAnswer(o === q.a); }} photos={q.opts.every(hasPhoto)} />
             ))}
           </View>
+          <FwCredits opts={q.opts} />
+          </>
         ) : q.type === 'mc' ? q.opts.map(o => {
           const st = optStyle(o === q.a, sel === o);
           const row = q.rows?.[o];
@@ -451,7 +458,7 @@ function QuestionBody({ q, card, done, right, onAnswer }: { q: Exclude<Q, { type
                   {/* the size question (user, 2026-10-07): the compared species' picture, the figure and
                       that species' name on the left, and on the right the card back's scale bar — where
                       it sits in the group */}
-                  {row.egId ? <HexThumb uri={photoFor(row.egId, 120)} width={40} height={46} borderColor={st.tc} borderWidth={2} /> : null}
+                  {row.egId ? <HexThumb uri={photoForDb(row.egId, 120)} width={40} height={46} borderColor={st.tc} borderWidth={2} /> : null}
                   <View style={{ flex: 1 }}>
                     <Text style={[s.optTxt, { color: st.tc }]}>{o}</Text>
                     {row.eg ? <Text style={[s.sizeEg, { color: st.tc }]} numberOfLines={1}>like a {row.eg}</Text> : null}
@@ -505,6 +512,7 @@ const s = StyleSheet.create({
   solFlash: { fontFamily: F.display, fontSize: 14, color: '#FFD700', marginLeft: 8 },
   tabs: { flexDirection: 'row', gap: 4, marginBottom: 14 },
   tab: { flex: 1, paddingVertical: 4, borderRadius: 6, borderWidth: 1, alignItems: 'center' },
+  fwCredit: { fontFamily: F.sans, fontSize: 9, color: '#666', textAlign: 'center', marginTop: 6 },
   tabGlow: { shadowColor: '#FFD700', shadowOpacity: 0.85, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 5 },
   tabTxt: { fontFamily: F.sansBold, fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 0.4 },
   qBox: { backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#333' },

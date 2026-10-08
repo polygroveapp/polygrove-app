@@ -39,6 +39,18 @@ let _photos: Record<string, string> = {};
 // does, for the database list and its species pages.
 export type InatPhoto = { url: string; page: string; by: string; lic: string };
 let _inat: Record<string, InatPhoto> = {};
+// QUIZ OPTIONS THAT ARE NOT CARDS (user, 2026-10-08: "species on the quizzes that only
+// have an iNat photo will show up on answers … a lot of missing photos there"): a
+// food-web option can be any species the records name. data/option_photos.json has a
+// licensed iNaturalist photo for those, keyed by the name the option shows.
+let _optPhoto: Record<string, InatPhoto> = {};
+/** an ANSWER OPTION's picture: the card's Wikipedia photo, else an iNaturalist one. Options are not collected, so iNaturalist is allowed here. */
+export function optionPhoto(name: string): { uri: string; id?: string; credit?: InatPhoto } | undefined {
+  const c = _byName[name.toLowerCase()];
+  if (c) { const w = photoFor(c.id, 250); if (w) return { uri: w, id: c.id }; const i = _inat[c.id]; return i ? { uri: i.url, credit: i } : undefined; }
+  const o = _optPhoto[name];
+  return o ? { uri: o.url, credit: o } : undefined;
+}
 export const inatPhotoOf = (id: string): InatPhoto | undefined => (_photos[id] ? undefined : _inat[id]);
 // how each photo sits in the card's hexagon (framing.json — only the cards
 // whose subject a centre crop would cut): [aspect, scale, cx, cy]
@@ -63,6 +75,7 @@ export function loadCatalog(onStage?: (s: string) => void) {
     for (const c of cards) { const q = quiz[c.id]; if (q) Object.assign(c, q); }
     onStage?.('Fetching photos…');
     const [photos, inat] = await Promise.all([fetchPhotos(), fetchInat()]);   // together: deck membership reads both
+    fetch(`${BASE}/option_photos.json`).then(r => (r.ok ? r.json() : {})).then((o: Record<string, InatPhoto>) => { _optPhoto = o || {}; }).catch(() => {});
     // a failed photo index must not stick (2026-10-06: a sheet read "37 / 0
     // species in deck" — with no index every deck counted as empty, while the
     // journaled cards still showed from their on-disk photos): retry quietly
