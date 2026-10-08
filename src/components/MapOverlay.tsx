@@ -538,12 +538,12 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   return uri ? <Image source={{ uri }} style={s.underPhoto} contentFit="cover" transition={150} />
                     : <View style={[s.underPhoto, { alignItems: 'center', justifyContent: 'center' }]}><Text style={[s.underNoCard, { color }]}>✕</Text></View>; })()}
                 <View style={{ flex: 1, gap: 1 }}>
-                  <Text style={s.underName} numberOfLines={1}>{o === undefined ? 'Loading…' : o === null ? 'Unavailable' : card?.name ?? o.name}</Text>
-                  {o?.sci ? <Text style={s.underSci} numberOfLines={1}>{o.sci}</Text> : null}
-                  <Text style={[s.underMeta, { color }]} numberOfLines={1}>
+                  <Text style={s.underName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{o === undefined ? 'Loading…' : o === null ? 'Unavailable' : card?.name ?? o.name}</Text>
+                  {o?.sci ? <Text style={s.underSci} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{o.sci}</Text> : null}
+                  <Text style={[s.underMeta, { color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
                     {u.kind === 0 ? 'waiting' : u.kind === 2 ? 'potential' : 'confirmed'}{o?.date ? ` · ${niceDate(o.date)}` : ''}
                   </Text>
-                  {o ? <Text style={s.underHint} numberOfLines={1}>{under.length > 1 ? `${at + 1} of ${under.length} · ` : ''}{card ? `${card.group} · ` : ''}tap for more ›</Text> : null}
+                  {o ? <Text style={s.underHint} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{under.length > 1 ? `${at + 1} of ${under.length} · ` : ''}{card ? `${card.group} · ` : ''}tap for more ›</Text> : null}
                 </View>
               </Pressable>
               <Pressable onPress={() => setUnderAt(a => Math.min(under.length - 1, a + 1))} disabled={at >= under.length - 1} hitSlop={8} style={s.underArrow}>
@@ -628,9 +628,9 @@ const s = StyleSheet.create({
   zoomCol: { gap: 8, alignItems: 'center' },
   obsX: { fontFamily: F.sansBold, fontSize: 17, color: C.yellow, lineHeight: 21 },   // the marks' yellow (user, 2026-10-07: green for a minute, then "yellow again")
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
-  underWrap: { position: 'absolute', left: 14, right: 14, alignItems: 'flex-start' },   // edge to edge (user, 2026-10-07); the content keeps clear of the settings gear
+  underWrap: { position: 'absolute', left: 14, right: 14, alignItems: 'flex-start' },   // edge to edge, › at the right edge (user, 2026-10-07)
   // 92 = the two control rows (42 + 8 + 42) to its right (user, 2026-10-07)
-  under: { alignSelf: 'stretch', height: 92, flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 4, paddingRight: 60, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
+  under: { alignSelf: 'stretch', height: 92, flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 4, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   underRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   underPhoto: { width: 82, height: 82, borderRadius: 12, backgroundColor: '#1c2a1c' },
   underNoCard: { fontFamily: F.sansBold, fontSize: 26, lineHeight: 30, opacity: 0.8 },
