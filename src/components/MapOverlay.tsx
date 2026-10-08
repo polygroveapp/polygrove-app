@@ -553,9 +553,12 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
               {/* DRAW AROUND THE PIN, top of the list (user, 2026-10-08): packs come from the
                   pin's ecoregion, the species recorded around the pin first */}
               <GlassTile on={pinDraw} onPress={() => setPinDraw(!pinDraw)} label={pinDraw ? 'Packs from the camp deck' : 'Packs from around the pin'}>
-                <Svg width={24} height={24} viewBox="0 0 24 24">
-                  <Path d="M12 2.5 C8.4 2.5 5.8 5.2 5.8 8.6 C5.8 13.2 12 21 12 21 C12 21 18.2 13.2 18.2 8.6 C18.2 5.2 15.6 2.5 12 2.5 Z" fill={pinDraw ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.3} strokeLinejoin="round" />
-                  <Circle cx={12} cy={8.8} r={2.4} fill="none" stroke={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.3} />
+                {/* the map's own push pin — ball, collar and needle (user, 2026-10-08: "make this the shape of the red pin") */}
+                <Svg width={20} height={30} viewBox="0 0 20 33">
+                  <Path d="M8.8 13.4 L11.2 13.4 L10.25 29.7 L9.75 29.7 Z" fill={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} />
+                  <Ellipse cx="10" cy="13.2" rx="2.3" ry="0.9" fill={pinDraw ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={0.9} />
+                  <Circle cx="10" cy="7" r="6.5" fill={pinDraw ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.4} />
+                  <Ellipse cx="7.2" cy="4.1" rx="2.2" ry="1.35" fill={pinDraw ? 'rgba(129,199,132,0.55)' : 'rgba(255,255,255,0.5)'} transform="rotate(-28 7.2 4.1)" />
                 </Svg>
               </GlassTile>
               <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
