@@ -28,7 +28,7 @@ import { openWeb } from '../lib/web';
 import { setBorders, setEarthColours, setShowObs, useBorders, useEarthColours, useShowObs } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeInDown, FadeInRight, FadeOutDown, FadeOutRight, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
@@ -343,7 +343,6 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // every ecoregion's outline on or off (user, 2026-10-07)
   const borders = useBorders();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [zoomOpen, setZoomOpen] = useState(false);
   useEffect(() => {
     if (pageReady) web.current?.injectJavaScript(`window.polygroveBorders && window.polygroveBorders(${borders}); true;`);
   }, [pageReady, borders]);
@@ -455,20 +454,15 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         </View>
       </View>
 
-      {/* MAP CONTROLS (user, 2026-10-07): two folded glass tiles, bottom-right.
-          The corner one is zoom: open, − stands to its left and + above the −.
-          Above the corner, map preferences: open, three tiles rise above it —
-          ecoregion borders, earth colours ⇄ grey/black, sightings ✕ on/off.
-          (Zoom came 2026-09-28; the compass came and went 2026-09-29.) */}
+      {/* MAP CONTROLS (user, 2026-10-07): + in the bottom-right corner, − to its
+          left, always there. Above the +, map preferences: open, three tiles
+          rise above it — ecoregion borders, earth colours ⇄ grey/black,
+          sightings ✕ on/off. (Zoom came 2026-09-28; the compass came and went
+          2026-09-29.) */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
-          {/* left column: + above −, only while the zoom button is open */}
-          {zoomOpen && (
-            <Animated.View entering={FadeInRight.duration(160)} exiting={FadeOutRight.duration(120)} style={s.zoomCol}>
-              <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
-              <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
-            </Animated.View>
-          )}
+          {/* − to the left of the corner, always there */}
+          <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
           <View style={s.zoomCol} pointerEvents="box-none">
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
@@ -494,14 +488,8 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
               <Path d="M4.5 12.5 L12 16.7 L19.5 12.5 M4.5 16 L12 20.2 L19.5 16" fill="none" stroke={menuOpen ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" />
             </Svg>
           </GlassTile>
-          {/* the corner: zoom, folded (user, 2026-10-07: "another expand for the plus
-              and minus") — a magnifier; open, + and − stand to its left */}
-          <GlassTile on={zoomOpen} onPress={() => setZoomOpen(v => !v)} label={zoomOpen ? 'Close zoom' : 'Zoom'}>
-            <Svg width={24} height={24} viewBox="0 0 24 24">
-              <Circle cx={10.5} cy={10.5} r={6} fill={zoomOpen ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={zoomOpen ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.4} />
-              <Path d="M15 15 L20 20 M8 10.5 L13 10.5 M10.5 8 L10.5 13" fill="none" stroke={zoomOpen ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.4} strokeLinecap="round" />
-            </Svg>
-          </GlassTile>
+          {/* the corner: + (user, 2026-10-07: the zoom fold lasted an hour — "just have plus in bottom right and minus to the left of it") */}
+          <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
           </View>
         </View>
       )}
