@@ -211,7 +211,12 @@ export default function PackOpening() {
         {/* the demo's deck.map: EVERY remaining card is mounted and stacked
             (keyed, so none remounts when the top one leaves); the last one
             rendered is on top, so the list is reversed */}
-        {pack.slice(idx).reverse().map(st => (
+        {/* NOTHING BEHIND THE FIFTH (user, 2026-10-07: "when you swipe the fifth card
+            to the right make sure there isn't a card behind it"): once four are
+            journaled the next one kept ends the pack, so the spare cards waiting
+            behind it are not drawn — swiping it away used to flash a card you were
+            never going to get. A skip still brings the next spare up as the top card. */}
+        {(kept >= PACK_SIZE - 1 ? pack.slice(idx, idx + 1) : pack.slice(idx)).reverse().map(st => (
           <SwipeSlot key={st.card.id} top={st === pack[idx]} onFling={onFling} canSkip={canSkip} auto={auto}>
             <View style={cardSize}>
               <PolygroveCard card={st.card} demoFrame />
