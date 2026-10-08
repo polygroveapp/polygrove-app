@@ -461,15 +461,14 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
       {/* ONE BUTTON (user, 2026-10-07: "one button where the color map button is.
           when you click that it expands out to the four buttons"): a glass
           tile bottom-right; open, the four controls rise in a column above it —
-          zoom in, zoom out, ecoregion borders, earth colours ⇄ grey/black — and
+          ecoregion borders, earth colours ⇄ grey/black, then zoom in, zoom out
+          nearest the thumb (user, 2026-10-07: "switch") — and
           the tile becomes a ✕ to fold them away. (Zoom came 2026-09-28; the
           compass came and went 2026-09-29, the map stays north-up.) */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
-              <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
-              <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
               <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
                 <Svg width={24} height={24} viewBox="0 0 24 24">
                   <Path d={ECOBLOB} fill={borders ? 'rgba(129,199,132,0.22)' : 'rgba(255,255,255,0.1)'} stroke={borders ? C.greenSoft : 'rgba(255,255,255,0.85)'}
@@ -481,6 +480,8 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   <Path d={AMERICAS} fill={earth ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={earth ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
                 </Svg>
               </GlassTile>
+              <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
+              <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
             </Animated.View>
           )}
           <GlassTile on={menuOpen} onPress={() => setMenuOpen(v => !v)} label={menuOpen ? 'Close map controls' : 'Map controls'}>
