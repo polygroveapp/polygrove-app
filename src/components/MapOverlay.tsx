@@ -28,7 +28,7 @@ import { openWeb } from '../lib/web';
 import { setBorders, setEarthColours, setShowObs, useBorders, useEarthColours, useShowObs } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeInDown, FadeOutDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInRight, FadeOutDown, FadeOutRight, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
@@ -128,12 +128,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
     // the shown one and its neighbours are fetched ahead, so stepping is instant; the rest as you reach them
     const at = Math.min(underAt, Math.max(0, under.length - 1));
     for (const u of under.slice(Math.max(0, at - 1), at + 4)) {
-      if (u.id in obsCache || fetching.current.has(u.id)) continue;
-      // named marks (v8) are ready as they are — unless the strip has no picture
-      // for them (user, 2026-10-07: "a preview picture"): a species that is not a
-      // deck card has no cached card photo, so its observation is fetched (one
-      // small JSON per sighting, remembered for the session)
-      if (u.name) { const sci = u.sci?.toLowerCase(); const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined; if (card && photoFor(card.id, 250)) continue; }
+      if (u.name || u.id in obsCache || fetching.current.has(u.id)) continue;   // named marks (v8) are ready as they are — the picture is the card's, never a fetch
       fetching.current.add(u.id);
       observation(u.id).then(o => setObsCache(c => ({ ...c, [u.id]: o }))).catch(() => setObsCache(c => ({ ...c, [u.id]: null })))
         .finally(() => fetching.current.delete(u.id));
@@ -348,6 +343,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // every ecoregion's outline on or off (user, 2026-10-07)
   const borders = useBorders();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState(false);
   useEffect(() => {
     if (pageReady) web.current?.injectJavaScript(`window.polygroveBorders && window.polygroveBorders(${borders}); true;`);
   }, [pageReady, borders]);
@@ -459,18 +455,23 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         </View>
       </View>
 
-      {/* MAP CONTROLS (user, 2026-10-07): + bottom-right, − to its left, always
-          there. Above the + one glass tile for map preferences; open, three
-          tiles rise above it — sightings ✕ on/off, ecoregion borders, earth
-          colours ⇄ grey/black. (Zoom came 2026-09-28; the compass came and
-          went 2026-09-29.) */}
+      {/* MAP CONTROLS (user, 2026-10-07): two folded glass tiles, bottom-right.
+          The corner one is zoom: open, − stands to its left and + above the −.
+          Above the corner, map preferences: open, three tiles rise above it —
+          ecoregion borders, earth colours ⇄ grey/black, sightings ✕ on/off.
+          (Zoom came 2026-09-28; the compass came and went 2026-09-29.) */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
+          {/* left column: + above −, only while the zoom button is open */}
+          {zoomOpen && (
+            <Animated.View entering={FadeInRight.duration(160)} exiting={FadeOutRight.duration(120)} style={s.zoomCol}>
+              <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
+              <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
+            </Animated.View>
+          )}
+          <View style={s.zoomCol} pointerEvents="box-none">
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
-              <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
-                <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
-              </GlassTile>
               <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
                 <Svg width={24} height={24} viewBox="0 0 24 24">
                   <Path d={ECOBLOB} fill={borders ? 'rgba(129,199,132,0.22)' : 'rgba(255,255,255,0.1)'} stroke={borders ? C.greenSoft : 'rgba(255,255,255,0.85)'}
@@ -482,6 +483,9 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   <Path d={AMERICAS} fill={earth ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={earth ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
                 </Svg>
               </GlassTile>
+              <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
+                <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
+              </GlassTile>
             </Animated.View>
           )}
           <GlassTile on={menuOpen} onPress={() => setMenuOpen(v => !v)} label={menuOpen ? 'Close map preferences' : 'Map preferences'}>
@@ -490,35 +494,41 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
               <Path d="M4.5 12.5 L12 16.7 L19.5 12.5 M4.5 16 L12 20.2 L19.5 16" fill="none" stroke={menuOpen ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" />
             </Svg>
           </GlassTile>
-          <View style={s.zoomRow}>
-            <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
-            <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
+          {/* the corner: zoom, folded (user, 2026-10-07: "another expand for the plus
+              and minus") — a magnifier; open, + and − stand to its left */}
+          <GlassTile on={zoomOpen} onPress={() => setZoomOpen(v => !v)} label={zoomOpen ? 'Close zoom' : 'Zoom'}>
+            <Svg width={24} height={24} viewBox="0 0 24 24">
+              <Circle cx={10.5} cy={10.5} r={6} fill={zoomOpen ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={zoomOpen ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.4} />
+              <Path d="M15 15 L20 20 M8 10.5 L13 10.5 M10.5 8 L10.5 13" fill="none" stroke={zoomOpen ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.4} strokeLinecap="round" />
+            </Svg>
+          </GlassTile>
           </View>
         </View>
       )}
 
 
       {/* the ✕ mark under the pin, to the LEFT of − and +: one at a time, ‹ › for the others */}
-      {under.length > 0 && (() => {
+      {showObs && under.length > 0 && (() => {
         const at = Math.min(underAt, under.length - 1), u = under[at];
-        const o = obsCache[u.id] ?? spotOf(u);   // the fetched one first: it carries the photo
+        const o = spotOf(u) ?? obsCache[u.id];
         const sci = o?.sci?.toLowerCase();
         const card = sci ? getCards().find(c => c.sci.toLowerCase() === sci) : undefined;
         const color = u.kind === 0 ? '#5fe35a' : u.kind === 2 ? '#aaaaaa' : C.yellow;
         return (
-          <View style={[s.underWrap, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
+          <View style={[s.underWrap, { right: zoomOpen ? 118 : 66, bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
             <View style={s.under}>
               <Pressable onPress={() => setUnderAt(a => Math.max(0, a - 1))} disabled={at === 0} hitSlop={8} style={s.underArrow}>
                 <Text style={[s.underArrowTxt, at === 0 && { opacity: 0.25 }]}>‹</Text>
               </Pressable>
               {/* a preview picture and more info, the height of both control rows
-                  (user, 2026-10-07). The picture is the species' CARD photo (cached
-                  on the phone for the deck) unless the observation's own photo is
-                  already fetched — so panning still downloads nothing new */}
+                  (user, 2026-10-07). The picture is ALWAYS THE CARD'S, never the
+                  iNaturalist photo (user, 2026-10-07: "an image of the card not
+                  inaturalist") — cached on the phone, so panning downloads nothing.
+                  A species with no card shows its ✕ in the mark's colour. */}
               <Pressable onPress={() => o && openObs(o)} disabled={!o} style={s.underRow}>
-                {(() => { const uri = o?.photo || (card ? photoFor(card.id, 250) : undefined);
+                {(() => { const uri = card ? photoFor(card.id, 250) : undefined;
                   return uri ? <Image source={{ uri }} style={s.underPhoto} contentFit="cover" transition={150} />
-                    : <View style={[s.underPhoto, { alignItems: 'center', justifyContent: 'center' }]}><View style={[s.underDot, { backgroundColor: color }]} /></View>; })()}
+                    : <View style={[s.underPhoto, { alignItems: 'center', justifyContent: 'center' }]}><Text style={[s.underNoCard, { color }]}>✕</Text></View>; })()}
                 <View style={{ flex: 1, gap: 1 }}>
                   <Text style={s.underName} numberOfLines={1}>{o === undefined ? 'Loading…' : o === null ? 'Unavailable' : card?.name ?? o.name}</Text>
                   {o?.sci ? <Text style={s.underSci} numberOfLines={1}>{o.sci}</Text> : null}
@@ -606,17 +616,16 @@ const s = StyleSheet.create({
   title: { fontFamily: F.display, fontSize: 15, color: '#ffe14d' },   // yellow (user, 2026-09-30 — after the ecoregion brown, white, dimmer white)
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#ffffff' },   // white (user, 2026-09-30; was grey)
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
-  zoom: { position: 'absolute', right: 14, gap: 8, alignItems: 'flex-end' },
+  zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row', alignItems: 'flex-end' },
   zoomCol: { gap: 8, alignItems: 'center' },
-  zoomRow: { gap: 8, flexDirection: 'row' },
-  obsX: { fontFamily: F.sansBold, fontSize: 17, color: C.yellow, lineHeight: 21 },
+  obsX: { fontFamily: F.sansBold, fontSize: 17, color: C.yellow, lineHeight: 21 },   // the marks' yellow (user, 2026-10-07: green for a minute, then "yellow again")
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
   underWrap: { position: 'absolute', left: 14, right: 118, alignItems: 'flex-start', justifyContent: 'flex-end' },
   // 92 = the two control rows (42 + 8 + 42) to its right (user, 2026-10-07)
   under: { alignSelf: 'stretch', height: 92, flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 4, backgroundColor: 'rgba(10,15,10,0.9)', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   underRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   underPhoto: { width: 82, height: 82, borderRadius: 12, backgroundColor: '#1c2a1c' },
-  underDot: { width: 12, height: 12, borderRadius: 6 },
+  underNoCard: { fontFamily: F.sansBold, fontSize: 26, lineHeight: 30, opacity: 0.8 },
   underName: { fontFamily: F.sansBold, fontSize: 13, color: C.text },
   underSci: { fontFamily: F.sans, fontSize: 11, color: '#9a9', fontStyle: 'italic' },
   underMeta: { fontFamily: F.sans, fontSize: 11.5 },
