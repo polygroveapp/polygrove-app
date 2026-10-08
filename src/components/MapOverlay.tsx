@@ -492,15 +492,15 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         </View>
       </Animated.View>
 
-      {/* MAP CONTROLS (user, 2026-10-07): − in the bottom-right corner, + above
-          it, always there. In the bottom-LEFT corner, map preferences: open,
+      {/* MAP CONTROLS (user, 2026-10-07): + in the bottom-right corner, − to its
+          left, always there. In the bottom-LEFT corner, map preferences: open,
           three tiles rise above it — sightings ✕ on/off, ecoregion borders,
           earth colours ⇄ grey/black. (Zoom came 2026-09-28; the compass came
           and went 2026-09-29.) */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
-          <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
           <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
+          <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
         </View>
       )}
       {pageReady && (
@@ -644,7 +644,7 @@ const s = StyleSheet.create({
   title: { fontFamily: F.display, fontSize: 15, color: '#ffe14d' },   // yellow (user, 2026-09-30 — after the ecoregion brown, white, dimmer white)
   sub: { fontFamily: F.sans, fontSize: 10.5, color: '#ffffff' },   // white (user, 2026-09-30; was grey)
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
-  zoom: { position: 'absolute', right: 14, gap: 8, alignItems: 'center' },
+  zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row', alignItems: 'center' },
   prefs: { position: 'absolute', left: 14, gap: 8, alignItems: 'center' },
   zoomCol: { gap: 8, alignItems: 'center' },
   obsX: { fontFamily: F.sansBold, fontSize: 17, color: C.yellow, lineHeight: 21 },   // the marks' yellow (user, 2026-10-07: green for a minute, then "yellow again")
