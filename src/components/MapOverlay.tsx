@@ -554,12 +554,14 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   pin's ecoregion, the species recorded around the pin first */}
               <GlassTile on={pinDraw} onPress={() => setPinDraw(!pinDraw)} label={pinDraw ? 'Packs from the camp deck' : 'Packs from around the pin'}>
                 {/* the map's own push pin — ball, collar and needle (user, 2026-10-08: "make this the shape of the red pin") */}
+                {/* the pin's own red when on (user, 2026-10-08: "make it red like the x is yellow"), grey when off */}
+                {(() => { const on = pinDraw, line = on ? '#c45c54' : 'rgba(255,255,255,0.5)', fill = on ? 'rgba(196,92,84,0.35)' : 'rgba(255,255,255,0.1)'; return (
                 <Svg width={16} height={25} viewBox="0 0 20 33">
-                  <Path d="M8.8 13.4 L11.2 13.4 L10.25 29.7 L9.75 29.7 Z" fill={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} />
-                  <Ellipse cx="10" cy="13.2" rx="2.3" ry="0.9" fill={pinDraw ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={0.9} />
-                  <Circle cx="10" cy="7" r="6.5" fill={pinDraw ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={pinDraw ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.4} />
-                  <Ellipse cx="7.2" cy="4.1" rx="2.2" ry="1.35" fill={pinDraw ? 'rgba(129,199,132,0.55)' : 'rgba(255,255,255,0.5)'} transform="rotate(-28 7.2 4.1)" />
-                </Svg>
+                  <Path d="M8.8 13.4 L11.2 13.4 L10.25 29.7 L9.75 29.7 Z" fill={on ? '#c3c9ce' : 'rgba(255,255,255,0.5)'} />
+                  <Ellipse cx="10" cy="13.2" rx="2.3" ry="0.9" fill={on ? '#8a9096' : 'rgba(255,255,255,0.1)'} stroke={on ? '#4a5056' : 'rgba(255,255,255,0.5)'} strokeWidth={0.9} />
+                  <Circle cx="10" cy="7" r="6.5" fill={fill} stroke={line} strokeWidth={1.4} />
+                  <Ellipse cx="7.2" cy="4.1" rx="2.2" ry="1.35" fill={on ? 'rgba(234,176,170,0.7)' : 'rgba(255,255,255,0.35)'} transform="rotate(-28 7.2 4.1)" />
+                </Svg>); })()}
               </GlassTile>
               <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
                 <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
