@@ -696,7 +696,7 @@ const s = StyleSheet.create({
   underArrowTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
 
   // the + / − green (user, 2026-09-30: brown for a minute, then "green again")
-  zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: C.greenSoft, lineHeight: 26 },
+  zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: 'rgba(255,255,255,0.85)', lineHeight: 26 },   // white like the layers tile (user, 2026-10-07; green since 2026-09-30)
   lookBtn: {
     width: 42, height: 42, borderRadius: 21, overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
     backgroundColor: Platform.OS === 'android' ? 'rgba(16,22,16,0.9)' : 'rgba(255,255,255,0.06)',
