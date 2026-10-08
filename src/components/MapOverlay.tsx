@@ -555,10 +555,11 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
               </GlassTile>
             </Animated.View>
           )}
-          <GlassTile on={menuOpen} onPress={() => setMenuOpen(v => !v)} label={menuOpen ? 'Close map preferences' : 'Map preferences'}>
+          {/* stays white and unlit when open (user, 2026-10-07: "have this not change to green when it's selected") */}
+          <GlassTile on={false} onPress={() => setMenuOpen(v => !v)} label={menuOpen ? 'Close map preferences' : 'Map preferences'}>
             <Svg width={24} height={24} viewBox="0 0 24 24">
-              <Path d="M12 4 L20 8.5 L12 13 L4 8.5 Z" fill={menuOpen ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={menuOpen ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.3} strokeLinejoin="round" />
-              <Path d="M4.5 12.5 L12 16.7 L19.5 12.5 M4.5 16 L12 20.2 L19.5 16" fill="none" stroke={menuOpen ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" />
+              <Path d="M12 4 L20 8.5 L12 13 L4 8.5 Z" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.85)" strokeWidth={1.3} strokeLinejoin="round" />
+              <Path d="M4.5 12.5 L12 16.7 L19.5 12.5 M4.5 16 L12 20.2 L19.5 16" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" />
             </Svg>
           </GlassTile>
         </View>
