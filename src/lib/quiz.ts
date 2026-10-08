@@ -68,7 +68,15 @@ export function withImperial(size: string): string {
 // six slots, null where the card can't ask that question (no look-alikes, say)
 export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
   const rng = mulberry(hash32(`${card.sci}#${attempt}`));
-  const shuf = <T,>(arr: T[]) => { const x = [...arr]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
+  const shufWith = (r: () => number) => <T,>(arr: T[]) => { const x = [...arr]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
+  const shuf = shufWith(rng);
+  // THE WRONG ANSWERS ARE THE SAME EVERY TIME (user, 2026-10-08: "the answers being
+  // told to the user the second time they do the quiz"). Each retry used to draw
+  // fresh decoys, so the one option that came back was the right one: "Reptile"
+  // among new groups, "1.6kg" among new sizes, your card among new look-alikes.
+  // What is OFFERED is now fixed per card (`fix`); a retry only reorders it (`rng`).
+  const fix = mulberry(hash32(`${card.sci}#offered`));
+  const shufFix = shufWith(fix);
   const all = getCards();
   const c = card as Card & { role?: string; falseRole?: string; q3?: Q3; q4?: Q4 };
   const qs: (Q | null)[] = [];
@@ -92,12 +100,12 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
   const mine = GREEN(c.trophic) || greenGroups.has(c.group);
   // …and FUNGUS is offered on both sides (user, same day): a fungus is neither, and a fair guess for either
   const groupPool = [...new Set([...(all.length ? [...sizes.keys()].filter(g => (sizes.get(g) ?? 0) >= 5) : GROUPS).filter(g => greenGroups.has(g) === mine), 'Fungus'])];
-  const groups = shuf(groupPool.filter(g => g !== c.group)).slice(0, 3);
+  const groups = shufFix(groupPool.filter(g => g !== c.group).sort()).slice(0, 3);
   qs.push({ type: 'mc', label: 'Q1 · Taxonomy', short: 'Taxonomy', q: `Which group does the ${c.name} belong to?`, opts: shuf([c.group, ...groups]), a: c.group });
 
   // Q2 feeding guild
   if (c.role && c.falseRole) {
-    const t2 = (rng() < 0.5) !== flip;
+    const t2 = (fix() < 0.5) !== flip;
     qs.push({ type: 'tf', label: 'Q2 · Feeding guild', short: 'Guild', q: `The ${c.name} is ${t2 ? c.role : c.falseRole}.`, a: t2, explain: t2 ? undefined : `The ${c.name} is ${c.role}.` });
   } else qs.push(null);
 
@@ -135,7 +143,7 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
     const near = pool.filter(o => Math.max(o.v, sv.v) / Math.min(o.v, sv.v) <= 1.12 && withImperial(o.size) !== right)
       .sort((a, b) => Math.abs(Math.log(a.v / sv.v)) - Math.abs(Math.log(b.v / sv.v)))[0];
     if (near) { rows[0].eg = near.name; rows[0].egId = near.id; }
-    const N = 5, at = Math.floor(rng() * N), step = 1.9 + rng() * 0.7;   // five of them (user, 2026-10-07, after three); where the answer sits among them
+    const N = 5, at = Math.floor(fix() * N), step = 1.9 + fix() * 0.7;   // five of them (user, 2026-10-07, after three); where the answer sits among them
     for (let i = 0; i < N; i++) {
       if (i === at) continue;
       const target = sv.v * step ** (i - at);
@@ -166,8 +174,8 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
   // Q5 habitat / origin / biome
   if (c.slot5) {
     const pool = all.filter(o => o.slot5type === c.slot5type && o.slot5 && o.slot5 !== c.slot5);
-    const t5 = (rng() < 0.5) !== flip;   // flips on a retry too
-    const wrong = pool.length ? pool[Math.floor(rng() * pool.length)].slot5 : null;
+    const t5 = (fix() < 0.5) !== flip;   // flips on a retry too
+    const wrong = pool.length ? pool[Math.floor(fix() * pool.length)].slot5 : null;
     const truth = t5 || !wrong;
     const loc = truth ? c.slot5 : wrong;
     const phr = c.slot5type === 'habitat' ? `you would find it in ${loc} habitat`
@@ -181,7 +189,7 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
   if (c.lookAlikes && c.lookAlikes.length >= 2) {
     // a decoy must have a photo — an empty hexagon is a giveaway
     const decoys = c.lookAlikes.map(n => cardByName(n)).filter((d): d is Card => !!d && d.id !== card.id && !!photoFor(d.id));
-    const other = decoys.length ? decoys[Math.floor(rng() * decoys.length)] : undefined;
+    const other = decoys.length ? decoys[Math.floor(fix() * decoys.length)] : undefined;
     if (other) {
       const trio: PickCard[] = [
         { key: 'correct', card },
