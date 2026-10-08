@@ -56,7 +56,10 @@ export default function PolygroveDB() {
   // pagination resets with the filters: the count is remembered against the filter key
   const [shownBy, setShownBy] = useState<{ key: string; n: number }>({ key: '', n: PAGE });
 
-  const cards = useMemo(() => (ready ? getCards() : []), [ready]);
+  // ONLY CARDS WITH A PHOTO (user, 2026-10-08, of a blank Acantholycosa pedestris
+  // card): the deck has always left photo-less species out (ecoregions.ts), and
+  // so do sightings; this list showed them anyway. A trading card is its picture.
+  const cards = useMemo(() => (ready ? getCards().filter(c => !!photoFor(c.id)) : []), [ready]);
   const groups = useMemo(() => [...new Set(cards.map(c => c.group))].sort(), [cards]);
   const needle = q.trim().toLowerCase();
   const rows = useMemo(() => {
