@@ -703,7 +703,7 @@ const s = StyleSheet.create({
   prefs: { position: 'absolute', left: 14, gap: 8, alignItems: 'center' },
   timeline: { position: 'absolute', left: 14 + 42 + 10, right: 14 + 42 + 8 + 42 + 10 },
   zoomCol: { gap: 8, alignItems: 'center' },
-  obsX: { fontFamily: F.sansBold, fontSize: 17, color: C.yellow, lineHeight: 21 },   // the marks' yellow (user, 2026-10-07: green for a minute, then "yellow again")
+  obsX: { fontFamily: F.sansBold, fontSize: 21, color: C.yellow, lineHeight: 25 },   // the marks' yellow (user, 2026-10-07: green for a minute, then "yellow again")
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
   underWrap: { position: 'absolute', left: 14, right: 14, alignItems: 'flex-start' },   // edge to edge, › at the right edge (user, 2026-10-07)
   // 92 = the two control rows (42 + 8 + 42) to its right (user, 2026-10-07)
