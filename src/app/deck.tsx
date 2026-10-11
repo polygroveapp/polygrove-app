@@ -143,15 +143,22 @@ export default function FieldNotes() {
     transform: [{ translateY: -Math.max(0, headerH.value - scrollY.value) }],
   }));
 
+  // with the hexagons the switch and filters sit UNDER the shown card, above the
+  // quiz button (user, 2026-10-11: "put this below the card for hexagons and put
+  // the take solar quiz button below that"); with no card to sit under (the
+  // filters match nothing) they go back to the top so they can be undone
+  const inline = view === 'hex' && rows.length > 0;
   const filterBar = (
-    <View style={s.filters}>
+    <View style={[s.filters, inline && { backgroundColor: 'transparent', paddingTop: 14, paddingBottom: 0 }]}>
       {/* the backdrop slice goes FIRST: as a later sibling it painted over the
           Hexes/List switch, which showed as a blank band (user, 2026-10-06:
           "too much space here") */}
-      <Animated.View pointerEvents="none"
-        style={[{ position: 'absolute', left: 0, top: -insets.top, width: win.width, height: win.height }, sliceStyle]}>
-        <GreenBackdrop />
-      </Animated.View>
+      {inline ? null : (
+        <Animated.View pointerEvents="none"
+          style={[{ position: 'absolute', left: 0, top: -insets.top, width: win.width, height: win.height }, sliceStyle]}>
+          <GreenBackdrop />
+        </Animated.View>
+      )}
       <View style={{ alignItems: 'center', marginBottom: 8 }}><ViewToggle mode={view} onChange={setView} /></View>
       <View style={s.filterRow}>
         <FilterBtn label="Level" value={level ? levelOpts.find(o => o.key === level)?.label : undefined}
@@ -227,7 +234,7 @@ export default function FieldNotes() {
       stickySectionHeadersEnabled={view !== 'hex'}
       onScroll={e => { scrollY.value = e.nativeEvent.contentOffset.y; }}
       scrollEventThrottle={16}
-      renderSectionHeader={() => filterBar}
+      renderSectionHeader={() => (inline ? null : filterBar)}
       onScrollToIndexFailed={info => {   // a far row: jump close, then land on it
         list.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
         setTimeout(() => scrollToGlow(false), 300);
@@ -243,18 +250,23 @@ export default function FieldNotes() {
         </View>
       }
       renderItem={({ item }) => (view === 'hex' ? (
-        <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
-          {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
-          <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} picked={shownKey} onPick={setPicked} />
-          {/* the Camp page's green Solar Quiz button (user, 2026-10-07: "make the take solar
-              quiz on the journal page like this"); a mastered card's reads Practice */}
-          {shownCard ? (
-            <Pressable onPress={() => toQuiz(shownCard)} style={s.quizBtn}>
-              <LinearGradient colors={shownMastered ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.quizGrad}>
-                <Text style={s.quizTxt}>{shownMastered ? 'Practice Solar Quiz ☀️' : 'Take Solar Quiz ☀️'}</Text>
-              </LinearGradient>
-            </Pressable>
-          ) : null}
+        <View style={{ paddingTop: 4 }}>
+          <View style={{ paddingHorizontal: 20 }}>
+            {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
+          </View>
+          {filterBar}
+          <View style={{ paddingHorizontal: 20 }}>
+            {/* the Camp page's green Solar Quiz button (user, 2026-10-07: "make the take solar
+                quiz on the journal page like this"); a mastered card's reads Practice */}
+            {shownCard ? (
+              <Pressable onPress={() => toQuiz(shownCard)} style={[s.quizBtn, { marginTop: 12, marginBottom: 14 }]}>
+                <LinearGradient colors={shownMastered ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.quizGrad}>
+                  <Text style={s.quizTxt}>{shownMastered ? 'Practice Solar Quiz ☀️' : 'Take Solar Quiz ☀️'}</Text>
+                </LinearGradient>
+              </Pressable>
+            ) : null}
+            <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} picked={shownKey} onPick={setPicked} />
+          </View>
         </View>
       ) : (
         <View style={s.row}>
