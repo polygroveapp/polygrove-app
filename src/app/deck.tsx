@@ -159,7 +159,7 @@ export default function FieldNotes() {
           <GreenBackdrop />
         </Animated.View>
       )}
-      <View style={{ alignItems: 'center', marginBottom: 8 }}><ViewToggle mode={view} onChange={setView} /></View>
+      {inline ? null : <View style={{ alignItems: 'center', marginBottom: 8 }}><ViewToggle mode={view} onChange={setView} /></View>}
       <View style={s.filterRow}>
         <FilterBtn label="Level" value={level ? levelOpts.find(o => o.key === level)?.label : undefined}
           color={level ? ALL_TIERS.find(m => m.key === level)?.border : undefined} count={rows.length}
@@ -250,21 +250,26 @@ export default function FieldNotes() {
         </View>
       }
       renderItem={({ item }) => (view === 'hex' ? (
-        <View style={{ paddingTop: 4 }}>
+        <View style={{ paddingTop: 8 }}>
+          {/* the switch stays above the card (user, 2026-10-11: "put the hex/list buttons above the card") */}
+          <View style={{ alignItems: 'center', marginBottom: 12 }}><ViewToggle mode={view} onChange={setView} /></View>
           <View style={{ paddingHorizontal: 20 }}>
             {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
           </View>
-          {filterBar}
           <View style={{ paddingHorizontal: 20 }}>
             {/* the Camp page's green Solar Quiz button (user, 2026-10-07: "make the take solar
                 quiz on the journal page like this"); a mastered card's reads Practice */}
             {shownCard ? (
-              <Pressable onPress={() => toQuiz(shownCard)} style={[s.quizBtn, { marginTop: 12, marginBottom: 14 }]}>
+              <Pressable onPress={() => toQuiz(shownCard)} style={[s.quizBtn, { marginTop: 14 }]}>
                 <LinearGradient colors={shownMastered ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.quizGrad}>
                   <Text style={s.quizTxt}>{shownMastered ? 'Practice Solar Quiz ☀️' : 'Take Solar Quiz ☀️'}</Text>
                 </LinearGradient>
               </Pressable>
             ) : null}
+          </View>
+          {/* quiz button first, then the filters (user, 2026-10-11: "put the take solar quiz button above the filter") */}
+          {filterBar}
+          <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
             <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} picked={shownKey} onPick={setPicked} />
           </View>
         </View>
