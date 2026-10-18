@@ -27,7 +27,7 @@ import { Q, buildQuiz } from '../../lib/quiz';
 import { earnSol } from '../../lib/sol';
 
 export default function Quiz() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, practice } = useLocalSearchParams<{ id: string; practice?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [ready, setReady] = useState(getCards().length > 0);
@@ -44,10 +44,10 @@ export default function Quiz() {
       <Pressable onPress={back}><Text style={s.backTxt}>‹ Back</Text></Pressable>
     </View>
   );
-  return <QuizBody card={card} back={back} insets={insets} />;
+  return <QuizBody card={card} back={back} insets={insets} practice={practice === '1'} />;
 }
 
-function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets: { top: number; bottom: number } }) {
+function QuizBody({ card, back, insets, practice }: { card: Card; back: () => void; insets: { top: number; bottom: number }; practice: boolean }) {
   const router = useRouter();
   const eco = useCurrentEco();
   useMastery();   // re-render on progress
@@ -58,7 +58,9 @@ function QuizBody({ card, back, insets }: { card: Card; back: () => void; insets
   const counts = countsOf(sid);
   // questions the card can't ask count as locked, so they never block the ladder
   const effCounts = counts.map((c, i) => (available[i] ? c : LOCK_THRESHOLD));
-  const locked = isFullyLocked(effCounts);
+  // a PRACTICE quiz (QuizButton: a card not journaled, or PolygroveDB) runs like a
+  // mastered one — every question in turn, no Sol, no mastery change
+  const locked = practice || isFullyLocked(effCounts);
   const [practiceLevel, setPracticeLevel] = useState(0);
   // the demo's quizProgress: a correct answer moves FORWARD from the current
   // level (wrapping to the first unlocked one), a retry snaps back to the first
@@ -306,7 +308,7 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
                     is the photo and the field note, never the name */}
                 {/* every card wears the CORRECT card's facts; only its photo (with its recording)
                     and its field note come from the species it is built on (user, 2026-10-07) */}
-                <PolygroveCard card={targetCard ?? c.card} photoFrom={c.card} noteFrom={c.noteFrom ?? c.card} nameAs={done ? undefined : target} />
+                <PolygroveCard card={targetCard ?? c.card} photoFrom={c.card} noteFrom={c.noteFrom ?? c.card} nameAs={done ? undefined : target} secondPhoto />
               </Slot>
             );
           })}

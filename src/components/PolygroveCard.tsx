@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { interpolate, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
-import { Card, fmtImperial, fmtSize, parseSize, photoCommonsPage, photoFor, photoForDb, framingFor, sizeFrac, sizeRange, soundsFor } from '../lib/catalog';
+import { Card, fmtImperial, fmtSize, parseSize, photoCommonsPage, photoFor, photoForDb, framingFor, secondPhotoOf, sizeFrac, sizeRange, soundsFor } from '../lib/catalog';
 import SoundButton from './SoundButton';
 import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
 import { FactKey, SightingInfo, niceDate } from '../lib/sightings';
@@ -47,11 +47,13 @@ const MISSING_RED = '#E57373';
 // the name shown when the names are revealed — come from this other card. A
 // recording always belongs to the photo it plays over (user, same day: "a
 // woodpecker audio should always go with a woodpecker photo").
+// secondPhoto (user, 2026-10-18): the quiz's last question shows ANOTHER photo of
+// the species where there is one, so the card's own picture can't be matched by eye
 // dbPhoto (user, 2026-10-08): the PolygroveDB tab's species page may show an
 // iNaturalist fill-in photo; a card anywhere else never does
-export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, photoFrom, nameAs, demoFrame = false, sighting, missing, dbPhoto = false }:
+export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, photoFrom, nameAs, demoFrame = false, sighting, missing, dbPhoto = false, secondPhoto = false }:
   { card: Card; anonymous?: boolean; noteFrom?: Card; photoFrom?: Card; nameAs?: { name: string; sci: string }; demoFrame?: boolean;
-    sighting?: SightingInfo; missing?: FactKey[]; dbPhoto?: boolean }) {
+    sighting?: SightingInfo; missing?: FactKey[]; dbPhoto?: boolean; secondPhoto?: boolean }) {
   const lacks = (k: FactKey) => !!missing?.includes(k);
   const face = photoFrom ?? raw;   // whose picture (and sound) this is
   const card = nameAs ? { ...raw, name: `${nameAs.name}?`, sci: nameAs.sci } : anonymous ? { ...raw, name: '???', sci: '· · ·' } : { ...raw, name: face.name, sci: face.sci };
@@ -66,9 +68,10 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
   const sound = soundsFor(face.sci)[0];
   const own = sighting?.photo || undefined;             // your photo, uncropped by our framing data
   const pf = dbPhoto ? photoForDb : photoFor;
-  const photo = own ?? pf(face.id, 500);
-  const frame = own ? undefined : framingFor(face.id);
-  const commons = sighting ? sighting.uri : photoCommonsPage(face.id);
+  const alt = !own && secondPhoto ? secondPhotoOf(face.id) : undefined;   // its ⓘ opens the iNaturalist photo page, credited there
+  const photo = own ?? alt?.url ?? pf(face.id, 500);
+  const frame = own || alt ? undefined : framingFor(face.id);
+  const commons = sighting ? sighting.uri : alt ? alt.page : photoCommonsPage(face.id);
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => {
     let on = true;
@@ -205,7 +208,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
       {/* BACK — .face.back */}
       <Animated.View style={[s.phone, demoFrame && s.phoneDemo, backStyle]}>
         <View style={s.head}>
-          <HexPhoto uri={own ?? pf(face.id, 120)} frame={frame} width={46} height={52} borderColor={tc} borderWidth={4} />
+          <HexPhoto uri={own ?? alt?.url ?? pf(face.id, 120)} frame={frame} width={46} height={52} borderColor={tc} borderWidth={4} />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.name} numberOfLines={1}>{card.name}</Text>
             <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
@@ -235,7 +238,18 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
           <View style={s.fwLine} />
         </View>
         <MiniWeb card={card} onExpand={openWeb} boxRef={boxRef} />
-        <View style={s.pillRow}><View style={s.pill}><Text style={s.pillTxt}>Tap card to flip</Text></View></View>
+        {/* the flip hint moves left and a PolygroveDB button sits right (user, 2026-10-18:
+            "to the right there is a button that brings it to its polygroveDB page").
+            Not on a quiz card whose names are hidden: the page would give the answer away. */}
+        <View style={[s.pillRow, !hideNames && s.pillRowSplit]}>
+          <View style={s.pill}><Text style={s.pillTxt}>Tap card to flip</Text></View>
+          {!hideNames && (
+            <Pressable onPress={() => router.push(`/species/${raw.id}`)} hitSlop={8} accessibilityRole="button"
+              accessibilityLabel={`Open the ${card.name} in PolygroveDB`} style={s.dbBtn}>
+              <Text style={s.dbBtnTxt}>🌲 PolygroveDB ›</Text>
+            </Pressable>
+          )}
+        </View>
 
         {/* EXPANDED FOOD WEB — full screen, over everything */}
         <Modal visible={webBig} transparent animationType="none" statusBarTranslucent onRequestClose={closeWeb}>
@@ -474,7 +488,9 @@ const s = StyleSheet.create({
   // as tight as the drawing (user, 2026-10-06: "as tight as possible so the card
   // isn't too big … keep the size of the image"): the box follows the 300×160
   // view box, so the web draws at the same size with no dead space around it
-  fwBox: { aspectRatio: 300 / 160, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, paddingVertical: 4, paddingHorizontal: 12, overflow: 'hidden' },
+  // the food web takes whatever height is left, so the flip row under it always fits
+  // (it overflowed the journal's card and clipped "Tap card to flip", 2026-10-18)
+  fwBox: { flex: 1, minHeight: 70, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, paddingVertical: 4, paddingHorizontal: 12, overflow: 'hidden' },
   fwChip: { position: 'absolute', top: 6, left: 6, backgroundColor: '#2a2a2a', borderRadius: 9, paddingHorizontal: 7, paddingVertical: 2, zIndex: 2 },
   // the expanded food web — the box grown to the face
   webBigPanel: { position: 'absolute', overflow: 'hidden' },
@@ -541,4 +557,7 @@ const s = StyleSheet.create({
   pillRow: { alignItems: 'center', marginTop: 9, marginBottom: 5 },
   pill: { backgroundColor: '#222222', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 5 },
   pillTxt: { color: '#999999', fontSize: 12, fontFamily: F.sans },
+  pillRowSplit: { flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  dbBtn: { backgroundColor: 'rgba(76,175,80,0.16)', borderColor: 'rgba(76,175,80,0.45)', borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4 },
+  dbBtnTxt: { color: '#81C784', fontSize: 12, fontFamily: F.sansBold },
 });

@@ -4,7 +4,6 @@
 // with a ❓ and "???" until you find them. Needs the catalog → online-only;
 // the Journal is the offline view.
 
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, SectionList, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -18,11 +17,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackChevron from '../components/BackChevron';
 import Honeycomb, { Comb, ShownCard } from '../components/Honeycomb';
 import PolygroveCard from '../components/PolygroveCard';
+import QuizButton from '../components/QuizButton';
 import { ALL_TIERS, C, F, MASTERY, TROPHIC_COLOR, TROPHIC_ORDER, getLevel, getTier } from '../constants/polygrove';
 import { Card, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, owns, useCollection, ownedAt } from '../lib/collection';
 import { CurrentEco, ecoMembers, ecoMeta, loadCurrentEco, loadEcoMeta, useCurrentEco } from '../lib/ecoregions';
-import { countsOf, isFullyLocked, loadMastery, scoreOf, useMastery } from '../lib/mastery';
+import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 
 export default function FieldNotes() {
@@ -117,7 +117,6 @@ export default function FieldNotes() {
   const inComb = (k: string | null | undefined) => !!k && combs.some(c => c.key === k);
   const shownKey = inComb(picked) ? picked : inComb(glow) ? glow! : combs[0]?.key ?? null;
   const shownCard = shownKey ? rows.find(c => c.id === shownKey) : undefined;
-  const shownMastered = shownCard ? isFullyLocked(countsOf(shownCard.species_id)) : false;
   // the fresh Solar card: the comb opens with it picked and pulsing gold; the
   // list scrolls to the comb's top
   const scrollToGlow = (retry = true) => {
@@ -259,13 +258,7 @@ export default function FieldNotes() {
           <View style={{ paddingHorizontal: 20 }}>
             {/* the Camp page's green Solar Quiz button (user, 2026-10-07: "make the take solar
                 quiz on the journal page like this"); a mastered card's reads Practice */}
-            {shownCard ? (
-              <Pressable onPress={() => toQuiz(shownCard)} style={[s.quizBtn, { marginTop: 14 }]}>
-                <LinearGradient colors={shownMastered ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.quizGrad}>
-                  <Text style={s.quizTxt}>{shownMastered ? 'Practice Solar Quiz ☀️' : 'Take Solar Quiz ☀️'}</Text>
-                </LinearGradient>
-              </Pressable>
-            ) : null}
+            {shownCard ? <QuizButton card={shownCard} style={{ marginTop: 14 }} /> : null}
           </View>
           {/* quiz button first, then the filters (user, 2026-10-11: "put the take solar quiz button above the filter") */}
           {filterBar}
@@ -419,9 +412,6 @@ const s = StyleSheet.create({
   filterRow: { flexDirection: 'row', gap: 8 },
   // under the comb: the shown card's way into its quiz (gold 'Practice' once mastered)
   // yellow button, yellow text (user, 2026-10-06); a touch more orange once mastered
-  quizBtn: { alignSelf: 'stretch', marginTop: 18, borderRadius: 16, overflow: 'hidden' },
-  quizGrad: { paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center' },
-  quizTxt: { fontFamily: F.display, fontSize: 13, color: C.text },
   filterBtn: {
     flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,
     borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',

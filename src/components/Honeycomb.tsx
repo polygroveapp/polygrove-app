@@ -25,6 +25,7 @@ export type Comb = {
   name: string; sub?: string; meta?: string;
   fallback?: string;        // an emoji for a cell with no photo
   card?: () => ReactNode;   // the card to show above the comb (fills its box)
+  cardId?: string | null;   // the deck card it stands for, if any (QuizButton)
   onOpen: () => void;
 };
 

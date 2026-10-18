@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackChevron from '../../components/BackChevron';
 import GreenBackdrop, { GREEN_BG } from '../../components/GreenBackdrop';
 import PolygroveCard from '../../components/PolygroveCard';
+import QuizButton from '../../components/QuizButton';
 import RangeMap from '../../components/RangeMap';
 import SeasonStrip from '../../components/SeasonStrip';
 import { C, F, TROPHIC_COLOR } from '../../constants/polygrove';
@@ -105,9 +106,8 @@ export default function Species() {
         {(() => { const ip = inatPhotoOf(card.id); return ip ? (
           <Pressable onPress={() => openWeb(ip.page)}><Text style={[s.credit, { textAlign: 'center', marginTop: 8 }]}>photo{ip.by && ip.by !== 'no rights reserved' ? `: ${ip.by}` : ''} · {ip.lic} · iNaturalist ›</Text></Pressable>
         ) : null; })()}
-        <Pressable onPress={() => router.push({ pathname: '/quiz/[id]', params: { id: card.id } })} style={s.quiz}>
-          <Text style={s.quizTxt}>Take a quiz</Text>
-        </Pressable>
+        {/* PolygroveDB quizzes are practice (user, 2026-10-18: "take practice quiz too for the database") */}
+        <QuizButton card={card} practice style={{ marginTop: 16, width: cardSize.width, alignSelf: 'center' }} />
 
         {/* 3 · Range — the map, then the top ecoregions by records, one panel at a time */}
         <H3 title="Range" />
@@ -229,8 +229,6 @@ const s = StyleSheet.create({
   name: { fontFamily: F.display, fontSize: 30, color: C.text, lineHeight: 36 },
   sci: { fontFamily: F.sans, fontSize: 16, color: '#aaa', fontStyle: 'italic', marginTop: 4 },
   group: { fontFamily: F.sansBold, fontSize: 11, letterSpacing: 1.6, marginTop: 10 },
-  quiz: { marginTop: 14, paddingVertical: 15, borderRadius: 18, alignItems: 'center', backgroundColor: '#2E7D32' },
-  quizTxt: { fontFamily: F.display, fontSize: 16, color: C.text },
   h3Row: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 28, marginBottom: 8 },
   h3: { fontFamily: F.display, fontSize: 18, color: C.text },
   h3Src: { fontFamily: F.sans, fontSize: 11, color: '#777', flexShrink: 1 },

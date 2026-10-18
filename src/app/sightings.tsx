@@ -24,6 +24,7 @@ import { cardById, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { Naturalist, searchNaturalists } from '../lib/inatPublic';
 import { ALL_FACTS, Earned, chooseMe, forgetMe, loadSightings, niceDate, partialCard, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
 import PolygroveCard from '../components/PolygroveCard';
+import QuizButton from '../components/QuizButton';
 import { openWeb } from '../lib/web';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -111,6 +112,7 @@ export default function Sightings() {
     ? allCells.filter(c => c.date && (!year || c.date.startsWith(String(year))) && (!month || Number(c.date.slice(5, 7)) === month))
     : allCells;
   const shownKey = shown && cells.some(c => c.key === shown) ? shown : cells[0]?.key ?? null;
+  const shownCardId = cells.find(c => c.key === shownKey)?.cardId ?? null;
   // the shown card's two links (user, 2026-10-06: "to the right of this put two
   // buttons, journal and iNaturalist"): the game's card, and the observation
   const shownLinks = (() => {
@@ -238,6 +240,10 @@ export default function Sightings() {
               </ScrollView>
             ) : null}
             {view === 'hex' && shownKey ? <ShownCard cells={cells} picked={shownKey} onPick={setShown} /> : null}
+            {/* the quiz button under the card, above the hexagons (user, 2026-10-18) — Solar
+                when the species is journaled, Practice otherwise; none for a species
+                that is not a card */}
+            {view === 'hex' && shownCardId && cardById(shownCardId) ? <QuizButton card={cardById(shownCardId)!} style={{ marginTop: 14, marginBottom: 4 }} /> : null}
             {/* a search shows its matches from all three lists (and the month/year
                 filters apply to the rows — they were built but never wired to Cells) */}
             {needle ? (cells.length === 0 ? <Text style={s.empty}>Nothing matches “{query.trim()}”.</Text>
@@ -325,7 +331,7 @@ function combOf(photo: string | null | undefined, cardId: string | null, rest: O
   const role = card?.trophic || trophic || '';
   const border = role ? TROPHIC_COLOR[role] || C.greenSoft : '#666';
   const uri = smallPhoto(photo) || (cardId ? photoFor(cardId, 250) : undefined);
-  return { ...rest, uri, frame: photo || !cardId ? undefined : framingFor(cardId), border, fallback: '🌿' };
+  return { ...rest, cardId, uri, frame: photo || !cardId ? undefined : framingFor(cardId), border, fallback: '🌿' };
 }
 
 function Stat({ n, label }: { n: number; label: string }) {
