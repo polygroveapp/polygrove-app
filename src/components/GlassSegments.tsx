@@ -6,12 +6,13 @@
 
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { C, F } from '../constants/polygrove';
 
-export type Segment<K extends string> = { key: K; label: string; n?: number; color?: string };   // color: the count's colour when chosen
+// color: the count's colour when chosen; icon: drawn before the label (an emoji can just go in the label)
+export type Segment<K extends string> = { key: K; label: string; n?: number; color?: string; icon?: ReactNode };
 
 const PAD = 4;
 
@@ -37,7 +38,10 @@ export default function GlassSegments<K extends string>({ items, value, onChange
         const on = it.key === value;
         return (
           <Pressable key={it.key} onPress={() => onChange(it.key)} style={s.seg} hitSlop={4}>
-            <Text style={[s.label, on && s.labelOn]} numberOfLines={1}>{it.label}</Text>
+            <View style={s.labelRow}>
+              {it.icon}
+              <Text style={[s.label, on && s.labelOn]} numberOfLines={1}>{it.label}</Text>
+            </View>
             {it.n !== undefined ? <Text style={[s.count, on && it.color ? { color: it.color } : null]}>{it.n.toLocaleString()}</Text> : null}
           </Pressable>
         );
@@ -62,5 +66,6 @@ const s = StyleSheet.create({
   seg: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999, gap: 0 },
   label: { fontFamily: F.sansBold, fontSize: 11, color: '#8f8f8f', lineHeight: 14 },
   labelOn: { color: C.text },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   count: { fontFamily: F.sans, fontSize: 12, color: '#8f8f8f', fontVariant: ['tabular-nums'], lineHeight: 14 },   // the regular weight — medium was still too heavy (user, 2026-10-06)
 });

@@ -11,6 +11,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, T
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
+import EcoregionIcon from '../components/EcoregionIcon';
 import GlassSegments from '../components/GlassSegments';
 import HexThumb from '../components/HexThumb';
 import { C, F, TROPHIC_COLOR, TROPHIC_ORDER } from '../constants/polygrove';
@@ -35,7 +36,7 @@ export default function PolygroveDB() {
   // ALL · PIN · TENT (user, 2026-10-06: "the pin matters"): all species; the
   // ones most likely to be seen near the pin, most-recorded first; the ones
   // most likely in your camp's ecoregion, likewise — a sliding glass pill
-  const [where, setWhere] = useState<'all' | 'pin' | 'tent'>('all');
+  const [where, setWhere] = useState<'all' | 'pin' | 'tent'>('pin');   // opens on Camp (user, 2026-11-16; was All)
   const pin = usePin();
   const [rankFor, setRankFor] = useState<{ key: string; rank: Map<string, number> } | null>(null);
   const rankKey = where === 'pin' && pin ? `pin:${pin.lng.toFixed(1)},${pin.lat.toFixed(1)}` : where === 'tent' && eco ? `tent:${eco.eid}` : '';
@@ -118,9 +119,10 @@ export default function PolygroveDB() {
           below, and a box for "in your camp" */}
       <View style={{ marginBottom: 12 }}>
         <GlassSegments value={where} onChange={setWhere} items={[
-          { key: 'all', label: 'All' },
-          { key: 'pin', label: '📍 Pin' },
-          { key: 'tent', label: '⛺ Ecoregion' }   // "Ecoregion" (user, 2026-10-07; was "Tent"),
+          // Camp · Ecoregion · All, left to right (user, 2026-11-16; All was first)
+          { key: 'pin', label: '⛺ Camp' },   // "Camp" (user, 2026-11-16; was "📍 Pin")
+          { key: 'tent', label: 'Ecoregion', icon: <EcoregionIcon size={17} /> },   // "Ecoregion" (user, 2026-10-07; was "Tent"); a drawn region, not the tent (2026-11-16)
+          { key: 'all', label: '🌲 All' }   // the tree, PolygroveDB's own emoji (user, 2026-11-16)
         ]} />
       </View>
       {where === 'pin' && !pin ? <Text style={s.hint}>Move the pin on the Map tab first — this lists what is seen near it.</Text> : null}
