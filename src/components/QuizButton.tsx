@@ -1,4 +1,4 @@
-// THE QUIZ BUTTON under a shown card, above the hexagons — the same everywhere
+// THE QUIZ BUTTON above a shown card (under it until 2026-11-16) — the same everywhere
 // (user, 2026-10-18: "below the card and above the hexes … anywhere in the app.
 // If it can take a solar quiz … say Take Solar Quiz, otherwise say Take Practice
 // Quiz … the practice is a book emoji instead of the sun 📖").
@@ -16,7 +16,8 @@ import { Card } from '../lib/catalog';
 import { ownsAnywhere, useOwns } from '../lib/collection';
 import { countsOf, isFullyLocked, useMastery } from '../lib/mastery';
 
-export default function QuizButton({ card, practice = false, style }: { card: Card; practice?: boolean; style?: StyleProp<ViewStyle> }) {
+// compact: a small pill that sits in a row beside the Hexes/List switch (the Journal, 2026-11-16)
+export default function QuizButton({ card, practice = false, compact = false, style }: { card: Card; practice?: boolean; compact?: boolean; style?: StyleProp<ViewStyle> }) {
   const router = useRouter();
   useMastery(); useOwns(null, null);   // re-render when progress or the journal changes
   const owned = ownsAnywhere(card.species_id);
@@ -24,16 +25,20 @@ export default function QuizButton({ card, practice = false, style }: { card: Ca
   const solar = !practice && owned && !mastered;
   const go = () => router.push({ pathname: '/quiz/[id]', params: solar ? { id: card.id } : { id: card.id, practice: '1' } });
   return (
-    <Pressable onPress={go} style={[s.btn, style]} accessibilityRole="button">
-      <LinearGradient colors={solar ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.grad}>
-        <Text style={s.txt}>{solar ? 'Take Solar Quiz ☀️' : 'Take Practice Quiz 📖'}</Text>
+    <Pressable onPress={go} style={[compact ? s.btnCompact : s.btn, style]} accessibilityRole="button">
+      <LinearGradient colors={solar ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={compact ? s.gradCompact : s.grad}>
+        <Text style={compact ? s.txtCompact : s.txt} numberOfLines={1}>{solar ? 'Take Solar Quiz ☀️' : 'Take Practice Quiz 📖'}</Text>
       </LinearGradient>
     </Pressable>
   );
 }
 
 const s = StyleSheet.create({
-  btn: { alignSelf: 'stretch', borderRadius: 16, overflow: 'hidden' },
+  // as wide as a phone's card, never a bar across a desktop window (2026-11-16)
+  btn: { alignSelf: 'center', width: '100%', maxWidth: 440, borderRadius: 16, overflow: 'hidden' },
   grad: { paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center' },
+  btnCompact: { borderRadius: 14, overflow: 'hidden' },
+  gradCompact: { paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center' },
+  txtCompact: { fontFamily: F.display, fontSize: 11, color: C.text },
   txt: { fontFamily: F.display, fontSize: 13, color: C.text },
 });

@@ -142,13 +142,13 @@ export default function FieldNotes() {
     transform: [{ translateY: -Math.max(0, headerH.value - scrollY.value) }],
   }));
 
-  // with the hexagons the switch and filters sit UNDER the shown card, above the
-  // quiz button (user, 2026-10-11: "put this below the card for hexagons and put
-  // the take solar quiz button below that"); with no card to sit under (the
-  // filters match nothing) they go back to the top so they can be undone
+  // with the hexagons the filters, the switch and the quiz button are drawn in the
+  // comb's own item, above the card (user, 2026-11-16; under the card from
+  // 2026-10-11); with no card (the filters match nothing) the filters are the
+  // section header, so they can be undone
   const inline = view === 'hex' && rows.length > 0;
   const filterBar = (
-    <View style={[s.filters, inline && { backgroundColor: 'transparent', paddingTop: 14, paddingBottom: 0 }]}>
+    <View style={[s.filters, inline && { backgroundColor: 'transparent', paddingTop: 0, paddingBottom: 0 }]}>
       {/* the backdrop slice goes FIRST: as a later sibling it painted over the
           Hexes/List switch, which showed as a blank band (user, 2026-10-06:
           "too much space here") */}
@@ -249,19 +249,19 @@ export default function FieldNotes() {
         </View>
       }
       renderItem={({ item }) => (view === 'hex' ? (
-        <View style={{ paddingTop: 8 }}>
-          {/* the switch stays above the card (user, 2026-10-11: "put the hex/list buttons above the card") */}
-          <View style={{ alignItems: 'center', marginBottom: 12 }}><ViewToggle mode={view} onChange={setView} /></View>
-          <View style={{ paddingHorizontal: 20 }}>
+        <View>
+          {/* TOP TO BOTTOM (user, 2026-11-16): the filters right under "Field Notes", the
+              Hexes/List switch with the quiz button to its right, the card, the hexagons. (The
+              button and the filters sat under the card from 2026-10-11.) A mastered card's
+              button reads Practice. */}
+          {filterBar}
+          <View style={[s.topRow, { paddingTop: 12 }]}>
+            <ViewToggle mode={view} onChange={setView} />
+            {shownCard ? <QuizButton card={shownCard} compact style={s.topQuiz} /> : null}
+          </View>
+          <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
             {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
           </View>
-          <View style={{ paddingHorizontal: 20 }}>
-            {/* the Camp page's green Solar Quiz button (user, 2026-10-07: "make the take solar
-                quiz on the journal page like this"); a mastered card's reads Practice */}
-            {shownCard ? <QuizButton card={shownCard} style={{ marginTop: 14 }} /> : null}
-          </View>
-          {/* quiz button first, then the filters (user, 2026-10-11: "put the take solar quiz button above the filter") */}
-          {filterBar}
           <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
             <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} picked={shownKey} onPick={setPicked} />
           </View>
@@ -375,6 +375,8 @@ function Cell({ card, onPress, glow = false }: { card: Card; onPress: () => void
 }
 
 const s = StyleSheet.create({
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 20 },
+  topQuiz: { flexShrink: 1 },
   row: { flexDirection: 'row', gap: 10, paddingHorizontal: 20 },
   cellWrap: { flex: 1, marginBottom: 10 },
   cellGold: { borderWidth: 2, borderColor: '#FFD700' },

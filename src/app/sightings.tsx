@@ -239,11 +239,11 @@ export default function Sightings() {
                   : years.map(y => <Pressable key={y} onPress={() => { setYear(year === Number(y) ? null : Number(y)); setMonth(null); setPickOpen(null); }} style={[s.chip, year === Number(y) && s.chipOn]}><Text style={s.chipTxt}>{y}</Text></Pressable>)}
               </ScrollView>
             ) : null}
+            {/* the quiz button ABOVE the card, under the selectors (user, 2026-11-16; under the card
+                since 2026-10-18) — Solar when the species is journaled, Practice otherwise; none
+                for a species that is not a card */}
+            {view === 'hex' && shownCardId && cardById(shownCardId) ? <QuizButton card={cardById(shownCardId)!} style={{ marginTop: 4, marginBottom: 14 }} /> : null}
             {view === 'hex' && shownKey ? <ShownCard cells={cells} picked={shownKey} onPick={setShown} /> : null}
-            {/* the quiz button under the card, above the hexagons (user, 2026-10-18) — Solar
-                when the species is journaled, Practice otherwise; none for a species
-                that is not a card */}
-            {view === 'hex' && shownCardId && cardById(shownCardId) ? <QuizButton card={cardById(shownCardId)!} style={{ marginTop: 14, marginBottom: 4 }} /> : null}
             {/* a search shows its matches from all three lists (and the month/year
                 filters apply to the rows — they were built but never wired to Cells) */}
             {needle ? (cells.length === 0 ? <Text style={s.empty}>Nothing matches “{query.trim()}”.</Text>
