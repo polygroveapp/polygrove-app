@@ -19,7 +19,18 @@ export type EcoMeta = {
 export type CurrentEco = {
   eid: number; name: string; bbox: [number, number, number, number]; size: number;
   lead?: string; photo?: EcoMeta['photo']; wiki?: string;
+  // WHERE THE PIN STOOD when you pressed "Camp here" (user, 2026-11-16: "the pin is where
+  // you camp and the species closest to it is what you will see"). A spot on the map the
+  // player chose, never the device's location. Camps saved before this have none.
+  spot?: { lng: number; lat: number };
 };
+
+/** the camp's spot: where the pin stood when you camped; for an older camp, the pin if it is still in the camp's ecoregion */
+export function campSpot(camp: CurrentEco | null, pin: { lng: number; lat: number; eid: number | null } | null): { lng: number; lat: number } | null {
+  if (!camp) return null;
+  if (camp.spot) return camp.spot;
+  return pin && pin.eid === camp.eid ? { lng: pin.lng, lat: pin.lat } : null;
+}
 
 const META_URL = 'https://polygrovedb.pages.dev/data/eco_meta.json';
 export const ECO_GEOMETRY_URL = 'https://polygrovedb.pages.dev/data/eco_simple.geojson';

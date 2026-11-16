@@ -16,7 +16,7 @@ import GlassSegments from '../components/GlassSegments';
 import HexThumb from '../components/HexThumb';
 import { C, F, TROPHIC_COLOR, TROPHIC_ORDER } from '../constants/polygrove';
 import { Card, getCards, loadCatalog, photoForDb } from '../lib/catalog';
-import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
+import { campSpot, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 import { ecoRanking, pinRanking } from '../lib/nearby';
 import { usePin } from '../lib/pin';
 import { useStars } from '../lib/stars';
@@ -39,11 +39,13 @@ export default function PolygroveDB() {
   const [where, setWhere] = useState<'all' | 'pin' | 'tent'>('pin');   // opens on Camp (user, 2026-11-16; was All)
   const pin = usePin();
   const [rankFor, setRankFor] = useState<{ key: string; rank: Map<string, number> } | null>(null);
-  const rankKey = where === 'pin' && pin ? `pin:${pin.lng.toFixed(1)},${pin.lat.toFixed(1)}` : where === 'tent' && eco ? `tent:${eco.eid}` : '';
+  // "Camp" ranks by the spot where you camped (user, 2026-11-16: the pin is where you camp), not wherever the map's pin has wandered since
+  const spot = campSpot(eco, pin);
+  const rankKey = where === 'pin' && spot ? `pin:${spot.lng.toFixed(1)},${spot.lat.toFixed(1)}` : where === 'tent' && eco ? `tent:${eco.eid}` : '';
   useEffect(() => {
     if (!rankKey) return;
     let on = true;
-    const p = rankKey.startsWith('pin:') && pin ? pinRanking(pin.lng, pin.lat) : eco ? ecoRanking(eco.eid) : Promise.resolve([] as [string, number][]);
+    const p = rankKey.startsWith('pin:') && spot ? pinRanking(spot.lng, spot.lat) : eco ? ecoRanking(eco.eid) : Promise.resolve([] as [string, number][]);
     p.then(list => { if (on) setRankFor({ key: rankKey, rank: new Map(list) }); }).catch(() => { if (on) setRankFor({ key: rankKey, rank: new Map() }); });
     return () => { on = false; };
   }, [rankKey]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -125,9 +127,9 @@ export default function PolygroveDB() {
           { key: 'all', label: '🌲 All' }   // the tree, PolygroveDB's own emoji (user, 2026-11-16)
         ]} />
       </View>
-      {where === 'pin' && !pin ? <Text style={s.hint}>Move the pin on the Map tab first — this lists what is seen near it.</Text> : null}
+      {where === 'pin' && !spot ? <Text style={s.hint}>Press “Camp here” on the Map tab first — this lists what is seen closest to your camp.</Text> : null}
       {where === 'tent' && !eco ? <Text style={s.hint}>Choose a camp first — this lists what is seen in its ecoregion.</Text> : null}
-      {where === 'pin' && pin ? <Text style={s.hint}>Most likely to be seen near the pin{pin.name ? ` · ${pin.name}` : ''}</Text> : null}
+      {where === 'pin' && spot ? <Text style={s.hint}>Most likely to be seen near your camp{eco?.name ? ` · ${eco.name}` : ''}</Text> : null}
       {where === 'tent' && eco ? <Text style={s.hint}>Most likely to be seen in {eco.name}</Text> : null}
       <View style={s.filterRow}>
         <FilterBtn label="Role" value={role ?? undefined} color={role ? TROPHIC_COLOR[role] : undefined} count={rows.length}

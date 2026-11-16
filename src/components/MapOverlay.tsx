@@ -25,7 +25,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { openWeb } from '../lib/web';
-import { setBorders, setEarthColours, setPinDraw, setShowObs, useBorders, useEarthColours, usePinDraw, useShowObs } from '../lib/mapLook';
+import { setBorders, setEarthColours, setShowObs, useBorders, useEarthColours, useShowObs } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOutDown, FadeOutUp, withTiming, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -37,7 +37,7 @@ import ObsTimeline from './ObsTimeline';
 import { C, F, getLevel, MASTERY } from '../constants/polygrove';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import { loadSightings, niceDate, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
-import { setPin } from '../lib/pin';
+import { getPin, setPin } from '../lib/pin';
 import { Spot, observation } from '../lib/inatPublic';
 import { ecoregionAt } from '../lib/locate';
 import { getCards, loadCatalog, photoFor } from '../lib/catalog';
@@ -116,7 +116,6 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // observations") — a remembered preference in the map preferences; an
   // earlier top-bar toggle lived for an hour on 2026-10-06
   const showObs = useShowObs();
-  const pinDraw = usePinDraw();
   useEffect(() => {
     if (pageReady) web.current?.injectJavaScript(`window.polygroveShowMarks && window.polygroveShowMarks(${showObs}); true;`);
   }, [pageReady, showObs]);
@@ -423,7 +422,10 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
     if (!pick) return;
     const m = ecoMeta(pick.eid);
     flownTo.current = pick.eid;   // the pin is already on it — no fly-back on return
-    await setCurrentEco({ eid: pick.eid, name: pick.name, bbox: pick.bbox, size: ecoDeckSize(pick.eid), lead: m?.lead, photo: m?.photo, wiki: m?.wiki });
+    // the pin's spot becomes the camp's: packs and the PolygroveDB "Camp" list favour what is recorded closest to it
+    const at = getPin();
+    const spot = at && at.eid === pick.eid ? { lng: at.lng, lat: at.lat } : undefined;
+    await setCurrentEco({ eid: pick.eid, name: pick.name, bbox: pick.bbox, size: ecoDeckSize(pick.eid), lead: m?.lead, photo: m?.photo, wiki: m?.wiki, spot });
     router.replace({ pathname: '/', params: { tab: '1' } });
   };
 
@@ -527,7 +529,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
 
       {/* MAP CONTROLS (user, 2026-10-07): + in the bottom-right corner, − to its
           left, always there. In the bottom-LEFT corner, map preferences: open,
-          four tiles rise above it — packs around the pin, sightings ✕ on/off,
+          three tiles rise above it — sightings ✕ on/off,
           ecoregion borders, earth colours ⇄ grey/black. (Zoom came 2026-09-28; the compass came
           and went 2026-09-29.) */}
       {pageReady && (
@@ -549,19 +551,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         <View style={[s.prefs, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
-              {/* DRAW AROUND THE PIN, top of the list (user, 2026-10-08): packs come from the
-                  pin's ecoregion, the species recorded around the pin first */}
-              <GlassTile on={pinDraw} onPress={() => setPinDraw(!pinDraw)} label={pinDraw ? 'Packs from the camp deck' : 'Packs from around the pin'}>
-                {/* the map's own push pin — ball, collar and needle (user, 2026-10-08: "make this the shape of the red pin") */}
-                {/* the pin's own red when on (user, 2026-10-08: "make it red like the x is yellow"), grey when off */}
-                {(() => { const on = pinDraw, line = on ? '#c45c54' : 'rgba(255,255,255,0.5)', fill = on ? 'rgba(196,92,84,0.35)' : 'rgba(255,255,255,0.1)'; return (
-                <Svg width={16} height={25} viewBox="0 0 20 33">
-                  <Path d="M8.8 13.4 L11.2 13.4 L10.25 29.7 L9.75 29.7 Z" fill={on ? '#c3c9ce' : 'rgba(255,255,255,0.5)'} />
-                  <Ellipse cx="10" cy="13.2" rx="2.3" ry="0.9" fill={on ? '#8a9096' : 'rgba(255,255,255,0.1)'} stroke={on ? '#4a5056' : 'rgba(255,255,255,0.5)'} strokeWidth={0.9} />
-                  <Circle cx="10" cy="7" r="6.5" fill={fill} stroke={line} strokeWidth={1.4} />
-                  <Ellipse cx="7.2" cy="4.1" rx="2.2" ry="1.35" fill={on ? 'rgba(234,176,170,0.7)' : 'rgba(255,255,255,0.35)'} transform="rotate(-28 7.2 4.1)" />
-                </Svg>); })()}
-              </GlassTile>
+              {/* (a "packs around the pin" tile stood here 2026-10-08 → 2026-11-16: it is always on now) */}
               <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
                 <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
               </GlassTile>

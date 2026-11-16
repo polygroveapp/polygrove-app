@@ -13,11 +13,6 @@ let _earth = false;
 let _borders = false;
 let _obs = true;   // the ✕ sighting marks: on unless turned off
 const KEY_O = 'polygrove.mapObs.v1';
-// DRAW AROUND THE PIN (user, 2026-10-08: "if you put a pin down at Lake Tahoe
-// you draw cards around Lake Tahoe"): packs come from the pin's ecoregion,
-// weighted by what is recorded in the cells around the pin. Off = the camp's deck.
-let _pinDraw = false;
-const KEY_P = 'polygrove.pinDraw.v1';
 let _loaded = false;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());
@@ -25,7 +20,6 @@ function load() {
   if (_loaded) return;
   _loaded = true;
   AsyncStorage.getItem(KEY).then(v => { if (v != null) { _earth = v === '1'; emit(); } }).catch(() => {});
-  AsyncStorage.getItem(KEY_P).then(v => { if (v != null) { _pinDraw = v === '1'; emit(); } }).catch(() => {});
   AsyncStorage.getItem(KEY_O).then(v => { if (v != null) { _obs = v === '1'; emit(); } }).catch(() => {});
   AsyncStorage.getItem(KEY_B).then(v => { if (v != null) { _borders = v === '1'; emit(); } }).catch(() => {});
 }
@@ -42,14 +36,6 @@ export function setEarthColours(on: boolean) {
 }
 export function useEarthColours(): boolean {
   return useSyncExternalStore(l => { load(); listeners.add(l); return () => { listeners.delete(l); }; }, () => _earth, () => false);
-}
-export function setPinDraw(on: boolean) {
-  _pinDraw = on; emit();
-  AsyncStorage.setItem(KEY_P, on ? '1' : '0').catch(() => {});
-}
-export const getPinDraw = () => (load(), _pinDraw);
-export function usePinDraw(): boolean {
-  return useSyncExternalStore(l => { load(); listeners.add(l); return () => { listeners.delete(l); }; }, () => _pinDraw, () => false);
 }
 export function setShowObs(on: boolean) {
   _obs = on; emit();

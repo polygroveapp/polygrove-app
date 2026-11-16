@@ -33,8 +33,7 @@ import { discoveryReady, loadDaily, markDiscoveryOpened } from '../lib/daily';
 import { fieldNote } from '../lib/dossier';
 import { SOLAR_PACK_COST, canAffordSolar, loadSol, spendSol } from '../lib/sol';
 import { loadTips, markTip, queuePacksPopup, tipSeen } from '../lib/tips';
-import { currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
-import { getPinDraw } from '../lib/mapLook';
+import { campSpot, currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
 import { pinRanking } from '../lib/nearby';
 import { getPin } from '../lib/pin';
 import {
@@ -113,19 +112,31 @@ export default function PackOpening() {
       if (!camp) { router.replace('/map'); return; }   // no ecoregion = nothing to draw from
       await Promise.all([loadDaily(), loadSol(), loadTips()]);
       if (solar ? !canAffordSolar() : !discoveryReady()) { router.replace('/'); return; }
-      // the pin's ecoregion when "packs around the pin" is on and the pin is on land (user, 2026-10-08)
-      const pin = getPin();
-      const near = getPinDraw() && pin && pin.eid != null ? pin : null;
-      const eco = near ? { eid: near.eid as number } : camp;
+      // ALWAYS AROUND THE CAMP'S PIN (user, 2026-11-16: "the pin is where you camp and the
+      // species closest to it is what you will see"; a map toggle since 2026-10-08): the
+      // camp's deck, weighted by what is recorded around the spot where you camped
+      const eco = camp;
       setEid(eco.eid);
-      // 5 keeps + up to 3 skip spares, queue first, live draw for the rest
-      // (the pin draw is always live: the queue was dealt from the camp's deck)
-      let p = near ? null : popPack(eco.eid);
+      const spot = campSpot(camp, getPin());
+      // 5 keeps + up to 3 skip spares. Around the pin is a LIVE draw; with no signal (or no
+      // spot) the pack comes from the offline queue, dealt from the camp's deck, as before
+      let p: Stashed[] | null = null;
+      let near: { lng: number; lat: number } | null = null;
+      if (spot) {
+        try {
+          p = await Promise.race([
+            loadCatalog().then(() => drawNear(eco.eid, spot.lng, spot.lat, PACK_SIZE, new Set())).then(cs => cs.map(liveStash)),
+            new Promise<null>(res => setTimeout(() => res(null), 6000)),   // a weak signal must not hang the pack
+          ]);
+          if (p && p.length) near = spot; else p = null;
+        } catch { p = null; }
+      }
+      if (!p) p = popPack(eco.eid);
       if (!p) {
         try {
           await loadCatalog();
-          p = (near ? await drawNear(eco.eid, near.lng, near.lat, PACK_SIZE, new Set()) : drawLive(eco.eid, PACK_SIZE, new Set())).map(liveStash);
-          if (!near) topUp();
+          p = drawLive(eco.eid, PACK_SIZE, new Set()).map(liveStash);
+          topUp();
         } catch { setNoNet(true); return; }
       }
       if (!p.length) { setNoNet(true); return; }
