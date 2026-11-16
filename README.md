@@ -1,56 +1,74 @@
-# Welcome to your Expo app 👋
+# Polygrove
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**An educational ecology trading card game.** Pick a place on a world map of 847
+ecoregions, open packs of real species that live there, and master each card
+through a six-question quiz about how it fits into its ecosystem.
 
-## Get started
+**Try it in your browser:** https://polygrovedb.pages.dev/app/
+· The species database behind it: https://polygrovedb.pages.dev
+· Data pipeline: [polygrovedb](https://github.com/polygroveapp/polygrovedb)
 
-1. Install dependencies
+<p>
+  <img src="docs/screens/map.png" width="240" alt="Choosing where to camp on the ecoregion map">
+  <img src="docs/screens/card.png" width="240" alt="A species card with its field note">
+  <img src="docs/screens/quiz.png" width="240" alt="A quiz question">
+</p>
 
-   ```bash
-   npm install
-   ```
+## What it does
 
-2. Start the app
+- **Camp anywhere on Earth.** A MapLibre map of the RESOLVE 2017 ecoregions. Drop
+  the pin and that ecoregion becomes your deck: 14,912 species cards drawn from
+  the places they actually occur.
+- **Open packs.** Five cards at a time, weighted toward species that are commonly
+  recorded nearby. Every card carries a Wikipedia photo, a field note, its size,
+  its feeding role and a food web built from recorded interactions.
+- **Master cards with the Solar Quiz.** Six questions per species, from taxonomy
+  and feeding guild to size, food web, habitat and "which card is yours?".
+  Wrong answers stay the same on a retry, so the quiz can't be beaten by
+  elimination. The last question uses a second photo of the species, so it can't
+  be answered by remembering the picture.
+- **Turn real sightings into cards.** Link an iNaturalist account and every
+  community-confirmed observation of an in-game species becomes a custom card,
+  journaled in the ecoregion where you saw it.
+- **Works offline on the trail.** A rolling queue of 100 cards per ecoregion and a
+  snapshot of every collected card, photos included, are kept on the phone.
 
-   ```bash
-   npx expo start
-   ```
+## Built with
 
-In the output, you'll find options to open the app in a
+| | |
+|---|---|
+| App | Expo SDK 57, React Native 0.86, TypeScript, Expo Router |
+| Animation and gestures | Reanimated 4, Gesture Handler |
+| Map | MapLibre GL JS in a WebView on phones and an iframe on the web, with a typed message bridge |
+| Platforms | iOS (TestFlight via EAS Build), Android, and the web from the same code |
+| Data | Static JSON from the [PolygroveDB](https://github.com/polygroveapp/polygrovedb) pipeline, served by Cloudflare Pages |
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Privacy by design: the app never asks for your location and sends nothing about
+you or your chosen place to a server. Your collection lives on your phone.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Project layout
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+src/app/         screens (Expo Router): map, camp, pack, journal, quiz, PolygroveDB, sightings
+src/components/  cards, honeycomb journal, map overlay, food-web graph, quiz button, WebFrame bridge
+src/lib/         catalog loading, quiz builder, mastery, offline queue, iNaturalist sync
+scripts/         deploy-web.sh: exports the web build into the PolygroveDB site at /app
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Running it
 
-### Other setup steps
+```bash
+npm install
+npx expo start
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Scan the QR code with Expo Go, or press `i` for the iOS simulator or `w` for the
+web. Type-check and lint with `npx tsc --noEmit` and `npx expo lint`.
 
-## Learn more
+## Data and licences
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Species facts come from open scientific trait databases, GBIF occurrence
+records, GloBI interactions and Wikipedia. Photos are Wikipedia/Commons images or
+iNaturalist photos under CC0, CC BY or CC BY-SA only, each credited on the card.
+Full sources and licences are listed in the
+[PolygroveDB repo](https://github.com/polygroveapp/polygrovedb).

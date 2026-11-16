@@ -99,8 +99,14 @@ export function buildQuiz(card: Card, attempt = 0): (Q | null)[] {
   for (const o of all) { sizes.set(o.group, (sizes.get(o.group) ?? 0) + 1); if (GREEN(o.trophic)) greenGroups.add(o.group); }
   const mine = GREEN(c.trophic) || greenGroups.has(c.group);
   // …and FUNGUS is offered on both sides (user, same day): a fungus is neither, and a fair guess for either
-  const groupPool = [...new Set([...(all.length ? [...sizes.keys()].filter(g => (sizes.get(g) ?? 0) >= 5) : GROUPS).filter(g => greenGroups.has(g) === mine), 'Fungus'])];
-  const groups = shufFix(groupPool.filter(g => g !== c.group).sort()).slice(0, 3);
+  // NO DECOY THAT IS ALSO TRUE (2026-11-16: an Incense-cedar was offered both "Tree" and
+  // "Plant"): "Plant" is the catch-all for plants without a growth form, so it is never a
+  // decoy, and "Tree/Shrub" overlaps "Tree" and "Shrub". A "Plant" card's real form is
+  // unknown, so it is offered only non-plant groups.
+  const OVERLAP: Record<string, string[]> = { 'Tree': ['Tree/Shrub'], 'Shrub': ['Tree/Shrub'], 'Tree/Shrub': ['Tree', 'Shrub'] };
+  const side = c.group === 'Plant' ? false : mine;
+  const groupPool = [...new Set([...(all.length ? [...sizes.keys()].filter(g => (sizes.get(g) ?? 0) >= 5) : GROUPS).filter(g => greenGroups.has(g) === side), 'Fungus'])];
+  const groups = shufFix(groupPool.filter(g => g !== c.group && g !== 'Plant' && !(OVERLAP[c.group] ?? []).includes(g)).sort()).slice(0, 3);
   qs.push({ type: 'mc', label: 'Q1 · Taxonomy', short: 'Taxonomy', q: `Which group does the ${c.name} belong to?`, opts: shuf([c.group, ...groups]), a: c.group });
 
   // Q2 feeding guild
