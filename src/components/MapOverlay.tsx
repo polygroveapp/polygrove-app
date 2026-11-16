@@ -693,7 +693,10 @@ const PIN_W = 20, PIN_H = 30;   // the pin body; the needle's tip (y=30 of the 3
 
 const s = StyleSheet.create({
   root: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 5, backgroundColor: '#0d0d0d' },
-  hidden: { opacity: 0 },
+  // web: pointerEvents none on the root does not reach children marked box-none (the nav,
+  // zoom, title), so the invisible map kept catching taps on other screens (user,
+  // 2026-11-16: the Map tab did nothing from Camp). visibility:hidden takes it all out.
+  hidden: { opacity: 0, ...(Platform.OS === 'web' ? ({ visibility: 'hidden' } as object) : null) },
   center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
   // no back button (user, 2026-09-29): the tab bar's Camp is the way home
   top: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 40, gap: 10 },
