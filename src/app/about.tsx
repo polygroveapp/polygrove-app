@@ -36,7 +36,7 @@ export default function About() {
           trait databases for size and diet, RESOLVE ecoregions for where things live. Tap a fact on any
           card’s back to see its source and how sure we are.
         </Text>
-        <Pressable onPress={() => open('https://polygrovedb.pages.dev')}>
+        <Pressable onPress={() => open('https://polygrovedb.pages.dev/?db')}>
           <Text style={s.link}>Explore the full database ›</Text>
         </Pressable>
 
