@@ -658,7 +658,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
               </View>
             </Pressable>
             <Pressable onPress={enter} style={[s.enter, here && s.enterHere]}>
-              <Text style={[s.enterTxt, here && s.enterTxtHere]}>{here ? 'Stay in ecoregion' : visited ? 'Return to ecoregion' : 'Explore ecoregion'}</Text>
+              <Text style={[s.enterTxt, here && s.enterTxtHere]}>{here ? 'Camp here' : visited ? 'Return to ecoregion' : 'Explore ecoregion'}</Text>
             </Pressable>
           </>
         ) : (
@@ -752,7 +752,7 @@ const s = StyleSheet.create({
   credit: { fontFamily: F.sans, fontSize: 9.5, color: '#666', marginTop: 2 },
   wikiLink: { fontFamily: F.sansBold, color: C.greenSoft },
   enter: { paddingVertical: 12, borderRadius: 24, backgroundColor: '#2E7D32', alignItems: 'center' },
-  // "Stay in ecoregion" (and Back to camp) in the camp's YELLOW (user, 2026-09-30; was a quiet dark green)
+  // "Camp here" ("Stay in ecoregion" until 2026-11-16) (and Back to camp) in the camp's YELLOW (user, 2026-09-30; was a quiet dark green)
   enterHere: { backgroundColor: '#4CAF50' },   // GREEN (user, 2026-10-05), the map's own green for where you are; orange and yellow before
   enterTxtHere: { color: '#1a1a1a' },
   enterTxt: { fontFamily: F.display, fontSize: 14, color: C.text },
