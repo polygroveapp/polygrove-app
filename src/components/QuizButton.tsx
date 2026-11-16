@@ -6,6 +6,8 @@
 //  · Take Practice Quiz 📖 — a card you have not journaled, one already mastered,
 //    or anywhere the quiz is practice by design (PolygroveDB). Practice earns no
 //    Sol and moves no mastery: the quiz page runs it with `practice=1`.
+// Solar is GOLD, like the sun and the Solar Pack; practice is GREEN (user, 2026-11-16 —
+// they were the other way round).
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
@@ -23,7 +25,7 @@ export default function QuizButton({ card, practice = false, style }: { card: Ca
   const go = () => router.push({ pathname: '/quiz/[id]', params: solar ? { id: card.id } : { id: card.id, practice: '1' } });
   return (
     <Pressable onPress={go} style={[s.btn, style]} accessibilityRole="button">
-      <LinearGradient colors={solar ? ['#1B5E20', '#2E7D32'] : ['#5a4a12', '#8a6d1a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.grad}>
+      <LinearGradient colors={solar ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.grad}>
         <Text style={s.txt}>{solar ? 'Take Solar Quiz ☀️' : 'Take Practice Quiz 📖'}</Text>
       </LinearGradient>
     </Pressable>
