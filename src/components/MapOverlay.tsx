@@ -727,8 +727,9 @@ const s = StyleSheet.create({
   zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: 'rgba(255,255,255,0.85)', lineHeight: 26 },   // white like the layers tile (user, 2026-10-07; green since 2026-09-30)
   lookBtn: {
     width: 42, height: 42, borderRadius: 21, overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: Platform.OS === 'android' ? 'rgba(16,22,16,0.9)' : 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.13)',
+    // solid DARK GREEN (user, 2026-11-16: "too translucent" — the frosted glass vanished over the map)
+    backgroundColor: 'rgba(22,52,25,0.95)',
+    borderWidth: 1, borderColor: 'rgba(129,199,132,0.35)',
   },
   lookBtnOn: { borderColor: 'rgba(255,255,255,0.22)', shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
   lookShine: { position: 'absolute', top: 0, left: 10, right: 10, height: 1, backgroundColor: 'rgba(255,255,255,0.28)' },
