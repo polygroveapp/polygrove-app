@@ -7,7 +7,7 @@
 // PIN PICKING (user, 2026-09-28): a fixed pin sits in the middle of the
 // visible map; you pan the world under it (or tap to slide a spot under it)
 // and the sheet previews the ecoregion under the pin — its Wikipedia photo
-// and first sentence (eco_meta.json) — with the Enter button (Stay in /
+// and first sentence (eco_meta.json) — with the Enter button ("Camp here", always, since 2026-11-16; it was Stay in /
 // Return to / Explore, by whether it's yours / visited / new). Visited
 // ecoregions are outlined in a stronger green on the map.
 // Bridge: page → {ready | center{eid|null,name,bbox}}; app → {state{current,collected,fly,pad}}.
@@ -432,7 +432,6 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   const size = pick && catalogReady ? ecoDeckSize(pick.eid) : null;
   const meta = pick && metaReady ? ecoMeta(pick.eid) : undefined;
   const here = !!pick && current?.eid === pick.eid;
-  const visited = !!pick && collected.includes(pick.eid);
 
   return (
     // hidden = transparent and untouchable, never unmounted
@@ -658,7 +657,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
               </View>
             </Pressable>
             <Pressable onPress={enter} style={[s.enter, here && s.enterHere]}>
-              <Text style={[s.enterTxt, here && s.enterTxtHere]}>{here ? 'Camp here' : visited ? 'Return to ecoregion' : 'Explore ecoregion'}</Text>
+              <Text style={[s.enterTxt, here && s.enterTxtHere]}>{/* always "Camp here" (user, 2026-11-16; was Stay in / Return to / Explore ecoregion) */}Camp here</Text>
             </Pressable>
           </>
         ) : (
