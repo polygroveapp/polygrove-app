@@ -100,7 +100,7 @@ export default function SolarPicker({ visible, owned, onClose }: { visible: bool
             <Pressable key={c.id} onPress={() => go(i)} hitSlop={4} style={[s.dot, i === idx && { width: 16, backgroundColor: c.provenance?.feeding?.confidence === 'inferred' ? '#c084fc' : TROPHIC_COLOR[c.trophic] || '#81C784' }]} />
           ))}
         </View>
-        <GestureDetector gesture={pan}>
+        <GestureDetector gesture={pan} touchAction="pan-y">
           <Animated.View style={{ height: cardSize.height, alignItems: 'center' }}>
             {cards.map((c, i) => <Slot key={c.id} i={i} pos={pos} step={step} active={i === idx} size={cardSize} deal={deal} drop={DROP}><PolygroveCard card={c} /></Slot>)}
           </Animated.View>

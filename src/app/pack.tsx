@@ -368,7 +368,7 @@ function SwipeSlot({ children, top, onFling, canSkip, auto }: {
   // NOTE: s.overlay carries explicit top/left/right/bottom — absolute children
   // WITHOUT offsets keep their flow position on iOS (user's phone, 2026-09-25)
   return (
-    <GestureDetector gesture={pan}>
+    <GestureDetector gesture={pan} touchAction="pan-y">
       <Animated.View style={[s.overlay, style]} pointerEvents={top ? 'auto' : 'none'}>
         {children}
       </Animated.View>

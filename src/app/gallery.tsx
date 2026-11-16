@@ -103,7 +103,7 @@ export default function Gallery() {
         </View>
         {/* the demo's Quiz pill under the card: THE way into the quiz (user,
             2026-09-26). Green = quiz; gold "Practice" once a card is mastered. */}
-        <GestureDetector gesture={pan}>
+        <GestureDetector gesture={pan} touchAction="pan-y">
           <Animated.View style={[{ height: cardSize.height, alignItems: 'center' }, dragStyle]}>
             {cards.map((c, i) => {
               const diff = i - idx;

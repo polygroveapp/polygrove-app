@@ -45,10 +45,12 @@ export default function EcoHero({ eco }: { eco: CurrentEco }) {
         {/* ALWAYS LOADED (user, 2026-09-29): the first visit draws the map in
             a WebView, which hands back a picture of itself; from then on the
             picture shows at once — no page, no network */}
+        {/* the map picture opens the MAP (user, 2026-11-16: tapping it opened Wikipedia) */}
+        <Pressable onPress={() => router.push('/map')} accessibilityRole="link" accessibilityLabel="Open the map" style={s.mapTap}>
         {snap ? (
-          <Image source={{ uri: snap }} style={[s.pane, s.map]} contentFit="cover" />
+          <Image source={{ uri: snap }} style={[s.pane, s.map, s.inTap]} contentFit="cover" />
         ) : mapOk && (
-          <View style={[s.pane, s.map]} pointerEvents="none">
+          <View style={[s.pane, s.map, s.inTap]} pointerEvents="none">
             <WebView key={eco.eid} source={{ uri: `${MINI_URL}${eco.eid}&v=${MINI_VERSION}` }} cacheEnabled={false} style={s.web} onError={() => setMapOk(false)}
               onMessage={e => {
                 try {
@@ -59,6 +61,7 @@ export default function EcoHero({ eco }: { eco: CurrentEco }) {
               scrollEnabled={false} bounces={false} javaScriptEnabled scalesPageToFit={false} originWhitelist={['https://*']} />
           </View>
         )}
+        </Pressable>
         {meta.photo ? (
           <Image source={{ uri: meta.photo.thumb }} style={[s.pane, s.photo]} contentFit="cover" transition={250} cachePolicy="disk" />
         ) : (
@@ -86,6 +89,9 @@ const s = StyleSheet.create({
   photo: { borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   map: { backgroundColor: '#0d0d0d', borderWidth: 1, borderColor: 'rgba(129,199,132,0.25)' },
   web: { flex: 1, backgroundColor: '#0d0d0d' },
+  // the tap target takes the map's half of the row; the map inside keeps its own height
+  mapTap: { flex: 1 },
+  inTap: { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' },
   center: { alignItems: 'center', justifyContent: 'center' },
   noPhoto: { fontSize: 30 },
   lead: { fontFamily: F.sans, fontSize: 12.5, color: '#c9c4b8', lineHeight: 17.5, paddingHorizontal: 2 },

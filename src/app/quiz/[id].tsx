@@ -296,7 +296,7 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
             style={[s.pickDot, i === idx && { width: 16, backgroundColor: verdict(c.key) ?? '#FFD700' }]} />
         ))}
       </View>
-      <GestureDetector gesture={pan}>
+      <GestureDetector gesture={pan} touchAction="pan-y">
         <Animated.View style={[{ height: cardSize.height, alignItems: 'center' }, dragStyle]}>
           {q.cards.map((c, i) => {
             const v = verdict(c.key);

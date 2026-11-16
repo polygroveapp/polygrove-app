@@ -70,7 +70,7 @@ export function ShownCard({ cells, picked, onPick }: { cells: Comb[]; picked: st
   for (let i = lo; i <= hi; i++) slots.push(<Slot key={cells[i].key} i={i} pos={pos} step={step} active={i === idx} size={cardSize}>{cells[i].card?.()}</Slot>);
   return (
     <View style={s.cardWrap}>
-      <GestureDetector gesture={pan}>
+      <GestureDetector gesture={pan} touchAction="pan-y">
         <Animated.View style={[cardSize, { overflow: 'visible' }]}>{slots}</Animated.View>
       </GestureDetector>
     </View>
