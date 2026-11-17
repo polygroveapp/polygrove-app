@@ -34,6 +34,7 @@ import { fieldNote } from '../lib/dossier';
 import { SOLAR_PACK_COST, canAffordSolar, loadSol, spendSol } from '../lib/sol';
 import { loadTips, markTip, queuePacksPopup, tipSeen } from '../lib/tips';
 import { campSpot, currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
+import { getPinDraw } from '../lib/mapLook';
 import { pinRanking } from '../lib/nearby';
 import { getPin } from '../lib/pin';
 import {
@@ -117,7 +118,8 @@ export default function PackOpening() {
       // camp's deck, weighted by what is recorded around the spot where you camped
       const eco = camp;
       setEid(eco.eid);
-      const spot = campSpot(camp, getPin());
+      // the map's pin tile can switch the pin's pull off: then it is the ecoregion's deck, evenly (user, 2026-11-16)
+      const spot = getPinDraw() ? campSpot(camp, getPin()) : null;
       // 5 keeps + up to 3 skip spares. Around the pin is a LIVE draw; with no signal (or no
       // spot) the pack comes from the offline queue, dealt from the camp's deck, as before
       let p: Stashed[] | null = null;
