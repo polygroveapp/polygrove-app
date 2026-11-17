@@ -6,9 +6,8 @@
 //  · Take Practice Quiz 📖 — a card you have not journaled, one already mastered,
 //    or anywhere the quiz is practice by design (PolygroveDB). Practice earns no
 //    Sol and moves no mastery: the quiz page runs it with `practice=1`.
-// THE CARD'S NAME IS IN THE WORDING (user, 2026-11-16: "Take Red-tailed Hawk Solar Quiz");
-// a long name wraps onto a second line rather than being cut, and the emoji is tied to
-// "Quiz" with a no-break space so it never sits alone on that line.
+// (the card's name was in the wording for an hour on 2026-11-16 — "Take Red-tailed Hawk
+// Solar Quiz" — and the user took it back out: "change it back to take quiz")
 // Solar is GOLD, like the sun and the Solar Pack; practice is GREEN (user, 2026-11-16 —
 // they were the other way round).
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,7 +29,7 @@ export default function QuizButton({ card, practice = false, compact = false, st
   return (
     <Pressable onPress={go} style={[compact ? s.btnCompact : s.btn, style]} accessibilityRole="button">
       <LinearGradient colors={solar ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={compact ? s.gradCompact : s.grad}>
-        <Text style={compact ? s.txtCompact : s.txt} numberOfLines={2}>{solar ? `Take ${card.name} Solar Quiz\u00A0☀️` : `Take ${card.name} Practice Quiz\u00A0📖`}</Text>
+        <Text style={compact ? s.txtCompact : s.txt} numberOfLines={1}>{solar ? 'Take Solar Quiz ☀️' : 'Take Practice Quiz 📖'}</Text>
       </LinearGradient>
     </Pressable>
   );
