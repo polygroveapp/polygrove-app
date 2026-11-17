@@ -84,11 +84,13 @@ export default function FwGraph({ card, viewW, viewH, nodeR, centerR, fontSize, 
         const accent = t ? (TROPHIC_COLOR[t.trophic] || '#8fa08f') : '#8fa08f';
         const nph = t ? photoFor(t.id, 120) : undefined;
         const cid = `${inst}n${i}`;
-        const above = sp.y < cy;
         const lines = fwWrap(sp.name);
         const lh = fontSize + 1, pad = Math.round(nodeR * 0.6);
         const rec = sp.evidence ? `${sp.evidence} records` : '';
-        const sdy = above ? -(nodeR + pad) - (lines.length - 1) * lh - (rec ? lh : 0) : (nodeR + pad + fontSize);
+        // THE NAME IS ALWAYS ABOVE THE HEXAGON and the coloured group word below it (user,
+        // 2026-11-17: "make it so the name is always on top and the color word on bottom"). In the
+        // lower half of the web they used to be the other way round, mirroring the upper half.
+        const sdy = -(nodeR + pad) - (lines.length - 1) * lh - (rec ? lh : 0);
         const hex = nph ? (
           <>
             <Defs><ClipPath id={cid}><Polygon points={hexPts(sp.x, sp.y, nodeR)} /></ClipPath></Defs>
@@ -112,7 +114,7 @@ export default function FwGraph({ card, viewW, viewH, nodeR, centerR, fontSize, 
                   {!!rec && <TSpan x={sp.x} dy={lh} fontSize={fontSize - 3} fill="#5a5a5a" fontWeight="400">{rec}</TSpan>}
                 </SvgText>
                 {!!t && (
-                  <SvgText x={sp.x} y={above ? (sp.y + nodeR + pad + fontSize - 3) : (sp.y - nodeR - pad + 1)}
+                  <SvgText x={sp.x} y={sp.y + nodeR + pad + fontSize - 3}
                     textAnchor="middle" fontSize={fontSize - 2} fill={accent} fontFamily={F.sansBold} fontWeight="700">
                     {t.group}
                   </SvgText>
