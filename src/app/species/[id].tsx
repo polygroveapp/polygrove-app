@@ -8,8 +8,9 @@
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCardSize } from '../../lib/cardSize';
 import BackChevron from '../../components/BackChevron';
 import GreenBackdrop, { GREEN_BG } from '../../components/GreenBackdrop';
 import PolygroveCard from '../../components/PolygroveCard';
@@ -31,7 +32,7 @@ export default function Species() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const win = useWindowDimensions();
+  const cardSize = useCardSize();   // the one card size (lib/cardSize)
   const [ready, setReady] = useState(getCards().length > 0);
   useEffect(() => {
     // a deep link lands here cold: load the catalog ourselves; offline
@@ -82,7 +83,6 @@ export default function Species() {
   const climate = card.climate as Climate | undefined;
   const diet = (card.diet as DietItem[] | undefined) ?? [];
   const prov = card.provenance ?? {};
-  const cardSize = { width: Math.min(win.width - 40, 360), height: Math.min(640, Math.round(win.height * 0.72)) };
   const cur = range && range.length ? range[Math.min(page, range.length - 1)] : null;
   const pct = (pm: number) => (pm >= 10 ? `${(pm / 10).toFixed(0)}%` : '<1%');
 

@@ -10,8 +10,9 @@
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCardSize } from '../lib/cardSize';
 import CloseX from '../components/CloseX';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 import PolygroveCard from '../components/PolygroveCard';
@@ -25,7 +26,6 @@ const listOf = (a: string[]) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).
 export default function Preview() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const win = useWindowDimensions();
   const { kind, key, name: pName, sci: pSci, date: pDate, uri: pUri } = useLocalSearchParams<{ kind?: string; key?: string; name?: string; sci?: string; date?: string; uri?: string }>();
   const st = useSightings();
   const [ready, setReady] = useState(false);
@@ -84,10 +84,7 @@ export default function Preview() {
   const card = found ? real ?? partialCard(found.name, found.sci, found.facts) : null;
   const missing = found && !real ? found.facts?.missing ?? ALL : undefined;
 
-  const cardSize = {
-    width: Math.min(Math.round(win.width * 0.8), 340),
-    height: Math.min(600, win.height - 250 - insets.top - insets.bottom),
-  };
+  const cardSize = useCardSize();   // the one card size (lib/cardSize)
 
   return (
     <View style={[s.root, { paddingTop: insets.top + 54, paddingBottom: insets.bottom + 16 }]}>

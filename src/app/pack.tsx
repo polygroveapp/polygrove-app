@@ -17,7 +17,7 @@
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing, runOnJS, useAnimatedReaction, useAnimatedStyle, useSharedValue, withTiming,
@@ -36,6 +36,7 @@ import { loadTips, markTip, queuePacksPopup, tipSeen } from '../lib/tips';
 import { campSpot, currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
 import { getPinDraw } from '../lib/mapLook';
 import { pinRanking } from '../lib/nearby';
+import { useCardSize } from '../lib/cardSize';
 import { getPin } from '../lib/pin';
 import {
   PACK_SIZE, Stashed, offlineReady, popCards, popPack, releaseStashed, returnCards, snapshotStashed, topUp,
@@ -223,14 +224,10 @@ export default function PackOpening() {
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
   // 100dvh-130px), width min(430,screen)*0.88): window-based, no onLayout —
   // measured-flex sizing kept collapsing on the phone (2026-09-25)
-  const win = useWindowDimensions();
   // the demo's swipe stage: the card is at most 340 wide and as tall as the
   // screen allows (its `calc(100vh - 120px)`), hung from the TOP — 16px under
   // the status bar — with the footer directly beneath it
-  const cardSize = {
-    width: Math.min(win.width - 40, 340),
-    height: win.height - insets.top - insets.bottom - 16 - (daily ? 118 : 62),   // the daily card leaves room for its quiz button and the link under it
-  };
+  const cardSize = useCardSize();   // THE card size (lib/cardSize) — this screen's card is where it comes from
 
   if (noNet) return (
     <View style={[s.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 20 }]}>

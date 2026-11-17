@@ -57,7 +57,7 @@ const FIT_H = 505, FIT_H_DEMO = 545;   // the pack's card (demoFrame) has a bigg
 // the species where there is one, so the card's own picture can't be matched by eye
 // dbPhoto (user, 2026-10-08): the PolygroveDB tab's species page may show an
 // iNaturalist fill-in photo; a card anywhere else never does
-export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, photoFrom, nameAs, demoFrame = false, sighting, missing, dbPhoto = false, secondPhoto = false }:
+export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, photoFrom, nameAs, demoFrame = true, sighting, missing, dbPhoto = false, secondPhoto = false }:
   { card: Card; anonymous?: boolean; noteFrom?: Card; photoFrom?: Card; nameAs?: { name: string; sci: string }; demoFrame?: boolean;
     sighting?: SightingInfo; missing?: FactKey[]; dbPhoto?: boolean; secondPhoto?: boolean }) {
   const lacks = (k: FactKey) => !!missing?.includes(k);

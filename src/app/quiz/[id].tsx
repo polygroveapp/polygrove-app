@@ -15,6 +15,7 @@ import HexPhoto from '../../components/HexPhoto';
 import HexThumb from '../../components/HexThumb';
 import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCardSize } from '../../lib/cardSize';
 import SolarCelebration from '../../components/SolarCelebration';
 import { C, F, MASTERY, getLevel, getTier } from '../../constants/polygrove';
 import { Card, cardById, framingFor, getCards, loadCatalog, optionPhoto, photoForDb } from '../../lib/catalog';
@@ -240,7 +241,7 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
   const pos = useSharedValue(1);
   const start = useSharedValue(1);
   const ty = useSharedValue(0);        // the whole hand of cards, dropping off the bottom
-  const cardSize = { width: Math.min(Math.round(win.width * 0.78), 320), height: Math.min(520, Math.round(win.height * 0.56)) };
+  const cardSize = useCardSize();   // the one card size (lib/cardSize); the page scrolls under it
   const step = cardSize.width + 18;
   const SNAP = { damping: 22, stiffness: 190, mass: 0.7 };
   const go = (i: number) => { const t = Math.max(0, Math.min(n - 1, i)); pos.value = withSpring(t, SNAP); setIdx(t); };

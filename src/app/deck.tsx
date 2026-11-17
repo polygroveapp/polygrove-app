@@ -409,11 +409,13 @@ const s = StyleSheet.create({
   // under the comb: the shown card's way into its quiz (gold 'Practice' once mastered)
   // yellow button, yellow text (user, 2026-10-06); a touch more orange once mastered
   filterBtn: {
-    flex: 1, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,
+    flex: 1, minWidth: 0, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 12,
     borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.04)',
   },
   filterBtnOn: { borderColor: '#555555', backgroundColor: 'rgba(255,255,255,0.08)' },
-  starBtn: { flex: 0, width: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 0 },
+  // a fixed 52 that never shrinks: with plain `flex: 0` a browser let the three filters take the
+  // whole row and pushed the star off the right edge (user, 2026-11-17: "the star filter is cut off")
+  starBtn: { flexGrow: 0, flexShrink: 0, flexBasis: 52, width: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 0 },
   starBtnTxt: { fontSize: 22, lineHeight: 26, color: '#777' },
   filterTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   filterLabel: { fontFamily: F.sansBold, fontSize: 8.5, color: '#666', textTransform: 'uppercase', letterSpacing: 1 },

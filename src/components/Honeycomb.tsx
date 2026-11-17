@@ -14,6 +14,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, w
 import { F } from '../constants/polygrove';
 import { Frame } from '../lib/catalog';
 import HexThumb from './HexThumb';
+import { useCardSize } from '../lib/cardSize';
 import { FlatCard } from './PolygroveCard';
 
 export type Comb = {
@@ -45,7 +46,7 @@ const PITCH = H * 0.75 + GAP / 2, STEP = W + GAP;
 export function ShownCard({ cells, picked, onPick }: { cells: Comb[]; picked: string | null; onPick: (key: string | null) => void }) {
   const win = useWindowDimensions();
   const idx = cells.findIndex(c => c.key === picked);
-  const cardSize = { width: Math.min(win.width - 48, 340), height: Math.min(530, Math.round(win.height * 0.61)) };
+  const cardSize = useCardSize();   // the one card size (lib/cardSize)
   const GAP = 18;
   const step = cardSize.width + GAP;
   const side = Math.max(0, (win.width - cardSize.width) / 2);   // room either side, so the first and last card can sit in the middle
