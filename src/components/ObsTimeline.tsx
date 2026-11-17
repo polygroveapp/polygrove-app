@@ -30,34 +30,47 @@ export function hasTimeline(marks: Mark[]): boolean {
   return ms.length > 1 && ms.some(v => v !== ms[0]);
 }
 
-// THE PACE OF A PLAY, SET BY HOW MANY SIGHTINGS THERE ARE (user, 2026-11-17: "make the speed
-// proportional to the number of observations. like the current one i have is like 1500
-// observations"). Up to 200 sightings the play takes its time: a month a second at the
-// slowest, and a full 2.6 s flight between far-apart sightings. Past that everything
-// quickens in proportion — 1,500 sightings run about seven times faster — down to a floor
-// that still reads as movement. `flyMs` goes to the map with each date.
-export function playPace(marks: Mark[]): { every: number; inc: number; flyMs: number } {
-  const ms = monthsOf(marks);
-  if (!ms.length) return { every: 400, inc: 1, flyMs: 2600 };
-  let min = ms[0], max = ms[0];
-  for (const v of ms) { if (v < min) min = v; if (v > max) max = v; }
-  const months = max - min + 1;
-  const f = Math.max(0.15, Math.min(1, 200 / ms.length));
-  return {
-    every: Math.max(120, Math.round(Math.max(200, Math.min(1000, 24000 / months)) * f)),
-    inc: Math.max(1, Math.ceil(months / 120)),
-    flyMs: Math.max(500, Math.round(2600 * f)),
-  };
+// how long a flight between two far-apart sightings may take during a play, in ms (the map
+// glides between near ones much faster); sent to the map with every step
+export const PLAY_FLY_MS = 1800;
+// the pause on each sighting once the map is there, before the next one
+const PLAY_DWELL_MS = 260;
+
+// the sightings a play visits, in the order they were made: by date, then by iNaturalist id
+// (ids are handed out as observations are uploaded, so within a day this is the order you
+// added them).
+// ONLY THE ONES THAT ARE CARDS (user, 2026-11-17: "only highlight the observations that have
+// been confirmed by iNaturalist … and are a card"): a mark's third number is 1 for a sighting
+// the community has confirmed AND that is a card in your journal, 0 for one still waiting,
+// 2 for one confirmed with no card. The others still appear on the map as their day comes;
+// the map just does not stop on them.
+type Step = { date: string; id: number; month: number };
+function stepsOf(marks: Mark[]): Step[] {
+  const out: Step[] = [];
+  for (const m of marks) {
+    const d = m[6];
+    if (!d || d.length < 7 || (m[2] ?? 1) !== 1) continue;
+    const y = +d.slice(0, 4), mo = +d.slice(5, 7);
+    if (!(y > 1900 && mo >= 1 && mo <= 12)) continue;
+    out.push({ date: d, id: Number(m[3]) || 0, month: y * 12 + mo - 1 });
+  }
+  return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
 }
 
 // PLAYING (user, 2026-11-17: "a play pause button … it should follow the journey of the x's
-// as you made them"): while `playing`, the thumb walks forward through the months on its own
-// and the map shows each sighting as its month arrives — from an empty map, if the thumb was
-// resting at the end. It stops at the latest month (onPlayEnd), or when you take hold of the bar.
-// hold: the play stands still while this is true (the map is still flying to the sighting
-// the last step revealed) and walks on when it clears.
+// as you made them"), ONE SIGHTING AT A TIME (same day: "it's going way too fast, you should
+// be able to follow every single observation when pressing play"). While `playing`, the
+// sightings appear one by one in the order they were made — from an empty map, if the thumb
+// was resting at the end — and the map goes to each: a glide to one nearby, a flight to one
+// far off, then a short rest on it. The thumb keeps pace by month. However many sightings
+// there are, none is skipped; an account with 1,500 takes a quarter of an hour, and pausing
+// or dragging the bar is how you jump. It stops after the last one (onPlayEnd), or when you
+// take hold of the bar.
+// hold: the map is still on its way to the sighting just revealed; the next one waits.
+// onUntil(date, id): the cut the map draws to. A drag gives only a date (the end of a month);
+// a play step also gives the sighting's id, so the sightings of one day still come singly.
 export default function ObsTimeline({ marks, onUntil, playing = false, hold = false, onPlayEnd }: {
-  marks: Mark[]; onUntil: (date: string | null) => void; playing?: boolean; hold?: boolean; onPlayEnd?: () => void;
+  marks: Mark[]; onUntil: (date: string | null, id?: number | null) => void; playing?: boolean; hold?: boolean; onPlayEnd?: () => void;
 }) {
   // the span the dated sightings cover
   const t = useMemo(() => {
@@ -96,27 +109,43 @@ export default function ObsTimeline({ marks, onUntil, playing = false, hold = fa
     show(m >= s.max ? null : m);
   };
 
-  // the walk, at playPace's tempo: about twenty-four seconds of steps end to end for a small
-  // account (user, 2026-11-17: "have it go slower"; it took eight), quicker in proportion for
-  // a big one, plus however long the map's flights between sightings take
+  // the walk
   const atRef = useRef<number | null>(null);
   const endRef = useRef(onPlayEnd);
   useEffect(() => { endRef.current = onPlayEnd; }, [onPlayEnd]);
-  const marksRef = useRef(marks);
-  useEffect(() => { marksRef.current = marks; }, [marks]);
   const holdRef = useRef(hold);
   useEffect(() => { holdRef.current = hold; }, [hold]);
+  const steps = useMemo(() => stepsOf(marks), [marks]);
+  const stepsRef = useRef(steps);
+  useEffect(() => { stepsRef.current = steps; }, [steps]);
+  const kRef = useRef(-1);          // the sighting the play is on; -1 = none yet
   useEffect(() => {
     if (!playing) return;
-    const s = span.current; if (!s) { endRef.current?.(); return; }
-    const { every, inc } = playPace(marksRef.current);
-    // from the end (or before the start) it begins again on an empty map
-    if (atRef.current == null || atRef.current >= s.max) show(s.min - 1);
+    const s = span.current, all = stepsRef.current;
+    if (!s || !all.length) { endRef.current?.(); return; }
+    // where to begin: from the end (or before the start) on an empty map; after a pause, where
+    // it stopped; after a drag, at the last sighting of the month the thumb was left on
+    const cur = atRef.current;
+    if (cur == null || cur >= s.max) { kRef.current = -1; show(s.min - 1); }
+    else if (!(kRef.current >= 0 && all[kRef.current]?.month === cur)) {
+      let k = -1;
+      for (let i = 0; i < all.length && all[i].month <= cur; i++) k = i;
+      kRef.current = k;
+    }
+    let nextAt = Date.now() + 400, waiting = false;
     const id = setInterval(() => {
-      const sp = span.current; if (!sp || holdRef.current) return;   // the map is mid-flight: wait for it
-      const next = (atRef.current ?? sp.min - 1) + inc;
-      if (next >= sp.max) { show(null); clearInterval(id); endRef.current?.(); } else show(next);
-    }, every);
+      const list = stepsRef.current;
+      if (holdRef.current) { waiting = true; return; }                        // the map is on its way: wait for it
+      if (waiting) { waiting = false; nextAt = Date.now() + PLAY_DWELL_MS; }   // it has arrived: rest a moment
+      if (Date.now() < nextAt) return;
+      const k = kRef.current + 1;
+      if (k >= list.length) { kRef.current = -1; show(null); clearInterval(id); endRef.current?.(); return; }
+      kRef.current = k;
+      const st = list[k];
+      setAt(st.month); atRef.current = st.month; sent.current = st.month;
+      onUntil(st.date, st.id);
+      nextAt = Date.now() + PLAY_DWELL_MS;   // if the map need not move, this is all the wait there is
+    }, 60);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing]);

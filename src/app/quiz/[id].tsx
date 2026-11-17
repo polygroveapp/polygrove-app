@@ -71,11 +71,18 @@ function QuizBody({ card, back, insets, practice }: { card: Card; back: () => vo
   const [progress, setProgress] = useState<number | null>(null);
   const [round, setRound] = useState(0);
   const officialLevel = progress !== null && (effCounts[progress] || 0) < LOCK_THRESHOLD ? progress : nextUnlocked(effCounts, 0);
-  const level = locked ? practiceLevel : officialLevel;
+  const [result, setResult] = useState<{ right: boolean; sol: number; at: number; leveledTo?: string; solar?: boolean } | null>(null);
+  // THE QUESTION ON SCREEN STAYS PUT WHILE ITS RESULT SHOWS (user, 2026-11-17: "if you get a
+  // question wrong on the quiz the next time you go through it it highlights the answer").
+  // A right answer that LOCKED its question changed `officialLevel` at once — to the next
+  // unlocked question, often the one just missed — while the "right" result was still up
+  // for its 0.7 s. That question was drawn as already answered correctly, its true option
+  // green, before you had touched it. The result now remembers which question it belongs to
+  // (`at`), and that question is the one shown until next() clears it.
+  const level = result ? result.at : locked ? practiceLevel : officialLevel;
   const q = qs[level];
   const score = scoreOf(sid);
   const tier = getTier(score);
-  const [result, setResult] = useState<{ right: boolean; sol: number; leveledTo?: string; solar?: boolean } | null>(null);
   const [celebrate, setCelebrate] = useState(false);
   // the demo's solFlash: "+N Sol 🔆" top-right of the card header, 1.5s
   const [solFlash, setSolFlash] = useState<{ amount: number; id: number } | null>(null);
@@ -103,13 +110,13 @@ function QuizBody({ card, back, insets, practice }: { card: Card; back: () => vo
     // For the pick, PickCards runs the shuffle itself (cards drop off the
     // bottom, reorder, rise back) — the parent only re-rolls the seed once
     // they're out of sight; it never remounts the component mid-animation.
-    if (!right) { if (q?.type !== 'pick') setResult({ right: false, sol: 0 }); return; }
-    if (locked) { if (!isLast) setResult({ right: true, sol: 0 }); advance(); return; }   // practice — no level change
+    if (!right) { if (q?.type !== 'pick') setResult({ right: false, sol: 0, at: level }); return; }
+    if (locked) { if (!isLast) setResult({ right: true, sol: 0, at: level }); advance(); return; }   // practice — no level change
     const adv = recordCorrect(sid, level);
     if (adv.sol > 0) { earnSol(adv.sol); setSolFlash({ amount: adv.sol, id: Date.now() }); }
     const leveledTo = adv.newScore > adv.prevScore ? getTier(adv.newScore).label : undefined;
-    if (adv.firstSolar) { setResult({ right: true, sol: adv.sol, leveledTo, solar: true }); setCelebrate(true); return; }
-    if (!isLast) setResult({ right: true, sol: adv.sol, leveledTo });
+    if (adv.firstSolar) { setResult({ right: true, sol: adv.sol, at: level, leveledTo, solar: true }); setCelebrate(true); return; }
+    if (!isLast) setResult({ right: true, sol: adv.sol, at: level, leveledTo });
     advance();
   };
 

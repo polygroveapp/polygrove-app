@@ -26,14 +26,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { openWeb } from '../lib/web';
 import { setBorders, setEarthColours, setPinDraw, setShowObs, useBorders, useEarthColours, usePinDraw, useShowObs } from '../lib/mapLook';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOutDown, FadeOutUp, withTiming, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebFrame as WebView, type FrameMessage, type WebFrameRef } from './WebFrame';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
-import ObsTimeline, { hasTimeline, playPace } from './ObsTimeline';
+import ObsTimeline, { hasTimeline, PLAY_FLY_MS } from './ObsTimeline';
 import { BTN_BG, BTN_BORDER, C, F, getLevel, MASTERY } from '../constants/polygrove';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import { loadSightings, niceDate, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
@@ -238,7 +238,14 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // page whenever they change; and when the map comes forward with an old
   // check (or none), your sightings are looked up again
   const run = useSightingsRun();
-  const marks = sightings.marks, meId = sightings.me?.id, checkedAt = sightings.checkedAt;
+  // ONLY THE YELLOW ✕s (user, 2026-11-17: "only highlight the observations that have been
+  // confirmed by iNaturalist … and are a card … and remove the grey and green x's otherwise
+  // from the screen"): a mark's third number is 1 for a sighting the community has confirmed
+  // and that is a card in your journal, 0 for one still waiting (it was drawn green), 2 for
+  // one confirmed with no card (grey). Only the 1s reach the map, its timeline and its play.
+  const allMarks = sightings.marks;
+  const marks = useMemo(() => allMarks.filter(m => (m[2] ?? 1) === 1), [allMarks]);
+  const meId = sightings.me?.id, checkedAt = sightings.checkedAt;
   // THE MARKS GO OVER ONCE, NOT ONCE PER PAGE (2026-10-06: the phone locked up
   // — a full check saves after every page, each save was a new array, and
   // each array re-sent 12,000 ✕s through the bridge and rebuilt the layer).
@@ -381,6 +388,8 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // the timeline's cut (user, 2026-10-07): only sightings up to this date are on the map; null = all.
   // With the ✕s switched off the timeline is gone, and so is its cut.
   const [until, setUntil] = useState<string | null>(null);
+  // a play step also names the sighting it has reached, so the sightings of one day appear one at a time
+  const [untilId, setUntilId] = useState<number | null>(null);
   // THE BAR TAKES THE ROW (user, 2026-11-17): while the ✕s are on and there is a timeline,
   // − and + step up out of the row to sit just above the bar's right end, the bar runs to
   // the right edge, and a play button sits between the fold-out tile and the bar. Switching
@@ -422,12 +431,12 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // began when the timeline is back at its end (user, 2026-11-17: "have the map follow the
   // x's … wherever it is on the timeline zoom to it")
   useEffect(() => {
-    // the third number is how long a flight may take: the play's own pace while playing
-    // (quicker for an account with many sightings), the page's default when dragged by hand
-    const flyMs = playing ? playPace(marks).flyMs : 0;
-    if (pageReady) web.current?.injectJavaScript(`window.polygroveMarksUntil && window.polygroveMarksUntil(${showObs && until ? JSON.stringify(until) : 'null'}, true, ${flyMs}); true;`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `playing` and `marks` are read at send time; a change in them alone must not resend the date
-  }, [pageReady, until, showObs]);
+    // the third number is how long a flight may take (the play's, or the page's own when dragged
+    // by hand); the fourth is the sighting a play step has reached
+    const on = showObs && until;
+    if (pageReady) web.current?.injectJavaScript(`window.polygroveMarksUntil && window.polygroveMarksUntil(${on ? JSON.stringify(until) : 'null'}, true, ${playing ? PLAY_FLY_MS : 0}, ${on && untilId != null ? untilId : 'null'}); true;`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `playing` is read at send time; a change in it alone must not resend the date
+  }, [pageReady, until, untilId, showObs]);
   // the title fades out while a sighting's strip is up and back in when it goes (user, 2026-10-07)
   const stripOn = showObs && under.length > 0;
   // the fade keeps step with the strip's own animation: 160 ms in, 240 ms out.
@@ -582,7 +591,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
           when the ✕s are switched on and folds back into it when they go off */}
       {pageReady && showObs && (
         <Animated.View entering={timelineIn} exiting={timelineOut} style={[s.timeline, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
-          <ObsTimeline marks={marks} onUntil={setUntil} playing={playing} hold={flying} onPlayEnd={() => setPlaying(false)} />
+          <ObsTimeline marks={marks} onUntil={(d, id) => { setUntil(d); setUntilId(id ?? null); }} playing={playing} hold={flying} onPlayEnd={() => setPlaying(false)} />
         </Animated.View>
       )}
       {/* THE ✕ TILE, ALWAYS OUT, right of the fold-out tile (user, 2026-11-17: "have the x button be
