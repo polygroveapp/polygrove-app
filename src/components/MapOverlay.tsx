@@ -529,8 +529,8 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
 
       {/* MAP CONTROLS (user, 2026-10-07): + in the bottom-right corner, − to its
           left, always there. In the bottom-LEFT corner, map preferences: open,
-          three tiles rise above it — sightings ✕ on/off,
-          ecoregion borders, earth colours ⇄ grey/black. (Zoom came 2026-09-28; the compass came
+          three tiles rise above it — ecoregion borders,
+          earth colours ⇄ grey/black, sightings ✕ on/off at the bottom. (Zoom came 2026-09-28; the compass came
           and went 2026-09-29.) */}
       {pageReady && (
         <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
@@ -552,9 +552,6 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
               {/* (a "packs around the pin" tile stood here 2026-10-08 → 2026-11-16: it is always on now) */}
-              <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
-                <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
-              </GlassTile>
               <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
                 <Svg width={24} height={24} viewBox="0 0 24 24">
                   <Path d={ECOBLOB} fill={borders ? 'rgba(129,199,132,0.22)' : 'rgba(255,255,255,0.1)'} stroke={borders ? C.greenSoft : 'rgba(255,255,255,0.85)'}
@@ -565,6 +562,10 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                 <Svg width={22} height={28} viewBox="0 0 24 32">
                   <Path d={AMERICAS} fill={earth ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={earth ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
                 </Svg>
+              </GlassTile>
+              {/* the ✕ is the lowest of the three, next to the timeline it switches (user, 2026-11-16: "make the x be the bottom button") */}
+              <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
+                <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
               </GlassTile>
             </Animated.View>
           )}
