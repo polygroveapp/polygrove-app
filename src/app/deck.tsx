@@ -251,13 +251,13 @@ export default function FieldNotes() {
       renderItem={({ item }) => (view === 'hex' ? (
         <View>
           {/* TOP TO BOTTOM (user, 2026-11-16): the filters right under "Field Notes", the
-              Hexes/List switch with the quiz button to its right, the card, the hexagons. (The
+              quiz button with the Hexes/List switch to its right (swapped the same day), the card, the hexagons. (The
               button and the filters sat under the card from 2026-10-11.) A mastered card's
               button reads Practice. */}
           {filterBar}
           <View style={[s.topRow, { paddingTop: 12 }]}>
-            <ViewToggle mode={view} onChange={setView} />
             {shownCard ? <QuizButton card={shownCard} compact style={s.topQuiz} /> : null}
+            <ViewToggle mode={view} onChange={setView} />
           </View>
           <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
             {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
