@@ -74,8 +74,9 @@ export default function ObsTimeline({ marks, onUntil, playing = false, onPlayEnd
     show(m >= s.max ? null : m);
   };
 
-  // the walk: about eight seconds end to end however long the span, never faster than a
-  // month every 80 ms nor slower than one every 400 ms
+  // the walk: about twenty-four seconds end to end however long the span, never faster than
+  // a month every 200 ms nor slower than one a second — slow enough for the map to reach
+  // each sighting and rest on it (user, 2026-11-17: "have it go slower"; it took eight seconds)
   const atRef = useRef<number | null>(null);
   const endRef = useRef(onPlayEnd);
   useEffect(() => { endRef.current = onPlayEnd; }, [onPlayEnd]);
@@ -83,8 +84,8 @@ export default function ObsTimeline({ marks, onUntil, playing = false, onPlayEnd
     if (!playing) return;
     const s = span.current; if (!s) { endRef.current?.(); return; }
     const months = s.max - s.min + 1;
-    const every = Math.max(80, Math.min(400, Math.round(8000 / months)));
-    const inc = Math.max(1, Math.ceil(months / 100));
+    const every = Math.max(200, Math.min(1000, Math.round(24000 / months)));
+    const inc = Math.max(1, Math.ceil(months / 120));
     // from the end (or before the start) it begins again on an empty map
     if (atRef.current == null || atRef.current >= s.max) show(s.min - 1);
     const id = setInterval(() => {

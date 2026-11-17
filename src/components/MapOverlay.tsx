@@ -373,17 +373,17 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // the timeline's cut (user, 2026-10-07): only sightings up to this date are on the map; null = all.
   // With the ✕s switched off the timeline is gone, and so is its cut.
   const [until, setUntil] = useState<string | null>(null);
-  // THE BAR TAKES THE ROW (user, 2026-11-17: "make it so the plus and minus go away off the
-  // right side as the bar folds out and a play pause button in between the bar and the
-  // fold up left thing"): while the ✕s are on and there is a timeline, − and + slide off the
-  // right edge, the bar runs to that edge, and a play button sits between the fold-out tile
-  // and the bar. Zoom by pinching meanwhile; switching the ✕s off brings − and + back.
+  // THE BAR TAKES THE ROW (user, 2026-11-17): while the ✕s are on and there is a timeline,
+  // − and + step up out of the row to sit just above the bar's right end, the bar runs to
+  // the right edge, and a play button sits between the fold-out tile and the bar. Switching
+  // the ✕s off brings − and + back down.
   const timelineOn = showObs && hasTimeline(marks);
   const [playWanted, setPlaying] = useState(false);
   const playing = playWanted && timelineOn;   // switching the ✕s off stops it (the ✕ tile also clears the wish)
   const zoomAway = useSharedValue(0);
   useEffect(() => { zoomAway.value = withTiming(timelineOn ? 1 : 0, { duration: 260 }); }, [timelineOn, zoomAway]);
-  const zoomStyle = useAnimatedStyle(() => ({ opacity: 1 - zoomAway.value, transform: [{ translateX: 130 * zoomAway.value }] }));
+  // − and + (and, on the left, the fold-out and ✕ tiles) RISE ABOVE THE BAR (user, 2026-11-17: "put the plus and minus above the bar instead of off the screen"; for an hour they slid off the right edge)
+  const zoomStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -(42 + 8) * zoomAway.value }] }));
   // the timeline unrolls from its left edge, where the fold-out tile is: scaled
   // from nothing, and slid left by half of what is missing so that edge stays put
   const timelineIn = (v: { targetWidth: number }) => {
@@ -550,7 +550,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
           earth colours ⇄ grey/black, sightings ✕ on/off at the bottom. (Zoom came 2026-09-28; the compass came
           and went 2026-09-29.) */}
       {pageReady && (
-        <Animated.View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }, zoomStyle]} pointerEvents={timelineOn ? 'none' : 'box-none'}>
+        <Animated.View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }, zoomStyle]} pointerEvents="box-none">
           <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
           <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
         </Animated.View>
@@ -564,7 +564,17 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
           <ObsTimeline marks={marks} onUntil={setUntil} playing={playing} onPlayEnd={() => setPlaying(false)} />
         </Animated.View>
       )}
-      {/* play / pause, between the fold-out tile and the bar: the ✕s appear in the order you made them */}
+      {/* THE ✕ TILE, ALWAYS OUT, right of the fold-out tile (user, 2026-11-17: "have the x button be
+          to the right of the fold out button instead of inside the fold"): one tap shows or hides
+          your sightings and their timeline, with no menu to open first */}
+      {pageReady && (
+        <Animated.View style={[s.obsTile, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }, zoomStyle]} pointerEvents="box-none">
+          <GlassTile on={showObs} onPress={() => { setPlaying(false); setShowObs(!showObs); }} label={showObs ? 'Hide observations' : 'Show observations'}>
+            <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
+          </GlassTile>
+        </Animated.View>
+      )}
+      {/* play / pause, between the ✕ tile and the bar: the ✕s appear in the order you made them */}
       {pageReady && timelineOn && (
         <Animated.View entering={FadeIn.duration(220)} exiting={FadeOutDown.duration(140)} style={[s.play, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           <GlassTile on={false} onPress={() => setPlaying(p => !p)} label={playing ? 'Pause the timeline' : 'Play your sightings in the order you made them'}>
@@ -577,7 +587,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         </Animated.View>
       )}
       {pageReady && (
-        <View style={[s.prefs, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
+        <Animated.View style={[s.prefs, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }, zoomStyle]} pointerEvents="box-none">
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
               {/* DOES THE PIN'S SPOT MATTER, top of the list (user, 2026-11-16: "put the pin button on
@@ -605,10 +615,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                   <Path d={AMERICAS} fill={earth ? 'rgba(129,199,132,0.28)' : 'rgba(255,255,255,0.16)'} stroke={earth ? C.greenSoft : 'rgba(255,255,255,0.85)'} strokeWidth={1.1} strokeLinejoin="round" strokeLinecap="round" />
                 </Svg>
               </GlassTile>
-              {/* the ✕ is the lowest of the three, next to the timeline it switches (user, 2026-11-16: "make the x be the bottom button") */}
-              <GlassTile on={showObs} onPress={() => { setPlaying(false); setShowObs(!showObs); }} label={showObs ? 'Hide observations' : 'Show observations'}>
-                <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
-              </GlassTile>
+              {/* (the ✕ tile was the lowest one in here until 2026-11-17; it now stands outside the fold, right of the fold-out tile) */}
             </Animated.View>
           )}
           {/* stays white and unlit when open (user, 2026-10-07: "have this not change to green when it's selected") */}
@@ -618,7 +625,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
               <Path d="M4.5 12.5 L12 16.7 L19.5 12.5 M4.5 16 L12 20.2 L19.5 16" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" />
             </Svg>
           </GlassTile>
-        </View>
+        </Animated.View>
       )}
 
 
@@ -739,10 +746,15 @@ const s = StyleSheet.create({
   zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row', alignItems: 'center' },
   prefs: { position: 'absolute', left: 14, gap: 8, alignItems: 'center' },
   // from the play tile to the right edge (it stopped short of − and + until 2026-11-17, when they began to step aside)
-  timeline: { position: 'absolute', left: 14 + 42 + 8 + 42 + 10, right: 14 },
-  play: { position: 'absolute', left: 14 + 42 + 8 },
+  // the bottom row is the fold-out tile and the ✕ tile on the left, − and + on the right.
+  // When the timeline is out, all four step up one row (zoomStyle) and the row below is
+  // the play tile and the bar, edge to edge (user, 2026-11-17: "move those two buttons above
+  // the bar as well like the plus and minus")
+  timeline: { position: 'absolute', left: 14 + 42 + 10, right: 14 },
+  obsTile: { position: 'absolute', left: 14 + 42 + 8 },
+  play: { position: 'absolute', left: 14 },
   zoomCol: { gap: 8, alignItems: 'center' },
-  obsX: { fontFamily: F.sansBold, fontSize: 21, color: C.yellow, lineHeight: 25 },   // the marks' yellow (user, 2026-10-07: green for a minute, then "yellow again")
+  obsX: { fontFamily: F.sansBold, fontSize: 19, color: C.yellow, lineHeight: 23 },   // 10% smaller, with the map's marks (user, 2026-11-17; it was 21)   // the marks' yellow (user, 2026-10-07: green for a minute, then "yellow again")
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
   underWrap: { position: 'absolute', left: 14, right: 14, alignItems: 'flex-start' },   // edge to edge, › at the right edge (user, 2026-10-07)
   // 92 = the two control rows (42 + 8 + 42) to its right (user, 2026-10-07)
