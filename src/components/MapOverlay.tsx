@@ -400,8 +400,14 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
       animations: { opacity: withTiming(0, { duration: 200 }), transform: [{ translateX: withTiming(-v.currentWidth / 2 - 26, { duration: 200 }) }, { scaleX: withTiming(0.02, { duration: 200 }) }] },
     };
   };
+  // while the timeline plays, each date goes with follow = true: the map glides to the newest
+  // sighting that step revealed and returns to where it began at the end (user, 2026-11-17:
+  // "have the map follow the x's"). `playing` is read through a ref, so pausing sends nothing
+  // and the map stays put.
+  const playingRef = useRef(false);
+  useEffect(() => { playingRef.current = playing; }, [playing]);
   useEffect(() => {
-    if (pageReady) web.current?.injectJavaScript(`window.polygroveMarksUntil && window.polygroveMarksUntil(${showObs && until ? JSON.stringify(until) : 'null'}); true;`);
+    if (pageReady) web.current?.injectJavaScript(`window.polygroveMarksUntil && window.polygroveMarksUntil(${showObs && until ? JSON.stringify(until) : 'null'}, ${playingRef.current}); true;`);
   }, [pageReady, until, showObs]);
   // the title fades out while a sighting's strip is up and back in when it goes (user, 2026-10-07)
   const stripOn = showObs && under.length > 0;
