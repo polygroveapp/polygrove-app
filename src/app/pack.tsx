@@ -98,6 +98,11 @@ export default function PackOpening() {
   // DAILY DISCOVERY DEALS ONE CARD (user, 2026-11-17: "make it so you … get 1 card at a
   // time"); a Solar Pack is still five. Either way up to SKIPS spares stand behind for passes.
   const need = solar ? PACK_SIZE : 1;
+  // …AND IT IS SIMPLY UNLOCKED (user, 2026-11-17: "for the daily you don't get to pass you
+  // just unlock the card and press ok"): no swiping and no spares — the card goes into the
+  // journal as it is shown, leaves fly, and an OK button takes you back to Camp
+  const daily = !solar;
+  const [okPressed, setOkPressed] = useState(false);
   // every pack pops the queue's front (one code path, photos already on
   // disk); the queue refills its tail in the background
   const [pack, setPack] = useState<Stashed[] | null>(null);
@@ -146,8 +151,8 @@ export default function PackOpening() {
         } catch { setNoNet(true); return; }
       }
       if (!p.length) { setNoNet(true); return; }
-      const spares = near ? [] : popCards(eco.eid, SKIPS);
-      if (spares.length < SKIPS) {
+      const spares = daily || near ? [] : popCards(eco.eid, SKIPS);
+      if (!daily && spares.length < SKIPS) {
         try {
           await loadCatalog();
           const have = new Set([...p, ...spares].map(st => st.card.species_id));
@@ -169,26 +174,26 @@ export default function PackOpening() {
         new Promise(r => setTimeout(r, 1200)),
       ]);
       setPack([...p, ...spares]);
-      if (!tipSeen('swipe')) setTip(true);   // the demo: if (!swipeTipSeen) setShowSwipeTip(true)
+      if (!daily && !tipSeen('swipe')) setTip(true);   // the demo: if (!swipeTipSeen) setShowSwipeTip(true)
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [idx, setIdx] = useState(0);
   const [kept, setKept] = useState(0);
   useEffect(() => {
-    if (!pack || tip || touched || reminded || idx > 0 || kept > 0 || tipSeen('firstPack') || !tipSeen('swipe')) return;
+    if (daily || !pack || tip || touched || reminded || idx > 0 || kept > 0 || tipSeen('firstPack') || !tipSeen('swipe')) return;
     const t = setTimeout(() => { setTip(true); setReminded(true); }, 10000);
     return () => clearTimeout(t);
-  }, [pack, tip, touched, reminded, idx, kept]);
+  }, [daily, pack, tip, touched, reminded, idx, kept]);
   const [skipped, setSkipped] = useState(0);
   const [swiping, setSwiping] = useState(false);   // a card is mid-flight
   // skips available = spares actually dealt (offline may have fewer)
   const maxSkips = pack ? Math.max(0, pack.length - need) : 0;
   const canSkip = skipped < maxSkips;
-  const done = kept >= need;
+  const done = daily ? okPressed : kept >= need;
   // unshown spares go back to the front of the queue
   useEffect(() => {
-    if (done && pack && eid != null && idx < pack.length) returnCards(eid, pack.slice(idx));
+    if (!daily && done && pack && eid != null && idx < pack.length) returnCards(eid, pack.slice(idx));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done]);
   // the fifth card goes home (user, 2026-10-08; from 2026-09-29 it opened a
@@ -196,6 +201,16 @@ export default function PackOpening() {
   // next time Camp comes forward.
   const keptIds = useRef<string[]>([]);
   const [leaves, setLeaves] = useState(0);   // goes up each time a card is journaled: a burst of leaves
+  // the daily card is journaled the moment it is shown
+  const unlocked = useRef(false);
+  useEffect(() => {
+    if (!daily || !pack || !pack.length || unlocked.current) return;
+    unlocked.current = true;
+    addToCollection(eid ?? currentEco()!.eid, pack[0].card);
+    keptIds.current.push(pack[0].card.id);
+    snapshotStashed(pack[0]);   // journal = offline forever
+    setLeaves(n => n + 1);
+  }, [daily, pack, eid]);
   const over = !!pack && (done || idx >= pack.length);
   useEffect(() => {
     if (!over) return;
@@ -204,9 +219,9 @@ export default function PackOpening() {
     // gallery, "Your Pack · 5 journaled", with Take Solar Quiz / Journal, is gone;
     // the cards are in the journal and the Camp page has both buttons)
     // …once the last card's leaves have flown (2026-11-17; it left after 100 ms before)
-    const t = setTimeout(() => router.replace({ pathname: '/', params: { tab: '1' } }), keptIds.current.length ? LEAF_BURST_MS - 250 : 100);
+    const t = setTimeout(() => router.replace({ pathname: '/', params: { tab: '1' } }), !daily && keptIds.current.length ? LEAF_BURST_MS - 250 : 100);
     return () => clearTimeout(t);
-  }, [over, router]);
+  }, [over, router, daily]);
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
   // 100dvh-130px), width min(430,screen)*0.88): window-based, no onLayout —
   // measured-flex sizing kept collapsing on the phone (2026-09-25)
@@ -216,7 +231,7 @@ export default function PackOpening() {
   // the status bar — with the footer directly beneath it
   const cardSize = {
     width: Math.min(win.width - 40, 340),
-    height: win.height - insets.top - insets.bottom - 16 - 62,
+    height: win.height - insets.top - insets.bottom - 16 - (daily ? 92 : 62),   // the daily card leaves room for its OK button
   };
 
   if (noNet) return (
@@ -267,7 +282,13 @@ export default function PackOpening() {
             journaled the next one kept ends the pack, so the spare cards waiting
             behind it are not drawn — swiping it away used to flash a card you were
             never going to get. A skip still brings the next spare up as the top card. */}
-        {(kept >= need - 1 ? pack.slice(idx, idx + 1) : pack.slice(idx)).reverse().map(st => (
+        {daily ? (
+          <View style={s.overlay} pointerEvents="box-none">
+            <View style={cardSize}>
+              <PolygroveCard card={pack[0].card} demoFrame />
+            </View>
+          </View>
+        ) : (kept >= need - 1 ? pack.slice(idx, idx + 1) : pack.slice(idx)).reverse().map(st => (
           <SwipeSlot key={st.card.id} top={st === pack[idx]} onFling={onFling} canSkip={canSkip} auto={auto}>
             <View style={cardSize}>
               <PolygroveCard card={st.card} demoFrame />
@@ -278,6 +299,11 @@ export default function PackOpening() {
 
       {/* footer (user, 2026-09-29): "Pass" (not skip) · SWIPE · journal k/5 — and the
           two sides are buttons: a tap swipes the top card that way */}
+      {daily ? (
+        <Pressable onPress={() => setOkPressed(true)} style={s.okBtn} accessibilityRole="button">
+          <Text style={s.okTxt}>OK</Text>
+        </Pressable>
+      ) : (
       <View style={s.hintRow}>
         <Pressable hitSlop={14} disabled={!canSkip || swiping} onPress={() => swipeFor(-1)}>
           <Text style={[s.hintL, !canSkip && { color: '#3a3a3a' }]}>
@@ -289,6 +315,7 @@ export default function PackOpening() {
           <Text style={s.hintR}>journal {kept}/{need} ▸</Text>
         </Pressable>
       </View>
+      )}
 
       {/* "When Collecting Field Notes" — the demo's swipe tip, word for word */}
       <LeafBurst fire={leaves} />
@@ -409,6 +436,9 @@ const s = StyleSheet.create({
   },
   // the demo's footer: 12px #666 · 10px #555 uppercase, 2px tracking · 12px #4CAF50 600
   hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 4, paddingHorizontal: 20 },
+  // the daily card's one button
+  okBtn: { alignSelf: 'center', width: '100%', maxWidth: 340, marginTop: 12, paddingVertical: 15, borderRadius: 16, backgroundColor: '#2E7D32', alignItems: 'center' },
+  okTxt: { fontFamily: F.display, fontSize: 16, color: C.text },
   hintL: { fontFamily: F.sansMed, fontSize: 12, color: C.text },   // Pass in WHITE (user, 2026-09-29)
   hintC: { fontFamily: F.sansBold, fontSize: 10, color: '#8B5035', textTransform: 'uppercase', letterSpacing: 2, marginTop: 3 },   // SWIPE in the header's BROWN (user, 2026-09-29; grey was tried)
   hintR: { fontFamily: F.sansBold, fontSize: 12, color: C.greenSoft },

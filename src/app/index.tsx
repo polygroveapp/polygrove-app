@@ -183,7 +183,7 @@ export default function Home() {
                 <Text style={s.journalTxt}>Open Journal 📖</Text>
               </LinearGradient>
             </Pressable>
-            <Text style={[s.hint, { marginBottom: 16 }]}>Browse to take quizzes and earn <Text style={{ color: C.gold }}>Sol Points 🔆</Text></Text>
+            <Text style={[s.hint, { marginBottom: 16 }]}>Browse to take <Text style={{ color: C.gold }}>Solar Quizzes</Text> and earn <Text style={{ color: C.gold }}>Sol Points 🔆</Text></Text>
 
 
             {/* the ecoregion: place on the map · photo · first sentence — order is
