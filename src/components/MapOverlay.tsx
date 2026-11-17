@@ -25,7 +25,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { openWeb } from '../lib/web';
-import { setBorders, setEarthColours, setShowObs, useBorders, useEarthColours, useShowObs } from '../lib/mapLook';
+import { setBorders, setEarthColours, setPinDraw, setShowObs, useBorders, useEarthColours, usePinDraw, useShowObs } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOutDown, FadeOutUp, withTiming, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -33,8 +33,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebFrame as WebView, type FrameMessage, type WebFrameRef } from './WebFrame';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
-import ObsTimeline from './ObsTimeline';
-import { C, F, getLevel, MASTERY } from '../constants/polygrove';
+import ObsTimeline, { hasTimeline } from './ObsTimeline';
+import { BTN_BG, BTN_BORDER, C, F, getLevel, MASTERY } from '../constants/polygrove';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import { loadSightings, niceDate, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
 import { getPin, setPin } from '../lib/pin';
@@ -116,6 +116,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // observations") — a remembered preference in the map preferences; an
   // earlier top-bar toggle lived for an hour on 2026-10-06
   const showObs = useShowObs();
+  const pinDraw = usePinDraw();
   useEffect(() => {
     if (pageReady) web.current?.injectJavaScript(`window.polygroveShowMarks && window.polygroveShowMarks(${showObs}); true;`);
   }, [pageReady, showObs]);
@@ -372,6 +373,17 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // the timeline's cut (user, 2026-10-07): only sightings up to this date are on the map; null = all.
   // With the ✕s switched off the timeline is gone, and so is its cut.
   const [until, setUntil] = useState<string | null>(null);
+  // THE BAR TAKES THE ROW (user, 2026-11-17: "make it so the plus and minus go away off the
+  // right side as the bar folds out and a play pause button in between the bar and the
+  // fold up left thing"): while the ✕s are on and there is a timeline, − and + slide off the
+  // right edge, the bar runs to that edge, and a play button sits between the fold-out tile
+  // and the bar. Zoom by pinching meanwhile; switching the ✕s off brings − and + back.
+  const timelineOn = showObs && hasTimeline(marks);
+  const [playWanted, setPlaying] = useState(false);
+  const playing = playWanted && timelineOn;   // switching the ✕s off stops it (the ✕ tile also clears the wish)
+  const zoomAway = useSharedValue(0);
+  useEffect(() => { zoomAway.value = withTiming(timelineOn ? 1 : 0, { duration: 260 }); }, [timelineOn, zoomAway]);
+  const zoomStyle = useAnimatedStyle(() => ({ opacity: 1 - zoomAway.value, transform: [{ translateX: 130 * zoomAway.value }] }));
   // the timeline unrolls from its left edge, where the fold-out tile is: scaled
   // from nothing, and slid left by half of what is missing so that edge stays put
   const timelineIn = (v: { targetWidth: number }) => {
@@ -529,14 +541,14 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
 
       {/* MAP CONTROLS (user, 2026-10-07): + in the bottom-right corner, − to its
           left, always there. In the bottom-LEFT corner, map preferences: open,
-          three tiles rise above it — ecoregion borders,
+          four tiles rise above it — the pin's pull on packs, ecoregion borders,
           earth colours ⇄ grey/black, sightings ✕ on/off at the bottom. (Zoom came 2026-09-28; the compass came
           and went 2026-09-29.) */}
       {pageReady && (
-        <View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
+        <Animated.View style={[s.zoom, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }, zoomStyle]} pointerEvents={timelineOn ? 'none' : 'box-none'}>
           <GlassTile on={false} onPress={() => zoom(-1)} label="Zoom out"><Text style={s.zoomTxt}>−</Text></GlassTile>
           <GlassTile on={false} onPress={() => zoom(1)} label="Zoom in"><Text style={s.zoomTxt}>+</Text></GlassTile>
-        </View>
+        </Animated.View>
       )}
       {/* the sightings' timeline, between the preferences tile and − (user, 2026-10-07) */}
       {/* ALWAYS OUT WHILE THE ✕s ARE ON (user, 2026-10-07 — it was tied to the open
@@ -544,16 +556,39 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
           when the ✕s are switched on and folds back into it when they go off */}
       {pageReady && showObs && (
         <Animated.View entering={timelineIn} exiting={timelineOut} style={[s.timeline, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
-          <ObsTimeline marks={marks} onUntil={setUntil} />
+          <ObsTimeline marks={marks} onUntil={setUntil} playing={playing} onPlayEnd={() => setPlaying(false)} />
+        </Animated.View>
+      )}
+      {/* play / pause, between the fold-out tile and the bar: the ✕s appear in the order you made them */}
+      {pageReady && timelineOn && (
+        <Animated.View entering={FadeIn.duration(220)} exiting={FadeOutDown.duration(140)} style={[s.play, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
+          <GlassTile on={false} onPress={() => setPlaying(p => !p)} label={playing ? 'Pause the timeline' : 'Play your sightings in the order you made them'}>
+            <Svg width={18} height={18} viewBox="0 0 18 18">
+              {playing
+                ? <Path d="M4.2 2.8 h3 v12.4 h-3 Z M10.8 2.8 h3 v12.4 h-3 Z" fill={C.yellow} />
+                : <Path d="M5 2.4 L15 9 L5 15.6 Z" fill={C.yellow} stroke={C.yellow} strokeWidth={1.2} strokeLinejoin="round" />}
+            </Svg>
+          </GlassTile>
         </Animated.View>
       )}
       {pageReady && (
         <View style={[s.prefs, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
-              {/* (a pin tile stood here 2026-10-08 → 11-16 and again 11-16 → 11-17: it switched the pin's
-                  pull on packs on and off. "we need to keep this simple … the pin feature should always
-                  be on" — it is, balanced by group in pack.tsx's drawNear, and there is no switch.) */}
+              {/* DOES THE PIN'S SPOT MATTER, top of the list (user, 2026-11-16: "put the pin button on
+                  the map — toggle whether the location of the pin matters or if it's just the
+                  ecoregion for probability"). Red = packs favour what is recorded closest to the
+                  campsite; grey = the whole ecoregion's deck, evenly. (Here 2026-10-08 → 11-16 too.) */}
+              <GlassTile on={pinDraw} onPress={() => setPinDraw(!pinDraw)} label={pinDraw ? 'Packs from the whole ecoregion' : 'Packs from around the campsite'}>
+                {/* the map's own push pin — ball, collar and needle; its red when on, grey when off */}
+                {(() => { const on = pinDraw, line = on ? '#c45c54' : 'rgba(255,255,255,0.5)', fill = on ? 'rgba(196,92,84,0.35)' : 'rgba(255,255,255,0.1)'; return (
+                <Svg width={16} height={25} viewBox="0 0 20 33">
+                  <Path d="M8.8 13.4 L11.2 13.4 L10.25 29.7 L9.75 29.7 Z" fill={on ? '#c3c9ce' : 'rgba(255,255,255,0.5)'} />
+                  <Ellipse cx="10" cy="13.2" rx="2.3" ry="0.9" fill={on ? '#8a9096' : 'rgba(255,255,255,0.1)'} stroke={on ? '#4a5056' : 'rgba(255,255,255,0.5)'} strokeWidth={0.9} />
+                  <Circle cx="10" cy="7" r="6.5" fill={fill} stroke={line} strokeWidth={1.4} />
+                  <Ellipse cx="7.2" cy="4.1" rx="2.2" ry="1.35" fill={on ? 'rgba(234,176,170,0.7)' : 'rgba(255,255,255,0.35)'} transform="rotate(-28 7.2 4.1)" />
+                </Svg>); })()}
+              </GlassTile>
               <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
                 <Svg width={24} height={24} viewBox="0 0 24 24">
                   <Path d={ECOBLOB} fill={borders ? 'rgba(129,199,132,0.22)' : 'rgba(255,255,255,0.1)'} stroke={borders ? C.greenSoft : 'rgba(255,255,255,0.85)'}
@@ -566,7 +601,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
                 </Svg>
               </GlassTile>
               {/* the ✕ is the lowest of the three, next to the timeline it switches (user, 2026-11-16: "make the x be the bottom button") */}
-              <GlassTile on={showObs} onPress={() => setShowObs(!showObs)} label={showObs ? 'Hide observations' : 'Show observations'}>
+              <GlassTile on={showObs} onPress={() => { setPlaying(false); setShowObs(!showObs); }} label={showObs ? 'Hide observations' : 'Show observations'}>
                 <Text style={[s.obsX, !showObs && { color: 'rgba(255,255,255,0.5)' }]}>✕</Text>
               </GlassTile>
             </Animated.View>
@@ -698,7 +733,9 @@ const s = StyleSheet.create({
   pin: { position: 'absolute', left: 0, right: 0, alignItems: 'center', height: PIN_H + 3 },
   zoom: { position: 'absolute', right: 14, gap: 8, flexDirection: 'row', alignItems: 'center' },
   prefs: { position: 'absolute', left: 14, gap: 8, alignItems: 'center' },
-  timeline: { position: 'absolute', left: 14 + 42 + 10, right: 14 + 42 + 8 + 42 + 10 },
+  // from the play tile to the right edge (it stopped short of − and + until 2026-11-17, when they began to step aside)
+  timeline: { position: 'absolute', left: 14 + 42 + 8 + 42 + 10, right: 14 },
+  play: { position: 'absolute', left: 14 + 42 + 8 },
   zoomCol: { gap: 8, alignItems: 'center' },
   obsX: { fontFamily: F.sansBold, fontSize: 21, color: C.yellow, lineHeight: 25 },   // the marks' yellow (user, 2026-10-07: green for a minute, then "yellow again")
   // the list of ✕ marks under the pin, left of the zoom buttons; its bottom lines up with theirs
@@ -719,9 +756,10 @@ const s = StyleSheet.create({
   zoomTxt: { fontFamily: F.sansBold, fontSize: 22, color: 'rgba(255,255,255,0.85)', lineHeight: 26 },   // white like the layers tile (user, 2026-10-07; green since 2026-09-30)
   lookBtn: {
     width: 42, height: 42, borderRadius: 21, overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
-    // solid DARK GREEN (user, 2026-11-16: "too translucent" — the frosted glass vanished over the map)
-    backgroundColor: 'rgba(22,52,25,0.95)',
-    borderWidth: 1, borderColor: 'rgba(129,199,132,0.35)',
+    // solid DARK GREEN (user, 2026-11-16: "too translucent" — the frosted glass vanished over the map);
+    // a little blacker since 2026-11-17, and now the app's default button colour (constants BTN_BG)
+    backgroundColor: BTN_BG,
+    borderWidth: 1, borderColor: BTN_BORDER,
   },
   lookBtnOn: { borderColor: 'rgba(255,255,255,0.22)', shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
   lookShine: { position: 'absolute', top: 0, left: 10, right: 10, height: 1, backgroundColor: 'rgba(255,255,255,0.28)' },

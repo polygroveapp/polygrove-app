@@ -160,19 +160,19 @@ export default function Home() {
                 <LinearGradient colors={['#FFD54F', '#FFC107', '#FF6F00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={[s.solarBtn, { borderColor: '#FFC107' }]}>
                   <Text style={[s.solarTxt, { color: '#1a1a1a' }]}>Open Solar Pack</Text>
-                  <Text style={[s.solarSol, { color: '#1a1a1a' }]}>{solBal}/{SOLAR_PACK_COST} Sol Points ☀️</Text>
+                  <Text style={[s.solarSol, { color: '#1a1a1a' }]}>{solBal}/{SOLAR_PACK_COST} Sol Points 🔆</Text>
                 </LinearGradient>
               </Pressable>
             ) : (
               <View style={[s.solarBtn, s.solarBtnDim]}>
                 <Text style={s.solarTxt}>Open Solar Pack</Text>
-                <Text style={s.solarSol}>{solBal}/{SOLAR_PACK_COST} Sol Points ☀️</Text>
+                <Text style={s.solarSol}>{solBal}/{SOLAR_PACK_COST} Sol Points 🔆</Text>
               </View>
             )}
             {/* the yellow is on the THING you do — "Solar Pack", "Solar Quizzes" — and Sol Points is
                 plain with its emoji (user, 2026-11-17; Sol Points was the yellow one before) */}
             <Text style={s.hint}>
-              {solOk ? <>Open a <Text style={{ color: C.gold }}>Solar Pack</Text> with Sol Points ☀️</> : 'Take a quiz to earn Sol Points ☀️'}
+              {solOk ? <>Open a <Text style={{ color: C.gold }}>Solar Pack</Text> with Sol Points 🔆</> : 'Take a quiz to earn Sol Points 🔆'}
             </Text>
 
             {/* THE JOURNAL, under the Solar Pack and BROWN (user, 2026-11-17: "move the journal button
@@ -184,7 +184,7 @@ export default function Home() {
                 <Text style={s.journalTxt}>Open Journal 📖</Text>
               </LinearGradient>
             </Pressable>
-            <Text style={[s.hint, { marginBottom: 16 }]}>Browse to take <Text style={{ color: C.gold }}>Solar Quizzes</Text> and earn Sol Points ☀️</Text>
+            <Text style={[s.hint, { marginBottom: 16 }]}>Browse to take <Text style={{ color: C.gold }}>Solar Quizzes</Text> and earn Sol Points 🔆</Text>
 
 
             {/* the ecoregion: place on the map · photo · first sentence — order is
@@ -201,7 +201,7 @@ export default function Home() {
         <Text style={s.tipTitle}> 🌲 How Packs Work 🌲</Text>
         <Text style={s.tipBody}>
           In the game you will get one <Text style={{ color: C.green }}>Daily Discovery</Text> card every day. To get more
-          cards you can open Solar Packs with <Text style={{ color: '#FFD700' }}>Sol Points ☀️</Text> which you earn through
+          cards you can open Solar Packs with <Text style={{ color: '#FFD700' }}>Sol Points 🔆</Text> which you earn through
           taking Solar Quizzes.{'\n\n'}
           <Text style={{ color: C.text }}>Try a Solar Quiz out for yourself!</Text>
         </Text>

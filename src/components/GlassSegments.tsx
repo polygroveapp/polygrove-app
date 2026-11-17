@@ -40,7 +40,7 @@ export default function GlassSegments<K extends string>({ items, value, onChange
           <Pressable key={it.key} onPress={() => onChange(it.key)} style={s.seg} hitSlop={4}>
             <View style={s.labelRow}>
               {it.icon}
-              <Text style={[s.label, on && s.labelOn]} numberOfLines={1}>{it.label}</Text>
+              <Text style={[s.label, on && s.labelOn]} numberOfLines={2}>{it.label}</Text>
             </View>
             {it.n !== undefined ? <Text style={[s.count, on && it.color ? { color: it.color } : null]}>{it.n.toLocaleString()}</Text> : null}
           </Pressable>
@@ -64,7 +64,7 @@ const s = StyleSheet.create({
   thumbFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   thumbShine: { position: 'absolute', top: 0, left: 10, right: 10, height: 1, backgroundColor: 'rgba(255,255,255,0.28)' },
   seg: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999, gap: 0 },
-  label: { fontFamily: F.sansBold, fontSize: 11, color: '#8f8f8f', lineHeight: 14 },
+  label: { fontFamily: F.sansBold, fontSize: 11, color: '#8f8f8f', lineHeight: 14, textAlign: 'center' },   // up to two lines: "📍 Around Camp Location" does not fit a third of a phone on one
   labelOn: { color: C.text },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   count: { fontFamily: F.sans, fontSize: 12, color: '#8f8f8f', fontVariant: ['tabular-nums'], lineHeight: 14 },   // the regular weight — medium was still too heavy (user, 2026-10-06)

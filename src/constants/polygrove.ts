@@ -1,6 +1,13 @@
 // Polygrove visual language — lifted from the demo (App.jsx) so the app and the
 // explorer speak the same dialect.
 
+// THE DEFAULT BUTTON (user, 2026-11-17, of the map's layers tile: "i like the green border,
+// but make the background just a little more black and make this the default button
+// color"): a near-black green fill with a soft green edge. The map's round tiles, the
+// timeline pill, and the ‹ back and ✕ close buttons all wear it.
+export const BTN_BG = 'rgba(13,31,16,0.96)';
+export const BTN_BORDER = 'rgba(129,199,132,0.35)';
+
 export const C = {
   bg: '#0d140d',        // the Camp green — every page sits on it (2026-09-29)
   panel: '#161616',

@@ -10,18 +10,36 @@
 import { BlurView } from 'expo-blur';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import { C, F } from '../constants/polygrove';
+import { BTN_BG, BTN_BORDER, C, F } from '../constants/polygrove';
 import type { Mark } from '../lib/sightings';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const BARS = 36;
 const PAD = 10;   // the track's inner margin, so the thumb can reach both ends
 
-export default function ObsTimeline({ marks, onUntil }: { marks: Mark[]; onUntil: (date: string | null) => void }) {
-  // month numbers (year × 12 + month) of every dated sighting, and the span they cover
+// month numbers (year × 12 + month) of every dated sighting
+function monthsOf(marks: Mark[]): number[] {
+  const ms: number[] = [];
+  for (const m of marks) { const d = m[6]; if (d && d.length >= 7) { const y = +d.slice(0, 4), mo = +d.slice(5, 7); if (y > 1900 && mo >= 1 && mo <= 12) ms.push(y * 12 + mo - 1); } }
+  return ms;
+}
+// is there a timeline to show? Sightings in at least two different months (the map's
+// other controls make room for the bar only when there is one)
+export function hasTimeline(marks: Mark[]): boolean {
+  const ms = monthsOf(marks);
+  return ms.length > 1 && ms.some(v => v !== ms[0]);
+}
+
+// PLAYING (user, 2026-11-17: "a play pause button … it should follow the journey of the x's
+// as you made them"): while `playing`, the thumb walks forward through the months on its own
+// and the map shows each sighting as its month arrives — from an empty map, if the thumb was
+// resting at the end. It stops at the latest month (onPlayEnd), or when you take hold of the bar.
+export default function ObsTimeline({ marks, onUntil, playing = false, onPlayEnd }: {
+  marks: Mark[]; onUntil: (date: string | null) => void; playing?: boolean; onPlayEnd?: () => void;
+}) {
+  // the span the dated sightings cover
   const t = useMemo(() => {
-    const ms: number[] = [];
-    for (const m of marks) { const d = m[6]; if (d && d.length >= 7) { const y = +d.slice(0, 4), mo = +d.slice(5, 7); if (y > 1900 && mo >= 1 && mo <= 12) ms.push(y * 12 + mo - 1); } }
+    const ms = monthsOf(marks);
     if (!ms.length) return null;
     let min = ms[0], max = ms[0];
     for (const v of ms) { if (v < min) min = v; if (v > max) max = v; }
@@ -39,18 +57,44 @@ export default function ObsTimeline({ marks, onUntil }: { marks: Mark[]; onUntil
   useEffect(() => { span.current = t; }, [t]);
   const measure = () => box.current?.measureInWindow((x, _y, w) => { geo.current = { x, w: Math.max(1, w) }; });
 
-  const move = (pageX: number) => {
-    const s = span.current; if (!s) return;
-    const f = Math.max(0, Math.min(1, (pageX - geo.current.x - PAD) / Math.max(1, geo.current.w - 2 * PAD)));
-    // the far left is the month BEFORE the first sighting: an empty map (user, 2026-10-07:
-    // "the x's should disappear if the timeline is to the left")
-    const m = s.min - 1 + Math.round(f * (s.max - s.min + 1)), v = m >= s.max ? null : m;
-    setAt(v);
+  // show the map as it stood at month v (null = everything)
+  const show = (v: number | null) => {
+    setAt(v); atRef.current = v;
     if (v === sent.current) return;   // the map is told once per month crossed, not once per pixel
     sent.current = v;
     // the last day any month can have: the page compares dates as text
     onUntil(v == null ? null : `${Math.floor(v / 12)}-${String((v % 12) + 1).padStart(2, '0')}-31`);
   };
+  const move = (pageX: number) => {
+    const s = span.current; if (!s) return;
+    const f = Math.max(0, Math.min(1, (pageX - geo.current.x - PAD) / Math.max(1, geo.current.w - 2 * PAD)));
+    // the far left is the month BEFORE the first sighting: an empty map (user, 2026-10-07:
+    // "the x's should disappear if the timeline is to the left")
+    const m = s.min - 1 + Math.round(f * (s.max - s.min + 1));
+    show(m >= s.max ? null : m);
+  };
+
+  // the walk: about eight seconds end to end however long the span, never faster than a
+  // month every 80 ms nor slower than one every 400 ms
+  const atRef = useRef<number | null>(null);
+  const endRef = useRef(onPlayEnd);
+  useEffect(() => { endRef.current = onPlayEnd; }, [onPlayEnd]);
+  useEffect(() => {
+    if (!playing) return;
+    const s = span.current; if (!s) { endRef.current?.(); return; }
+    const months = s.max - s.min + 1;
+    const every = Math.max(80, Math.min(400, Math.round(8000 / months)));
+    const inc = Math.max(1, Math.ceil(months / 100));
+    // from the end (or before the start) it begins again on an empty map
+    if (atRef.current == null || atRef.current >= s.max) show(s.min - 1);
+    const id = setInterval(() => {
+      const sp = span.current; if (!sp) return;
+      const next = (atRef.current ?? sp.min - 1) + inc;
+      if (next >= sp.max) { show(null); clearInterval(id); endRef.current?.(); } else show(next);
+    }, every);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing]);
 
   if (!t) return null;
   const cur = at == null || at > t.max || at < t.min - 1 ? t.max : at;
@@ -85,7 +129,7 @@ export default function ObsTimeline({ marks, onUntil }: { marks: Mark[]; onUntil
       <View ref={box} onLayout={measure}
         // the plain responder props (not PanResponder): the pill claims the touch, so the map under it stays put
         onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true} onResponderTerminationRequest={() => false}
-        onResponderGrant={e => { measure(); setDrag(true); move(e.nativeEvent.pageX); }}
+        onResponderGrant={e => { if (playing) endRef.current?.(); measure(); setDrag(true); move(e.nativeEvent.pageX); }}
         onResponderMove={e => move(e.nativeEvent.pageX)}
         onResponderRelease={() => setDrag(false)} onResponderTerminate={() => setDrag(false)}
         accessibilityRole="adjustable" accessibilityLabel={`Sightings timeline, up to ${label}`}>
@@ -101,8 +145,9 @@ const s = StyleSheet.create({
   wrap: { alignSelf: 'stretch' },
   pill: {
     height: 42, borderRadius: 21, overflow: 'hidden', justifyContent: 'center',
-    backgroundColor: Platform.OS === 'android' ? 'rgba(16,22,16,0.9)' : 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.13)',
+    // the default button fill wherever there is no blur behind it (the web and Android); iOS keeps its frosted glass
+    backgroundColor: Platform.OS === 'ios' ? 'rgba(255,255,255,0.06)' : BTN_BG,
+    borderWidth: 1, borderColor: Platform.OS === 'ios' ? 'rgba(255,255,255,0.13)' : BTN_BORDER,
   },
   bars: { position: 'absolute', left: PAD, right: PAD, top: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', gap: 1.5 },
   bar: { flex: 1, borderRadius: 1.5, minWidth: 1 },

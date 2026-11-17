@@ -122,14 +122,14 @@ export default function PolygroveDB() {
       <View style={{ marginBottom: 12 }}>
         <GlassSegments value={where} onChange={setWhere} items={[
           // Camp · Ecoregion · All, left to right (user, 2026-11-16; All was first)
-          { key: 'pin', label: '📍 Camp' },   // KEPT SIMPLE (user, 2026-11-17: "the camp emoji should be a pin … for DB the Near pin should be camp"): the pin IS the camp. ("📍 Pin", "⛺ Camp", "📍 Campsite", "📍 Near pin" before)
+          { key: 'pin', label: '📍 Camp Location' },   // KEPT SIMPLE (user, 2026-11-17: "the camp emoji should be a pin … for DB the Near pin should be camp"): the pin IS the camp. ("📍 Pin", "⛺ Camp", "📍 Campsite", "📍 Near pin" before)
           { key: 'tent', label: 'Ecoregion', icon: <EcoregionIcon size={17} /> },   // "Ecoregion" with a drawn ecoregion border (user, 2026-11-17: "the one that says camp should be ecoregion and have a ecoregion border")
           { key: 'all', label: '🌲 All' }   // the tree, PolygroveDB's own emoji (user, 2026-11-16)
         ]} />
       </View>
-      {where === 'pin' && !spot ? <Text style={s.hint}>Press “Camp here” on the Map tab first — this lists what is seen closest to your camp.</Text> : null}
+      {where === 'pin' && !spot ? <Text style={s.hint}>Press “Camp here” on the Map tab first — this lists what is seen around your camp location.</Text> : null}
       {where === 'tent' && !eco ? <Text style={s.hint}>Choose a camp first — this lists what is seen in its ecoregion.</Text> : null}
-      {where === 'pin' && spot ? <Text style={s.hint}>Most likely to be seen near your camp{eco?.name ? ` · ${eco.name}` : ''}</Text> : null}
+      {where === 'pin' && spot ? <Text style={s.hint}>Most likely to be seen around your camp location{eco?.name ? ` · ${eco.name}` : ''}</Text> : null}
       {where === 'tent' && eco ? <Text style={s.hint}>Most likely to be seen in {eco.name}</Text> : null}
       <View style={s.filterRow}>
         <FilterBtn label="Role" value={role ?? undefined} color={role ? TROPHIC_COLOR[role] : undefined} count={rows.length}

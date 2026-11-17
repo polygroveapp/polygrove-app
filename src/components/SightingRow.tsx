@@ -55,7 +55,7 @@ export default function SightingRow({ s, showBy = false }: { s: Sighting; showBy
       ) : s.photo ? (
         <View style={st.buyRow}>
           <Text style={st.none}>makes a custom card of this sighting</Text>
-          <Pressable onPress={buy} style={[st.buy, balance < CARD_PRICE && { opacity: 0.5 }]}><Text style={st.buyTxt}>Buy card · {CARD_PRICE} Sol ☀️</Text></Pressable>
+          <Pressable onPress={buy} style={[st.buy, balance < CARD_PRICE && { opacity: 0.5 }]}><Text style={st.buyTxt}>Buy card · {CARD_PRICE} Sol 🔆</Text></Pressable>
         </View>
       ) : <Text style={st.none}>no photo shared for reuse — can’t be a card</Text>}
       {msg && <Text style={st.msg}>{msg}</Text>}

@@ -12,6 +12,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleProp, StyleSheet, Text, 
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { Easing, SharedValue, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import HexPhoto from '../../components/HexPhoto';
+import BackChevron from '../../components/BackChevron';
 import HexThumb from '../../components/HexThumb';
 import PolygroveCard from '../../components/PolygroveCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -76,7 +77,7 @@ function QuizBody({ card, back, insets, practice }: { card: Card; back: () => vo
   const tier = getTier(score);
   const [result, setResult] = useState<{ right: boolean; sol: number; leveledTo?: string; solar?: boolean } | null>(null);
   const [celebrate, setCelebrate] = useState(false);
-  // the demo's solFlash: "+N Sol ☀️" top-right of the card header, 1.5s
+  // the demo's solFlash: "+N Sol 🔆" top-right of the card header, 1.5s
   const [solFlash, setSolFlash] = useState<{ amount: number; id: number } | null>(null);
 
   const next = () => {
@@ -128,7 +129,6 @@ function QuizBody({ card, back, insets, practice }: { card: Card; back: () => vo
       <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 24 }}>
         <View style={s.header}>
-          <Pressable onPress={back} hitSlop={12} style={s.back}><Text style={s.backTxt}>‹ Back</Text></Pressable>
           <Text style={s.logo}>Polygrove</Text>
           <Text style={s.tagline}>An educational ecology trading card app</Text>
           <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Solar Quiz'}</Text>
@@ -203,11 +203,14 @@ function QuizBody({ card, back, insets, practice }: { card: Card; back: () => vo
         </View>
       </ScrollView>
       </View>
+      {/* the round ‹ in the top-left, as on every other page (user, 2026-11-17: "for quizzes switch
+          the back word to the back arrow to match the rest of it"; it read "‹ Back" in green) */}
+      <BackChevron label="Back" onPress={back} />
     </View>
   );
 }
 
-// "+N Sol ☀️" — gold, rises and fades over 1.5s (demo keyframe solFlash)
+// "+N Sol 🔆" — gold, rises and fades over 1.5s (demo keyframe solFlash)
 function SolFlash({ amount }: { amount: number }) {
   const t = useSharedValue(0);
   useEffect(() => { t.value = withTiming(1, { duration: 1500 }); }, [t]);
@@ -215,7 +218,7 @@ function SolFlash({ amount }: { amount: number }) {
     opacity: 1 - t.value,
     transform: [{ translateY: -14 * t.value }],
   }));
-  return <Animated.Text style={[s.solFlash, style]}>+{amount} Sol ☀️</Animated.Text>;
+  return <Animated.Text style={[s.solFlash, style]}>+{amount} Sol 🔆</Animated.Text>;
 }
 
 function explainFor(q: Q, card: Card): string {
@@ -503,7 +506,6 @@ const s = StyleSheet.create({
   // the tagline sits BETWEEN the wordmark and the ecoregion name (user, 2026-09-29)
   tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 4 },   // a little closer to the ecoregion name (user, 2026-09-29)
   ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 20, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // wraps: the full name always shows
-  back: { position: 'absolute', left: 16, top: 12, paddingVertical: 6, zIndex: 2 },
   backTxt: { fontFamily: F.sansBold, fontSize: 14, color: C.greenSoft },
   head: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   name: { fontFamily: F.display, fontSize: 14, color: C.text },

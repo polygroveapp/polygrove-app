@@ -3,7 +3,7 @@
 
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { C } from '../constants/polygrove';
+import { BTN_BG, BTN_BORDER, C } from '../constants/polygrove';
 
 export default function BackChevron({ onPress, label }: { onPress: () => void; label?: string }) {
   const insets = useSafeAreaInsets();
@@ -18,7 +18,7 @@ export default function BackChevron({ onPress, label }: { onPress: () => void; l
 const s = StyleSheet.create({
   b: {
     position: 'absolute', zIndex: 20, width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: BTN_BG, borderWidth: 1, borderColor: BTN_BORDER,   // the default button (was a faint white glass)
     alignItems: 'center', justifyContent: 'center',
   },
   txt: { color: C.text, fontSize: 24, lineHeight: 26, marginTop: -3, marginLeft: -1 },

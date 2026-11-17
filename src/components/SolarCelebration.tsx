@@ -57,7 +57,7 @@ export default function SolarCelebration({ card, sol = 5, onDone }: { card: Card
         </Svg>
       </Animated.View>
       <Animated.Text style={[s.title, titleStyle]}>SOLAR LEVEL</Animated.Text>
-      <Text style={s.sol}>+{sol} Sol ☀️</Text>
+      <Text style={s.sol}>+{sol} Sol 🔆</Text>
       <Animated.View style={[{ width: cardW, height: cardH, borderRadius: 20 }, cardStyle]}>
         <PolygroveCard card={card} />
       </Animated.View>

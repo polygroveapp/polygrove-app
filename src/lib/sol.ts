@@ -1,4 +1,4 @@
-// Sol Points ☀️ — the currency for Solar Packs (the demo's rule: a Solar Pack
+// Sol Points 🔆 — the currency for Solar Packs (the demo's rule: a Solar Pack
 // costs 100 Sol; quizzes earn Sol). Everyone starts with 1000 (user,
 // 2026-09-26) — ten packs to play with beyond the daily Discovery Pack.
 
