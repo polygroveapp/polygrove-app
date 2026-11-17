@@ -180,9 +180,10 @@ export default function Home() {
                 Solar Quiz now starts from its button in the Journal. */}
             <Pressable onPress={() => router.push('/deck')} style={s.journalBtn} accessibilityRole="button">
               <LinearGradient colors={['#5A3622', '#8B5035']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.journalGrad}>
-                <Text style={s.journalTxt}>📖 Open Journal</Text>
+                <Text style={s.journalTxt}>Open Journal 📖</Text>
               </LinearGradient>
             </Pressable>
+            <Text style={[s.hint, { marginBottom: 16 }]}>Browse to take quizzes</Text>
 
 
             {/* the ecoregion: place on the map · photo · first sentence — order is
@@ -267,7 +268,7 @@ const s = StyleSheet.create({
   solarTxt: { fontFamily: F.display, fontSize: 16, color: '#666' },
   solarSol: { fontFamily: F.sansBold, fontSize: 12, color: '#666' },
   // the journal: the ecoregion label's brown, a full-width button like the packs
-  journalBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: 'rgba(139,80,53,0.6)' },
+  journalBtn: { borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(139,80,53,0.6)' },
   journalGrad: { paddingVertical: 15, paddingHorizontal: 20, alignItems: 'center' },
   journalTxt: { fontFamily: F.display, fontSize: 16, color: C.text },
   // "How Packs Work" (demo values)
