@@ -400,14 +400,12 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
       animations: { opacity: withTiming(0, { duration: 200 }), transform: [{ translateX: withTiming(-v.currentWidth / 2 - 26, { duration: 200 }) }, { scaleX: withTiming(0.02, { duration: 200 }) }] },
     };
   };
-  // while the timeline plays, each date goes with follow = true: the map glides to the newest
-  // sighting that step revealed and returns to where it began at the end (user, 2026-11-17:
-  // "have the map follow the x's"). `playing` is read through a ref, so pausing sends nothing
-  // and the map stays put.
-  const playingRef = useRef(false);
-  useEffect(() => { playingRef.current = playing; }, [playing]);
+  // every date goes with follow = true: the map glides to the latest sighting made by then,
+  // zoomed in, whether the timeline is playing or dragged by hand, and returns to where it
+  // began when the timeline is back at its end (user, 2026-11-17: "have the map follow the
+  // x's … wherever it is on the timeline zoom to it")
   useEffect(() => {
-    if (pageReady) web.current?.injectJavaScript(`window.polygroveMarksUntil && window.polygroveMarksUntil(${showObs && until ? JSON.stringify(until) : 'null'}, ${playingRef.current}); true;`);
+    if (pageReady) web.current?.injectJavaScript(`window.polygroveMarksUntil && window.polygroveMarksUntil(${showObs && until ? JSON.stringify(until) : 'null'}, true); true;`);
   }, [pageReady, until, showObs]);
   // the title fades out while a sighting's strip is up and back in when it goes (user, 2026-10-07)
   const stripOn = showObs && under.length > 0;
@@ -468,7 +466,8 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
 
       {/* the pin — a classic red map pin (user, 2026-09-28); its tip is the point the page reads */}
       {pageReady && (
-        <View style={[s.pin, { top: pinY - PIN_H }]} pointerEvents="none">
+        // gone while the timeline holds the map on a sighting — playing, or parked on a date (user, 2026-11-17: "remove the pin while going through them")
+        <View style={[s.pin, { top: pinY - PIN_H }, (playing || (showObs && until != null)) && { opacity: 0 }]} pointerEvents="none">
          <View style={{ width: PIN_W, height: PIN_H + 3 }}>
           {/* the ground shadow: flat on the map, under the tip, NOT part of the
               rotating pin (user, 2026-09-30: "make the pin 3D") */}
