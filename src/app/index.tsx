@@ -134,13 +134,13 @@ export default function Home() {
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.packBtn}>
                   {opening ? <Text style={s.packTxt}>Opening...</Text> : <>
                     <Text style={s.tree}>🌲</Text>
-                    <Text style={[s.packTxt, !daily.ready && { color: '#777' }]}>Open Discovery Pack</Text>
+                    <Text style={[s.packTxt, !daily.ready && { color: '#777' }]}>Daily Discovery</Text>
                     <Text style={s.tree}>🌲</Text>
                   </>}
                 </LinearGradient>
               </Pressable>
             </Animated.View>
-            <Text style={s.hint}>{daily.label}</Text>
+            {daily.label ? <Text style={s.hint}>{daily.label}</Text> : <View style={{ height: 14 }} />}
             {offline && (
               <Pressable onPress={() => { setOffline(false); fetchCatalog(); }}>
                 <Text style={[s.hint, { marginTop: 2 }]}>
@@ -265,12 +265,13 @@ const s = StyleSheet.create({
   hint: { fontFamily: F.sans, fontSize: 10, color: '#666', textAlign: 'center', marginTop: 6, marginBottom: 12 },
   // solar pack — lit gradient when affordable, dim otherwise (demo styles)
   solarBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 18, paddingHorizontal: 20, borderRadius: 16, borderWidth: 1,
+    // the Sol count sits UNDER the words, centred (user, 2026-11-16; it was a row with the count at the right)
+    alignItems: 'center', justifyContent: 'center', gap: 3,
+    paddingVertical: 13, paddingHorizontal: 20, borderRadius: 16, borderWidth: 1,
   },
   solarBtnDim: { backgroundColor: 'rgba(255,111,0,0.2)', borderColor: 'rgba(255,111,0,0.3)' },
   solarTxt: { fontFamily: F.display, fontSize: 16, color: '#666' },
-  solarSol: { fontFamily: F.sansBold, fontSize: 14, color: '#666' },
+  solarSol: { fontFamily: F.sansBold, fontSize: 12, color: '#666' },
   // review / quiz
   row2: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   reviewBtn: {

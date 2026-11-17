@@ -62,8 +62,7 @@ export default function FieldNotes() {
   // only what the user actually has (user, 2026-09-26): journaled cards, in
   // the ORDER THEY WERE OPENED, newest first (user, 2026-10-08: "for both hexes
   // and list they should be in order of which cards they opened"; by name
-  // before). The deck's full size stays in the subtitle so progress still reads
-  const deckSize = ready && eco ? ecoMembers(eco.eid).length : 0;
+  // before). (The deck's full size was in a subtitle, "5/744 Journaled", until 2026-11-16.)
   const cards = useMemo(
     () => (ready && eco
       ? ecoMembers(eco.eid).filter(c => owns(eco.eid, c.species_id)).sort((a, b) => ownedAt(eco.eid, b.species_id) - ownedAt(eco.eid, a.species_id) || a.name.localeCompare(b.name))
@@ -198,12 +197,9 @@ export default function FieldNotes() {
         <Text style={s.tagline}>An educational ecology trading card app</Text>
         <Text style={s.ecoLabel} numberOfLines={2}>{eco ? eco.name : 'Choose your camp'}</Text>
       </View>
-      <View style={s.titleWrap}>
-        <Text style={s.title}>Field Notes</Text>
-        <Text style={s.sub}>
-          {cards.length}/{deckSize} Journaled{rows.length !== cards.length ? ` · ${rows.length} shown` : ''}
-        </Text>
-      </View>
+      {/* (the "Field Notes" title and the "5/744 Journaled" line stood here until 2026-11-16:
+          user, "remove Field notes and /… journaled") — the gap keeps the filters off the header */}
+      <View style={s.titleGap} />
     </View>
   );
 
@@ -250,7 +246,7 @@ export default function FieldNotes() {
       }
       renderItem={({ item }) => (view === 'hex' ? (
         <View>
-          {/* TOP TO BOTTOM (user, 2026-11-16): the filters right under "Field Notes", the
+          {/* TOP TO BOTTOM (user, 2026-11-16): the filters at the top (under a "Field Notes" title until that went), the
               quiz button with the Hexes/List switch to its right (swapped the same day), the card, the hexagons. (The
               button and the filters sat under the card from 2026-10-11.) A mastered card's
               button reads Practice. */}
@@ -405,9 +401,7 @@ const s = StyleSheet.create({
   // the tagline sits BETWEEN the wordmark and the ecoregion name (user, 2026-09-29)
   tagline: { fontFamily: F.sans, fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 4 },   // a little closer to the ecoregion name (user, 2026-09-29)
   ecoLabel: { fontFamily: F.sansBold, fontSize: 15, lineHeight: 17, color: '#8B5035', letterSpacing: 1.6, textTransform: 'uppercase', marginTop: 2, maxWidth: 340, textAlign: 'center' },   // lines close together (user, 2026-10-07)   // wraps: the full name always shows
-  titleWrap: { alignItems: 'center', paddingTop: 16, marginBottom: 4 },
-  title: { fontFamily: F.display, fontSize: 20, color: C.text, marginBottom: 2 },
-  sub: { fontFamily: F.sans, fontSize: 12, color: '#555' },
+  titleGap: { height: 16 },
   // filters: three dropdown buttons, the open one's options as chips below
   // sticky: opaque so the cards slide underneath (user, 2026-09-28)
   filters: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, backgroundColor: GREEN_BG, overflow: 'hidden' },

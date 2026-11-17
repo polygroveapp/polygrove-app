@@ -47,7 +47,7 @@ export function useDiscoveryCountdown(): { ready: boolean; label: string } {
     return () => clearInterval(t);
   }, []);
   const ms = nextDiscoveryAt() - now;
-  if (ALWAYS_OPEN) return { ready: true, label: 'Open as many as you like' };
+  if (ALWAYS_OPEN) return { ready: true, label: '' };   // it read "Open as many as you like" until 2026-11-16 (user: remove it)
   if (ms <= 0) return { ready: true, label: 'Resets every 24 hours' };
   const mins = Math.ceil(ms / 60_000);   // whole minutes first, so it never reads "23h 60m"
   const h = Math.floor(mins / 60), m = mins % 60;

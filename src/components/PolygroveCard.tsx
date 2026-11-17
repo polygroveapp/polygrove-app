@@ -39,6 +39,8 @@ let _glowSeq = 0;
 // missing: an INCOMPLETE card, previewed "as it could be" — the facts the
 // database doesn't have yet are written in red.
 const MISSING_RED = '#E57373';
+// the least height at which a face shows everything without clipping (see fitStyle)
+const FIT_H = 505, FIT_H_DEMO = 545;   // the pack's card (demoFrame) has a bigger photo
 // photoFrom (user, 2026-10-07: the pick question's cards each showed their
 // OWN role and group — "an acorn woodpecker is an herbivore so it shouldn't
 // be omnivore, it gives it away. the only thing different should be the photo
@@ -90,6 +92,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
   const flip = useSharedValue(0);
   const [flipped, setFlipped] = useState(false);
   const [srcPop, setSrcPop] = useState<{ label: string; source: string; confidence: string } | null>(null);
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null);   // the space the card was given
 
   // "Tap to expand" opens the food web FULL SCREEN (user, 2026-10-06: "like
   // it was before and on the website" — the website's fwExpand overlay). For
@@ -150,13 +153,25 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
     const pv = card.provenance?.[key];
     if (pv) setSrcPop({ label, source: pv.source, confidence: pv.confidence });
   };
+  // NEVER CUT OFF (user, 2026-11-16: "the card is getting cut off on the phone … just in
+  // general"): the faces need FIT_H of height for the photo, the names, the sound and the
+  // field note. A shorter box — Safari's window is far shorter than the app's — used to
+  // clip the note and the flip pill. Now the faces are laid out FIT_H tall and proportionally
+  // wider, then scaled down as one piece to fill the box exactly.
+  const fitH = demoFrame ? FIT_H_DEMO : FIT_H;
+  const k = box && box.h > 0 && box.h < fitH ? box.h / fitH : 1;
+  const fitStyle = k < 1 && box
+    ? { position: 'absolute' as const, width: box.w / k, height: fitH, left: (box.w - box.w / k) / 2, top: (box.h - fitH) / 2, transform: [{ scale: k }] }
+    : { width: '100%' as const, height: '100%' as const };
   const slot5label = card.habitat ? 'Habitat' : card.origin ? 'Native origin' : 'Biome';
   const slot5val = card.habitat || card.origin || card.biome || '—';
 
   return (
     // width/height 100%, NOT flex:1 — flex:1 here collapsed to content height
     // on iOS (found natively on the simulator, 2026-09-25)
-    <Pressable onPress={doFlip} style={{ width: '100%', height: '100%' }}>
+    <Pressable onPress={doFlip} style={{ width: '100%', height: '100%' }}
+      onLayout={e => { const { width, height } = e.nativeEvent.layout; if (!box || Math.abs(box.w - width) > 0.5 || Math.abs(box.h - height) > 0.5) setBox({ w: width, h: height }); }}>
+      <View style={fitStyle}>
       {/* FRONT — .face.front */}
       <Animated.View style={[s.phone, demoFrame && s.phoneDemo, frontStyle]}>
         <View style={s.site}>
@@ -317,7 +332,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
           </View>
         </Pressable>
       )}
-
+      </View>
     </Pressable>
   );
 }
