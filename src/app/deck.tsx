@@ -247,16 +247,17 @@ export default function FieldNotes() {
       renderItem={({ item }) => (view === 'hex' ? (
         <View>
           {/* TOP TO BOTTOM (user, 2026-11-16): the filters at the top (under a "Field Notes" title until that went), the
-              quiz button with the Hexes/List switch to its right (swapped the same day), the card, the hexagons. (The
+              card, the quiz button with the Hexes/List switch to its right (that row was above the card for a few
+              hours, then: "move take solar quiz hex and list below the card"), the hexagons. (The
               button and the filters sat under the card from 2026-10-11.) A mastered card's
               button reads Practice. */}
           {filterBar}
-          <View style={[s.topRow, { paddingTop: 12 }]}>
-            {shownCard ? <QuizButton card={shownCard} compact style={s.topQuiz} /> : null}
-            <ViewToggle mode={view} onChange={setView} />
-          </View>
           <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
             {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
+          </View>
+          <View style={[s.topRow, { paddingTop: 14 }]}>
+            {shownCard ? <QuizButton card={shownCard} compact style={s.topQuiz} /> : null}
+            <ViewToggle mode={view} onChange={setView} />
           </View>
           <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
             <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} picked={shownKey} onPick={setPicked} />
