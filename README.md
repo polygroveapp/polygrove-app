@@ -17,7 +17,7 @@ through a six-question quiz about how it fits into its ecosystem.
 ## What it does
 
 - **Camp anywhere on Earth.** A MapLibre map of the RESOLVE 2017 ecoregions. Drop
-  the pin and that ecoregion becomes your deck: 14,912 species cards drawn from
+  the pin and that ecoregion becomes your deck: 14,911 species cards drawn from
   the places they actually occur.
 - **Open packs.** Five cards at a time, weighted toward species that are commonly
   recorded nearby. Every card carries a Wikipedia photo, a field note, its size,

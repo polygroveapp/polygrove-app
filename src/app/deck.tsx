@@ -246,18 +246,17 @@ export default function FieldNotes() {
       }
       renderItem={({ item }) => (view === 'hex' ? (
         <View>
-          {/* TOP TO BOTTOM (user, 2026-11-16): the filters at the top (under a "Field Notes" title until that went), the
-              card, the Hexes/List switch with the quiz button to its right (that row was above the card for a few
-              hours, then: "move take solar quiz hex and list below the card"), the hexagons. (The
-              button and the filters sat under the card from 2026-10-11.) A mastered card's
-              button reads Practice. */}
+          {/* TOP TO BOTTOM: the filters, the Hexes/List switch with the quiz button to its right,
+              the card, the hexagons (user, 2026-11-17: "move the hexes list and solar quiz buttons
+              above the cards"; that row was under the card for a day, and the button and the
+              filters sat under the card from 2026-10-11). A mastered card's button reads Practice. */}
           {filterBar}
-          <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
-            {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
-          </View>
-          <View style={[s.topRow, { paddingTop: 14 }]}>
+          <View style={[s.topRow, { paddingTop: 12 }]}>
             <ViewToggle mode={view} onChange={setView} />
             {shownCard ? <QuizButton card={shownCard} compact style={s.topQuiz} /> : null}
+          </View>
+          <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
+            {shownKey ? <ShownCard cells={item as unknown as Comb[]} picked={shownKey} onPick={setPicked} /> : null}
           </View>
           <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
             <Honeycomb cells={item as unknown as Comb[]} glowKey={glow ?? null} picked={shownKey} onPick={setPicked} />
