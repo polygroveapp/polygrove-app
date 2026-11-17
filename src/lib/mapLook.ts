@@ -14,12 +14,15 @@ let _borders = false;
 let _obs = true;   // the ✕ sighting marks: on unless turned off
 const KEY_O = 'polygrove.mapObs.v1';
 // DOES THE PIN'S SPOT MATTER? (user, 2026-11-16: "make it so you can toggle whether the
-// location of the pin matters or if it's just the ecoregion for probability".) On — the
-// default — packs favour the species recorded closest to where you camped; off, every
-// species of the ecoregion's deck is as likely as the next. (A toggle 2026-10-08 → 11-16,
-// always on for a few hours, then back; v2 because v1 defaulted to off.)
-let _pinDraw = true;
-const KEY_P = 'polygrove.pinDraw.v2';
+// location of the pin matters or if it's just the ecoregion for probability".)
+// OFF BY DEFAULT (user, 2026-11-17: "make the pin feature default off so it's just
+// ecoregion"): every species of the ecoregion's deck is as likely as the next. On, packs
+// favour the species recorded closest to where you camped — and because 99% of the records
+// in a place like the Great Basin are birds, that made packs there about 88% birds when
+// birds are 37% of its deck. v3 so the new default reaches everyone (v2 defaulted to on,
+// v1 to off).
+let _pinDraw = false;
+const KEY_P = 'polygrove.pinDraw.v3';
 let _loaded = false;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());
@@ -51,7 +54,7 @@ export function setPinDraw(on: boolean) {
 }
 export const getPinDraw = () => (load(), _pinDraw);
 export function usePinDraw(): boolean {
-  return useSyncExternalStore(l => { load(); listeners.add(l); return () => { listeners.delete(l); }; }, () => _pinDraw, () => true);
+  return useSyncExternalStore(l => { load(); listeners.add(l); return () => { listeners.delete(l); }; }, () => _pinDraw, () => false);
 }
 export function setShowObs(on: boolean) {
   _obs = on; emit();
