@@ -32,7 +32,7 @@ export default function Species() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const cardSize = useCardSize();   // the one card size (lib/cardSize)
+  const cardSize = useCardSize(true);   // the one card size (lib/cardSize); the page scrolls, so it is never shrunk
   const [ready, setReady] = useState(getCards().length > 0);
   useEffect(() => {
     // a deep link lands here cold: load the catalog ourselves; offline

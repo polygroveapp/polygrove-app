@@ -65,25 +65,48 @@ function drawLive(eid: number, n: number, exclude: Set<number>): Card[] {
 }
 
 // AROUND THE PIN (user, 2026-10-08: "if you put a pin down at Lake Tahoe you
-// draw cards around Lake Tahoe"): the pin's ecoregion's deck, weighted by the
-// records in the 1° cells around the pin (the PolygroveDB tab's Pin ranking,
-// square-rooted so the commonest few don't own every pack). A species with no
-// record near the pin is drawn only when the near ones run out.
+// draw cards around Lake Tahoe"): the camp's deck, steered by the records in the 1° cells
+// around the pin (the PolygroveDB tab's Campsite ranking).
+// BALANCED BY GROUP (user, 2026-11-17: "make the pin change"). Records are not a census:
+// birdwatchers log far more than anyone else — 99% of the Great Basin's records are birds —
+// so weighting the whole deck by records made packs there about 88% birds when birds are
+// 37% of its deck. Now each card is drawn in two steps:
+//   1. its GROUP (bird, mammal, tree, insect …) is chosen in proportion to how many cards
+//      of that group are still in the pool — the same odds as the plain deck draw;
+//   2. within that group, the species recorded near the pin are favoured, by the square
+//      root of their records so the commonest few do not own every pack. A species with no
+//      record near the pin is drawn only when the group's near ones have run out.
+// So the pin decides WHICH bird or WHICH plant, never how many birds.
 async function drawNear(eid: number, lng: number, lat: number, n: number, exclude: Set<number>): Promise<Card[]> {
   const near = new Map(await pinRanking(lng, lat));
   const all = ecoMembers(eid);
   let pool = all.filter(c => !owns(eid, c.species_id) && !exclude.has(c.species_id));
   if (pool.length < n) pool = all.filter(c => !exclude.has(c.species_id));
+  const groups = new Map<string, Card[]>();
+  for (const c of pool) { const g = c.group || '?'; const l = groups.get(g); if (l) l.push(c); else groups.set(g, [c]); }
   const out: Card[] = [];
-  let weighted = pool.filter(c => (near.get(c.id) ?? 0) > 0).map(c => ({ c, w: Math.sqrt(near.get(c.id) as number) }));
-  while (out.length < n && weighted.length) {
-    const total = weighted.reduce((s, x) => s + x.w, 0);
-    let r = Math.random() * total, i = 0;
-    while (i < weighted.length - 1 && (r -= weighted[i].w) > 0) i++;
-    out.push(weighted[i].c); weighted = weighted.filter((_, k) => k !== i);
+  let left = pool.length;
+  while (out.length < n && left > 0) {
+    // 1 · the group, by its share of what is left
+    let r = Math.random() * left;
+    let cards: Card[] = [], key = '';
+    for (const [g, l] of groups) { cards = l; key = g; if ((r -= l.length) < 0) break; }
+    // 2 · the species, by what is recorded near the pin
+    const seen = cards.filter(c => (near.get(c.id) ?? 0) > 0);
+    let pick: Card;
+    if (seen.length) {
+      const total = seen.reduce((sum, c) => sum + Math.sqrt(near.get(c.id) as number), 0);
+      let w = Math.random() * total, i = 0;
+      while (i < seen.length - 1 && (w -= Math.sqrt(near.get(seen[i].id) as number)) > 0) i++;
+      pick = seen[i];
+    } else {
+      pick = cards[Math.floor(Math.random() * cards.length)];
+    }
+    cards.splice(cards.indexOf(pick), 1);
+    if (!cards.length) groups.delete(key);   // an emptied group can no longer be chosen
+    left--;
+    out.push(pick);
   }
-  const rest = pool.filter(c => !out.includes(c));
-  while (out.length < n && rest.length) out.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]);
   return out;
 }
 

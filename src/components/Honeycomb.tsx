@@ -46,7 +46,7 @@ const PITCH = H * 0.75 + GAP / 2, STEP = W + GAP;
 export function ShownCard({ cells, picked, onPick }: { cells: Comb[]; picked: string | null; onPick: (key: string | null) => void }) {
   const win = useWindowDimensions();
   const idx = cells.findIndex(c => c.key === picked);
-  const cardSize = useCardSize();   // the one card size (lib/cardSize)
+  const cardSize = useCardSize(true);   // the one card size (lib/cardSize); these pages scroll, so it is never shrunk
   const GAP = 18;
   const step = cardSize.width + GAP;
   const side = Math.max(0, (win.width - cardSize.width) / 2);   // room either side, so the first and last card can sit in the middle

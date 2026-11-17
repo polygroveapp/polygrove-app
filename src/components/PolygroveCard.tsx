@@ -18,6 +18,7 @@ import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
 import { FactKey, SightingInfo, niceDate } from '../lib/sightings';
 import { toggleStar, useStars } from '../lib/stars';
 import FwGraph from './FwGraph';
+import { CARD_FULL_H } from '../lib/cardSize';
 import HexPhoto from './HexPhoto';
 
 let _glowSeq = 0;
@@ -44,7 +45,7 @@ const MISSING_RED = '#E57373';
 // between the cards and the hexagons (user, 2026-11-17). The row sets this; the card obeys.
 export const FlatCard = createContext(false);
 // the least height at which a face shows everything without clipping (see fitStyle)
-const FIT_H = 505, FIT_H_DEMO = 545;   // the pack's card (demoFrame) has a bigger photo
+const FIT_H = 505, FIT_H_DEMO = CARD_FULL_H;   // the pack's card (demoFrame, the default look) has a bigger photo
 // photoFrom (user, 2026-10-07: the pick question's cards each showed their
 // OWN role and group — "an acorn woodpecker is an herbivore so it shouldn't
 // be omnivore, it gives it away. the only thing different should be the photo

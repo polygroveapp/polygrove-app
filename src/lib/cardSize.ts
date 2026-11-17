@@ -12,11 +12,21 @@ export const CARD_MAX_W = 340;
 // row under it (a pack's swipe footer, or the daily card's quiz button and link)
 const CARD_CHROME = 134;
 
-export function useCardSize(): { width: number; height: number } {
+// the least height at which a card's faces show everything at full size; in a shorter box
+// the card scales its faces down to fit (PolygroveCard's fitStyle)
+export const CARD_FULL_H = 545;
+
+// scrolls: the screen scrolls under the card (the journal, sightings, a species' page, the
+// quiz). There the card is NEVER shorter than CARD_FULL_H, so its text is always full size
+// and a short window scrolls instead (user, 2026-11-17: legibility over fitting the screen).
+// A screen that does not scroll — the pack — keeps the window's height and lets the card
+// shrink a little on a short phone.
+export function useCardSize(scrolls = false): { width: number; height: number } {
   const win = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const h = win.height - insets.top - insets.bottom - CARD_CHROME;
   return {
     width: Math.min(win.width - 40, CARD_MAX_W),
-    height: Math.max(360, win.height - insets.top - insets.bottom - CARD_CHROME),
+    height: scrolls ? Math.max(CARD_FULL_H, h) : Math.max(360, h),
   };
 }

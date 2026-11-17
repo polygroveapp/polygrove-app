@@ -241,7 +241,7 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
   const pos = useSharedValue(1);
   const start = useSharedValue(1);
   const ty = useSharedValue(0);        // the whole hand of cards, dropping off the bottom
-  const cardSize = useCardSize();   // the one card size (lib/cardSize); the page scrolls under it
+  const cardSize = useCardSize(true);   // the one card size (lib/cardSize); the page scrolls, so it is never shrunk
   const step = cardSize.width + 18;
   const SNAP = { damping: 22, stiffness: 190, mass: 0.7 };
   const go = (i: number) => { const t = Math.max(0, Math.min(n - 1, i)); pos.value = withSpring(t, SNAP); setIdx(t); };
