@@ -33,7 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Circle, Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { WebFrame as WebView, type FrameMessage, type WebFrameRef } from './WebFrame';
 import BottomNav, { NAV_HEIGHT } from './BottomNav';
-import ObsTimeline, { hasTimeline } from './ObsTimeline';
+import ObsTimeline, { hasTimeline, playPace } from './ObsTimeline';
 import { BTN_BG, BTN_BORDER, C, F, getLevel, MASTERY } from '../constants/polygrove';
 import { loadMastery, scoreOf, useMastery } from '../lib/mastery';
 import { loadSightings, niceDate, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
@@ -111,6 +111,8 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // ONE AT A TIME (user, 2026-10-06): the strip shows one sighting with ‹ › to
   // step through the rest under the pin
   const [underAt, setUnderAt] = useState(0);
+  // the timeline's play button (declared here because the strip's lookups below go quiet while it plays)
+  const [playWanted, setPlaying] = useState(false);
   const [obsCache, setObsCache] = useState<Record<number, (Spot & { grade: string }) | null>>({});
   // the ✕ sighting marks on or off (user, 2026-10-07: "an x button to turn off
   // observations") — a remembered preference in the map preferences; an
@@ -147,6 +149,10 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   const fetching = useRef(new Set<number>());
   useEffect(() => {
     // the shown one and its neighbours are fetched ahead, so stepping is instant; the rest as you reach them
+    // NOT WHILE THE TIMELINE PLAYS: the map passes over a sighting a second, and looking each
+    // one up sent iNaturalist hundreds of requests in a play — it began refusing them (seen
+    // 2026-11-17). The strip wears the card's photo meanwhile; the lookup runs once it rests.
+    if (playWanted) return;
     const at = Math.min(underAt, Math.max(0, under.length - 1));
     for (const u of under.slice(Math.max(0, at - 1), at + 4)) {
       if (u.id in obsCache || fetching.current.has(u.id)) continue;
@@ -156,7 +162,7 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
         .finally(() => fetching.current.delete(u.id));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- ownPhoto reads the sightings store, listed below
-  }, [under, underAt, obsCache, sightings]);
+  }, [under, underAt, obsCache, sightings, playWanted]);
   // a tap on a ✕ puts those marks at the head of the list
   const onMark = (ids: number[], ok: number, marks?: Under[]) => {
     if (!ids.length) return;
@@ -380,7 +386,6 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // the right edge, and a play button sits between the fold-out tile and the bar. Switching
   // the ✕s off brings − and + back down.
   const timelineOn = showObs && hasTimeline(marks);
-  const [playWanted, setPlaying] = useState(false);
   // THE TIMELINE WAITS FOR THE MAP (user, 2026-11-17: "freeze the timeline while it's doing
   // the animation"): the page says when a flight to a sighting begins and ends; while one
   // is under way the play does not advance. A flight that never reports back (the page
@@ -417,7 +422,11 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // began when the timeline is back at its end (user, 2026-11-17: "have the map follow the
   // x's … wherever it is on the timeline zoom to it")
   useEffect(() => {
-    if (pageReady) web.current?.injectJavaScript(`window.polygroveMarksUntil && window.polygroveMarksUntil(${showObs && until ? JSON.stringify(until) : 'null'}, true); true;`);
+    // the third number is how long a flight may take: the play's own pace while playing
+    // (quicker for an account with many sightings), the page's default when dragged by hand
+    const flyMs = playing ? playPace(marks).flyMs : 0;
+    if (pageReady) web.current?.injectJavaScript(`window.polygroveMarksUntil && window.polygroveMarksUntil(${showObs && until ? JSON.stringify(until) : 'null'}, true, ${flyMs}); true;`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `playing` and `marks` are read at send time; a change in them alone must not resend the date
   }, [pageReady, until, showObs]);
   // the title fades out while a sighting's strip is up and back in when it goes (user, 2026-10-07)
   const stripOn = showObs && under.length > 0;

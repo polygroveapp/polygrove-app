@@ -30,6 +30,26 @@ export function hasTimeline(marks: Mark[]): boolean {
   return ms.length > 1 && ms.some(v => v !== ms[0]);
 }
 
+// THE PACE OF A PLAY, SET BY HOW MANY SIGHTINGS THERE ARE (user, 2026-11-17: "make the speed
+// proportional to the number of observations. like the current one i have is like 1500
+// observations"). Up to 200 sightings the play takes its time: a month a second at the
+// slowest, and a full 2.6 s flight between far-apart sightings. Past that everything
+// quickens in proportion — 1,500 sightings run about seven times faster — down to a floor
+// that still reads as movement. `flyMs` goes to the map with each date.
+export function playPace(marks: Mark[]): { every: number; inc: number; flyMs: number } {
+  const ms = monthsOf(marks);
+  if (!ms.length) return { every: 400, inc: 1, flyMs: 2600 };
+  let min = ms[0], max = ms[0];
+  for (const v of ms) { if (v < min) min = v; if (v > max) max = v; }
+  const months = max - min + 1;
+  const f = Math.max(0.15, Math.min(1, 200 / ms.length));
+  return {
+    every: Math.max(120, Math.round(Math.max(200, Math.min(1000, 24000 / months)) * f)),
+    inc: Math.max(1, Math.ceil(months / 120)),
+    flyMs: Math.max(500, Math.round(2600 * f)),
+  };
+}
+
 // PLAYING (user, 2026-11-17: "a play pause button … it should follow the journey of the x's
 // as you made them"): while `playing`, the thumb walks forward through the months on its own
 // and the map shows each sighting as its month arrives — from an empty map, if the thumb was
@@ -76,20 +96,20 @@ export default function ObsTimeline({ marks, onUntil, playing = false, hold = fa
     show(m >= s.max ? null : m);
   };
 
-  // the walk: about twenty-four seconds end to end however long the span, never faster than
-  // a month every 200 ms nor slower than one a second — slow enough for the map to reach
-  // each sighting and rest on it (user, 2026-11-17: "have it go slower"; it took eight seconds)
+  // the walk, at playPace's tempo: about twenty-four seconds of steps end to end for a small
+  // account (user, 2026-11-17: "have it go slower"; it took eight), quicker in proportion for
+  // a big one, plus however long the map's flights between sightings take
   const atRef = useRef<number | null>(null);
   const endRef = useRef(onPlayEnd);
   useEffect(() => { endRef.current = onPlayEnd; }, [onPlayEnd]);
+  const marksRef = useRef(marks);
+  useEffect(() => { marksRef.current = marks; }, [marks]);
   const holdRef = useRef(hold);
   useEffect(() => { holdRef.current = hold; }, [hold]);
   useEffect(() => {
     if (!playing) return;
     const s = span.current; if (!s) { endRef.current?.(); return; }
-    const months = s.max - s.min + 1;
-    const every = Math.max(200, Math.min(1000, Math.round(24000 / months)));
-    const inc = Math.max(1, Math.ceil(months / 120));
+    const { every, inc } = playPace(marksRef.current);
     // from the end (or before the start) it begins again on an empty map
     if (atRef.current == null || atRef.current >= s.max) show(s.min - 1);
     const id = setInterval(() => {
