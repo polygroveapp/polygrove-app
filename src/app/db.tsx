@@ -11,6 +11,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, T
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
+import EcoregionIcon from '../components/EcoregionIcon';
 import GlassSegments from '../components/GlassSegments';
 import HexThumb from '../components/HexThumb';
 import { C, F, TROPHIC_COLOR, TROPHIC_ORDER } from '../constants/polygrove';
@@ -35,7 +36,7 @@ export default function PolygroveDB() {
   // ALL · PIN · TENT (user, 2026-10-06: "the pin matters"): all species; the
   // ones most likely to be seen near the pin, most-recorded first; the ones
   // most likely in your camp's ecoregion, likewise — a sliding glass pill
-  const [where, setWhere] = useState<'all' | 'pin' | 'tent'>('pin');   // opens on Near pin (user, 2026-11-16; was All)
+  const [where, setWhere] = useState<'all' | 'pin' | 'tent'>('pin');   // opens on Camp (user, 2026-11-16; was All)
   const pin = usePin();
   const [rankFor, setRankFor] = useState<{ key: string; rank: Map<string, number> } | null>(null);
   // "Camp" ranks by the spot where you camped (user, 2026-11-16: the pin is where you camp), not wherever the map's pin has wandered since
@@ -121,14 +122,14 @@ export default function PolygroveDB() {
       <View style={{ marginBottom: 12 }}>
         <GlassSegments value={where} onChange={setWhere} items={[
           // Camp · Ecoregion · All, left to right (user, 2026-11-16; All was first)
-          { key: 'pin', label: '📍 Near pin' },   // "Near pin" (user, 2026-11-17; "📍 Pin", "⛺ Camp", then "📍 Campsite" before)
-          { key: 'tent', label: '⛺ Camp' },   // "Camp" (user, 2026-11-17; "⛺ Ecoregion" before): everything in your camp's ecoregion
+          { key: 'pin', label: '📍 Camp' },   // KEPT SIMPLE (user, 2026-11-17: "the camp emoji should be a pin … for DB the Near pin should be camp"): the pin IS the camp. ("📍 Pin", "⛺ Camp", "📍 Campsite", "📍 Near pin" before)
+          { key: 'tent', label: 'Ecoregion', icon: <EcoregionIcon size={17} /> },   // "Ecoregion" with a drawn ecoregion border (user, 2026-11-17: "the one that says camp should be ecoregion and have a ecoregion border")
           { key: 'all', label: '🌲 All' }   // the tree, PolygroveDB's own emoji (user, 2026-11-16)
         ]} />
       </View>
-      {where === 'pin' && !spot ? <Text style={s.hint}>Press “Camp here” on the Map tab first — this lists what is seen closest to your pin.</Text> : null}
+      {where === 'pin' && !spot ? <Text style={s.hint}>Press “Camp here” on the Map tab first — this lists what is seen closest to your camp.</Text> : null}
       {where === 'tent' && !eco ? <Text style={s.hint}>Choose a camp first — this lists what is seen in its ecoregion.</Text> : null}
-      {where === 'pin' && spot ? <Text style={s.hint}>Most likely to be seen near your pin{eco?.name ? ` · ${eco.name}` : ''}</Text> : null}
+      {where === 'pin' && spot ? <Text style={s.hint}>Most likely to be seen near your camp{eco?.name ? ` · ${eco.name}` : ''}</Text> : null}
       {where === 'tent' && eco ? <Text style={s.hint}>Most likely to be seen in {eco.name}</Text> : null}
       <View style={s.filterRow}>
         <FilterBtn label="Role" value={role ?? undefined} color={role ? TROPHIC_COLOR[role] : undefined} count={rows.length}

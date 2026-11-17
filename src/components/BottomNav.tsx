@@ -20,7 +20,7 @@ import CompassIcon from './CompassIcon';
 import GlassTrack from './GlassTrack';
 
 const TABS = [
-  { id: 'home', icon: '⛺', label: 'Camp', href: '/' },   // "Camp" (user, 2026-09-28)
+  { id: 'home', icon: '📍', label: 'Camp', href: '/' },   // "Camp" (user, 2026-09-28); a PIN, not the tent (user, 2026-11-17: "the camp emoji should be a pin")
   // a DRAWN compass in gold, muted (user, 2026-09-29; brown was tried) — CompassIcon
   { id: 'map', icon: 'compass', label: 'Map', href: '/map', dim: 0.85 },
   // SOCIAL replaces About (user, 2026-09-29): iNaturalist, a globe. About is a link at its foot.

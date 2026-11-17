@@ -25,7 +25,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { openWeb } from '../lib/web';
-import { setBorders, setEarthColours, setPinDraw, setShowObs, useBorders, useEarthColours, usePinDraw, useShowObs } from '../lib/mapLook';
+import { setBorders, setEarthColours, setShowObs, useBorders, useEarthColours, useShowObs } from '../lib/mapLook';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOutDown, FadeOutUp, withTiming, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -116,7 +116,6 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   // observations") — a remembered preference in the map preferences; an
   // earlier top-bar toggle lived for an hour on 2026-10-06
   const showObs = useShowObs();
-  const pinDraw = usePinDraw();
   useEffect(() => {
     if (pageReady) web.current?.injectJavaScript(`window.polygroveShowMarks && window.polygroveShowMarks(${showObs}); true;`);
   }, [pageReady, showObs]);
@@ -530,7 +529,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
 
       {/* MAP CONTROLS (user, 2026-10-07): + in the bottom-right corner, − to its
           left, always there. In the bottom-LEFT corner, map preferences: open,
-          four tiles rise above it — the pin's pull on packs, ecoregion borders,
+          three tiles rise above it — ecoregion borders,
           earth colours ⇄ grey/black, sightings ✕ on/off at the bottom. (Zoom came 2026-09-28; the compass came
           and went 2026-09-29.) */}
       {pageReady && (
@@ -552,20 +551,9 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
         <View style={[s.prefs, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
           {menuOpen && (
             <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(120)} style={s.zoomCol}>
-              {/* DOES THE PIN'S SPOT MATTER, top of the list (user, 2026-11-16: "put the pin button on
-                  the map — toggle whether the location of the pin matters or if it's just the
-                  ecoregion for probability"). Red = packs favour what is recorded closest to the
-                  campsite; grey = the whole ecoregion's deck, evenly. (Here 2026-10-08 → 11-16 too.) */}
-              <GlassTile on={pinDraw} onPress={() => setPinDraw(!pinDraw)} label={pinDraw ? 'Packs from the whole ecoregion' : 'Packs from around the campsite'}>
-                {/* the map's own push pin — ball, collar and needle; its red when on, grey when off */}
-                {(() => { const on = pinDraw, line = on ? '#c45c54' : 'rgba(255,255,255,0.5)', fill = on ? 'rgba(196,92,84,0.35)' : 'rgba(255,255,255,0.1)'; return (
-                <Svg width={16} height={25} viewBox="0 0 20 33">
-                  <Path d="M8.8 13.4 L11.2 13.4 L10.25 29.7 L9.75 29.7 Z" fill={on ? '#c3c9ce' : 'rgba(255,255,255,0.5)'} />
-                  <Ellipse cx="10" cy="13.2" rx="2.3" ry="0.9" fill={on ? '#8a9096' : 'rgba(255,255,255,0.1)'} stroke={on ? '#4a5056' : 'rgba(255,255,255,0.5)'} strokeWidth={0.9} />
-                  <Circle cx="10" cy="7" r="6.5" fill={fill} stroke={line} strokeWidth={1.4} />
-                  <Ellipse cx="7.2" cy="4.1" rx="2.2" ry="1.35" fill={on ? 'rgba(234,176,170,0.7)' : 'rgba(255,255,255,0.35)'} transform="rotate(-28 7.2 4.1)" />
-                </Svg>); })()}
-              </GlassTile>
+              {/* (a pin tile stood here 2026-10-08 → 11-16 and again 11-16 → 11-17: it switched the pin's
+                  pull on packs on and off. "we need to keep this simple … the pin feature should always
+                  be on" — it is, balanced by group in pack.tsx's drawNear, and there is no switch.) */}
               <GlassTile on={borders} onPress={() => setBorders(!borders)} label={borders ? 'Hide ecoregion borders' : 'Show ecoregion borders'}>
                 <Svg width={24} height={24} viewBox="0 0 24 24">
                   <Path d={ECOBLOB} fill={borders ? 'rgba(129,199,132,0.22)' : 'rgba(255,255,255,0.1)'} stroke={borders ? C.greenSoft : 'rgba(255,255,255,0.85)'}
