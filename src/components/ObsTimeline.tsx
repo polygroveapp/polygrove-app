@@ -34,8 +34,10 @@ export function hasTimeline(marks: Mark[]): boolean {
 // as you made them"): while `playing`, the thumb walks forward through the months on its own
 // and the map shows each sighting as its month arrives — from an empty map, if the thumb was
 // resting at the end. It stops at the latest month (onPlayEnd), or when you take hold of the bar.
-export default function ObsTimeline({ marks, onUntil, playing = false, onPlayEnd }: {
-  marks: Mark[]; onUntil: (date: string | null) => void; playing?: boolean; onPlayEnd?: () => void;
+// hold: the play stands still while this is true (the map is still flying to the sighting
+// the last step revealed) and walks on when it clears.
+export default function ObsTimeline({ marks, onUntil, playing = false, hold = false, onPlayEnd }: {
+  marks: Mark[]; onUntil: (date: string | null) => void; playing?: boolean; hold?: boolean; onPlayEnd?: () => void;
 }) {
   // the span the dated sightings cover
   const t = useMemo(() => {
@@ -80,6 +82,8 @@ export default function ObsTimeline({ marks, onUntil, playing = false, onPlayEnd
   const atRef = useRef<number | null>(null);
   const endRef = useRef(onPlayEnd);
   useEffect(() => { endRef.current = onPlayEnd; }, [onPlayEnd]);
+  const holdRef = useRef(hold);
+  useEffect(() => { holdRef.current = hold; }, [hold]);
   useEffect(() => {
     if (!playing) return;
     const s = span.current; if (!s) { endRef.current?.(); return; }
@@ -89,7 +93,7 @@ export default function ObsTimeline({ marks, onUntil, playing = false, onPlayEnd
     // from the end (or before the start) it begins again on an empty map
     if (atRef.current == null || atRef.current >= s.max) show(s.min - 1);
     const id = setInterval(() => {
-      const sp = span.current; if (!sp) return;
+      const sp = span.current; if (!sp || holdRef.current) return;   // the map is mid-flight: wait for it
       const next = (atRef.current ?? sp.min - 1) + inc;
       if (next >= sp.max) { show(null); clearInterval(id); endRef.current?.(); } else show(next);
     }, every);

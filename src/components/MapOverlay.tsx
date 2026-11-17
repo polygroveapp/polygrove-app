@@ -341,9 +341,11 @@ export default function MapOverlay({ visible }: { visible: boolean }) {
   }));
 
   const onMessage = (e: FrameMessage) => {
-    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox']; dx?: number; dy?: number; ids?: unknown[]; ok?: number; marks?: unknown[]; lng?: number; lat?: number };
+    let m: { type: string; eid?: number | null; name?: string; bbox?: Pick['bbox']; dx?: number; dy?: number; ids?: unknown[]; ok?: number; marks?: unknown[]; lng?: number; lat?: number; on?: boolean };
     try { m = JSON.parse(e.nativeEvent.data); } catch { return; }
     if (m.type === 'ready') setPageReady(true);
+    // the map is flying to a sighting (or has landed): the timeline holds still meanwhile
+    if (m.type === 'fly') setFlying(!!m.on);
     if (m.type === 'center') {
       setPick(m.eid != null && m.name && m.bbox ? { eid: m.eid, name: m.name, bbox: m.bbox } : null);
       // the pin's spot, for the PolygroveDB tab's "near the pin" ranking (2026-10-06)
@@ -379,6 +381,16 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
   // the ✕s off brings − and + back down.
   const timelineOn = showObs && hasTimeline(marks);
   const [playWanted, setPlaying] = useState(false);
+  // THE TIMELINE WAITS FOR THE MAP (user, 2026-11-17: "freeze the timeline while it's doing
+  // the animation"): the page says when a flight to a sighting begins and ends; while one
+  // is under way the play does not advance. A flight that never reports back (the page
+  // reloaded mid-air) lets go after six seconds.
+  const [flying, setFlying] = useState(false);
+  useEffect(() => {
+    if (!flying) return;
+    const t = setTimeout(() => setFlying(false), 6000);
+    return () => clearTimeout(t);
+  }, [flying]);
   const playing = playWanted && timelineOn;   // switching the ✕s off stops it (the ✕ tile also clears the wish)
   const zoomAway = useSharedValue(0);
   useEffect(() => { zoomAway.value = withTiming(timelineOn ? 1 : 0, { duration: 260 }); }, [timelineOn, zoomAway]);
@@ -561,7 +573,7 @@ const zoom = (d: number) => web.current?.injectJavaScript(`window.polygroveZoom 
           when the ✕s are switched on and folds back into it when they go off */}
       {pageReady && showObs && (
         <Animated.View entering={timelineIn} exiting={timelineOut} style={[s.timeline, { bottom: NAV_HEIGHT + insets.bottom + SHEET_H + 14 }]} pointerEvents="box-none">
-          <ObsTimeline marks={marks} onUntil={setUntil} playing={playing} onPlayEnd={() => setPlaying(false)} />
+          <ObsTimeline marks={marks} onUntil={setUntil} playing={playing} hold={flying} onPlayEnd={() => setPlaying(false)} />
         </Animated.View>
       )}
       {/* THE ✕ TILE, ALWAYS OUT, right of the fold-out tile (user, 2026-11-17: "have the x button be
