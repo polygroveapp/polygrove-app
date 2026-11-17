@@ -171,7 +171,7 @@ export default function Home() {
             )}
             <Text style={s.hint}>
               {solOk ? 'Open a Solar Pack with ' : 'Take a quiz to earn '}
-              <Text style={{ color: C.gold }}>Sol 🔆</Text>
+              <Text style={{ color: C.gold }}>Sol Points 🔆</Text>
             </Text>
 
             {/* THE JOURNAL, under the Solar Pack and BROWN (user, 2026-11-17: "move the journal button
