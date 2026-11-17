@@ -180,7 +180,7 @@ export default function Home() {
                 Solar Quiz now starts from its button in the Journal. */}
             <Pressable onPress={() => router.push('/deck')} style={s.journalBtn} accessibilityRole="button">
               <LinearGradient colors={['#5A3622', '#8B5035']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.journalGrad}>
-                <Text style={s.journalTxt}>📖 Journal</Text>
+                <Text style={s.journalTxt}>📖 Open Journal</Text>
               </LinearGradient>
             </Pressable>
 
