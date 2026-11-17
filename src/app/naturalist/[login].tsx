@@ -88,7 +88,7 @@ export default function Account() {
                 <Pressable onPress={() => (following ? unfollow(who.id) : follow(who))} style={[s.follow, following && s.following]}>
                   <Text style={[s.followTxt, following && { color: C.greenSoft }]}>{following ? '✓ Following' : 'Follow'}</Text>
                 </Pressable>
-                <Text style={s.sol}>{balance} Sol 🔆 · a custom card of a sighting costs 10</Text>
+                <Text style={s.sol}>{balance} Sol ☀️ · a custom card of a sighting costs 10</Text>
               </>
             ) : err ? <Text style={s.err}>{err}</Text> : <ActivityIndicator color={C.green} style={{ marginTop: 60 }} />}
           </View>

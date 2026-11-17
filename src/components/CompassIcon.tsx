@@ -6,37 +6,48 @@
 // a polished brass bevel — a gradient rim with a light edge and a shaded
 // inner lip — the dial has a little depth, and the needle catches a highlight.
 
+import { useState } from 'react';
 import { Circle, Defs, Line, Polygon, RadialGradient, Stop, Svg, LinearGradient } from 'react-native-svg';
 
+// EACH COPY HAS ITS OWN GRADIENT IDS (user, 2026-11-17: "this is glitching sometimes" — the
+// compass showed as a needle in an empty ring). Every screen mounts its own tab bar, so the
+// page held several compasses that all gave their gradients the same three ids. A browser
+// resolves a gradient reference to the FIRST element with that id in the page; when that
+// copy sat on a hidden screen its gradients could not be used, and every other compass lost
+// its brass case and dial. A per-copy prefix makes each compass point at its own.
+let _seq = 0;
+
 export default function CompassIcon({ size = 24 }: { size?: number }) {
+  const [u] = useState(() => `c${++_seq}`);
+  const brass = `${u}Brass`, lip = `${u}Lip`, dial = `${u}Dial`;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Defs>
         {/* brass: bright at the upper-left, deep at the lower-right */}
-        <LinearGradient id="cBrass" x1="0" y1="0" x2="1" y2="1">
+        <LinearGradient id={brass} x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0" stopColor="#ffe9a3" />
           <Stop offset="0.45" stopColor="#e2b53f" />
           <Stop offset="1" stopColor="#8d6516" />
         </LinearGradient>
         {/* the same, reversed, for the inner lip — reads as a turned edge */}
-        <LinearGradient id="cLip" x1="0" y1="0" x2="1" y2="1">
+        <LinearGradient id={lip} x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0" stopColor="#7a5612" />
           <Stop offset="1" stopColor="#f0cf6a" />
         </LinearGradient>
         {/* the dial: lit from above, darker toward the rim */}
-        <RadialGradient id="cDial" cx="0.42" cy="0.35" r="0.75">
+        <RadialGradient id={dial} cx="0.42" cy="0.35" r="0.75">
           <Stop offset="0" stopColor="#d3b697" />
           <Stop offset="1" stopColor="#8f7256" />
         </RadialGradient>
       </Defs>
       {/* the ring the compass hangs by */}
-      <Circle cx="12" cy="2.5" r="1.4" fill="none" stroke="url(#cBrass)" strokeWidth="1.2" />
+      <Circle cx="12" cy="2.5" r="1.4" fill="none" stroke={`url(#${brass})`} strokeWidth="1.2" />
       {/* case: brass bevel, a dark seat line, then the inner lip */}
-      <Circle cx="12" cy="13" r="9.8" fill="url(#cBrass)" />
+      <Circle cx="12" cy="13" r="9.8" fill={`url(#${brass})`} />
       <Circle cx="12" cy="13" r="9.8" fill="none" stroke="#5c3f0c" strokeWidth="0.5" />
-      <Circle cx="12" cy="13" r="8.2" fill="none" stroke="url(#cLip)" strokeWidth="0.8" />
+      <Circle cx="12" cy="13" r="8.2" fill="none" stroke={`url(#${lip})`} strokeWidth="0.8" />
       {/* the dial, with a shadow under the lip */}
-      <Circle cx="12" cy="13" r="7.6" fill="url(#cDial)" />
+      <Circle cx="12" cy="13" r="7.6" fill={`url(#${dial})`} />
       <Circle cx="12" cy="13" r="7.6" fill="none" stroke="#4a3018" strokeWidth="0.5" opacity="0.7" />
       {/* the four points, with lesser marks between */}
       {[0, 90, 180, 270].map(a => (

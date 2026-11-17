@@ -76,7 +76,7 @@ function QuizBody({ card, back, insets, practice }: { card: Card; back: () => vo
   const tier = getTier(score);
   const [result, setResult] = useState<{ right: boolean; sol: number; leveledTo?: string; solar?: boolean } | null>(null);
   const [celebrate, setCelebrate] = useState(false);
-  // the demo's solFlash: "+N Sol 🔆" top-right of the card header, 1.5s
+  // the demo's solFlash: "+N Sol ☀️" top-right of the card header, 1.5s
   const [solFlash, setSolFlash] = useState<{ amount: number; id: number } | null>(null);
 
   const next = () => {
@@ -207,7 +207,7 @@ function QuizBody({ card, back, insets, practice }: { card: Card; back: () => vo
   );
 }
 
-// "+N Sol 🔆" — gold, rises and fades over 1.5s (demo keyframe solFlash)
+// "+N Sol ☀️" — gold, rises and fades over 1.5s (demo keyframe solFlash)
 function SolFlash({ amount }: { amount: number }) {
   const t = useSharedValue(0);
   useEffect(() => { t.value = withTiming(1, { duration: 1500 }); }, [t]);
@@ -215,7 +215,7 @@ function SolFlash({ amount }: { amount: number }) {
     opacity: 1 - t.value,
     transform: [{ translateY: -14 * t.value }],
   }));
-  return <Animated.Text style={[s.solFlash, style]}>+{amount} Sol 🔆</Animated.Text>;
+  return <Animated.Text style={[s.solFlash, style]}>+{amount} Sol ☀️</Animated.Text>;
 }
 
 function explainFor(q: Q, card: Card): string {

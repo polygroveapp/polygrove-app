@@ -5,6 +5,7 @@
 // deck card uses (those are coloured by feeding role): it is not a card from
 // the base game and carries none of its facts.
 
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F } from '../constants/polygrove';
@@ -13,7 +14,11 @@ import HexPhoto from './HexPhoto';
 
 export const CUSTOM_ACCENT = '#f5f0e8';
 
+// its own gradient id per copy: a shared id fails when the first copy in the page is hidden (see CompassIcon)
+let _seq = 0;
+
 export default function ObservationCard({ card }: { card: CustomCard }) {
+  const [glowId] = useState(() => `obsGlow${++_seq}`);
   const when = [card.date, card.place].filter(Boolean).join(' · ');
   return (
     <View style={s.phone}>
@@ -25,12 +30,12 @@ export default function ObservationCard({ card }: { card: CustomCard }) {
       <View style={s.hexGlow}>
         <Svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
           <Defs>
-            <RadialGradient id="obsGlow" cx="50%" cy="50%" rx="62%" ry="56%">
+            <RadialGradient id={glowId} cx="50%" cy="50%" rx="62%" ry="56%">
               <Stop offset="0" stopColor={CUSTOM_ACCENT} stopOpacity={0.16} />
               <Stop offset="0.7" stopColor={CUSTOM_ACCENT} stopOpacity={0} />
             </RadialGradient>
           </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#obsGlow)" />
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${glowId})`} />
         </Svg>
         <HexPhoto uri={bigPhoto(card.photo)} width={200} height={226} borderColor={CUSTOM_ACCENT} borderWidth={6} />
       </View>

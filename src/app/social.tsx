@@ -73,7 +73,7 @@ export default function Social() {
         contentContainerStyle={{ paddingTop: insets.top + 20, paddingHorizontal: 20, paddingBottom: NAV_HEIGHT + insets.bottom + 24 }}>
         <View style={s.head}>
           <Text style={s.title}>Social</Text>
-          <Text style={s.sub}>sightings from iNaturalist · {balance} Sol 🔆</Text>
+          <Text style={s.sub}>sightings from iNaturalist · {balance} Sol ☀️</Text>
         </View>
 
         <TextInput value={q} onChangeText={onType} placeholder="Find an iNaturalist account…" placeholderTextColor="#666"
