@@ -19,6 +19,7 @@ import { ownsAnywhere, useOwns } from '../lib/collection';
 import { countsOf, isFullyLocked, useMastery } from '../lib/mastery';
 
 // compact: a small pill that sits in a row beside the Hexes/List switch (the Journal, 2026-11-16)
+// — its wording drops "Take" so it never ends in "…" on a narrow phone (user, 2026-11-16)
 export default function QuizButton({ card, practice = false, compact = false, style }: { card: Card; practice?: boolean; compact?: boolean; style?: StyleProp<ViewStyle> }) {
   const router = useRouter();
   useMastery(); useOwns(null, null);   // re-render when progress or the journal changes
@@ -29,7 +30,7 @@ export default function QuizButton({ card, practice = false, compact = false, st
   return (
     <Pressable onPress={go} style={[compact ? s.btnCompact : s.btn, style]} accessibilityRole="button">
       <LinearGradient colors={solar ? ['#5a4a12', '#8a6d1a'] : ['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={compact ? s.gradCompact : s.grad}>
-        <Text style={compact ? s.txtCompact : s.txt} numberOfLines={1}>{solar ? 'Take Solar Quiz ☀️' : 'Take Practice Quiz 📖'}</Text>
+        <Text style={compact ? s.txtCompact : s.txt} numberOfLines={1}>{compact ? (solar ? 'Solar Quiz ☀️' : 'Practice Quiz 📖') : solar ? 'Take Solar Quiz ☀️' : 'Take Practice Quiz 📖'}</Text>
       </LinearGradient>
     </Pressable>
   );

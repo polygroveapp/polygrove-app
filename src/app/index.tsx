@@ -72,20 +72,24 @@ export default function Home() {
   useEffect(() => {
     if (daily.ready) {
       pulse.value = withRepeat(
-        withSequence(withTiming(1, { duration: 900 }), withTiming(0, { duration: 900 })),
+        withSequence(withTiming(1, { duration: 650 }), withTiming(0, { duration: 650 })),
         -1, false);
     } else {
       pulse.value = withTiming(0, { duration: 300 });
     }
   }, [pulse, daily.ready]);
+  // MORE PROMINENT (user, 2026-11-16: "make the flashing of the daily discovery more
+  // prominent"): a faster beat (1.3s, was 1.8s), a bigger breath (1.045, was 1.02), a wider
+  // and fully bright halo, and the button's face itself flashes lighter (flashStyle)
   const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + 0.02 * pulse.value }],
-    shadowColor: '#4CAF50',
-    shadowOpacity: 0.25 + 0.6 * pulse.value,
-    shadowRadius: 16 + 24 * pulse.value,
+    transform: [{ scale: 1 + 0.045 * pulse.value }],
+    shadowColor: '#66E06B',
+    shadowOpacity: 0.3 + 0.7 * pulse.value,
+    shadowRadius: 16 + 34 * pulse.value,
     shadowOffset: { width: 0, height: 4 * (1 - pulse.value) },
-    elevation: 8 + 8 * pulse.value,
+    elevation: 8 + 12 * pulse.value,
   }));
+  const flashStyle = useAnimatedStyle(() => ({ opacity: 0.28 * pulse.value }));
 
   const journaledPct = eco && eco.size > 0 ? Math.round((owned.length / eco.size) * 100) : 0;
 
@@ -132,12 +136,14 @@ export default function Home() {
               <Pressable onPress={() => daily.ready && openPack(false)} disabled={!daily.ready || opening}>
                 <LinearGradient colors={opening ? ['#333333', '#333333'] : daily.ready ? ['#1B5E20', '#4CAF50'] : ['#2a2a2a', '#333333']}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.packBtn}>
-                  {opening ? <Text style={s.packTxt}>Opening...</Text> : <>
+                  {/* opened today: grey, and it says so (user, 2026-11-16: "it greys out saying come back tomorrow") */}
+                  {opening ? <Text style={s.packTxt}>Opening...</Text> : !daily.ready ? <Text style={[s.packTxt, { color: '#777' }]}>Come back tomorrow</Text> : <>
                     <Text style={s.tree}>🌲</Text>
-                    <Text style={[s.packTxt, !daily.ready && { color: '#777' }]}>Daily Discovery</Text>
+                    <Text style={s.packTxt}>Daily Discovery</Text>
                     <Text style={s.tree}>🌲</Text>
                   </>}
                 </LinearGradient>
+                <Animated.View pointerEvents="none" style={[s.packFlash, flashStyle]} />
               </Pressable>
             </Animated.View>
             {daily.label ? <Text style={s.hint}>{daily.label}</Text> : <View style={{ height: 14 }} />}
@@ -152,21 +158,16 @@ export default function Home() {
             {/* solar pack — 100 Sol a pack, outside the daily limit (demo rule) */}
             {solOk ? (
               <Pressable onPress={() => openPack(true)} disabled={opening}>
-                <LinearGradient colors={['#FF6F00', '#FFC107', '#FFD54F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                {/* yellow on the left, orange on the right, and no ☀️ before the words (user, 2026-11-16 — it ran orange → yellow) */}
+                <LinearGradient colors={['#FFD54F', '#FFC107', '#FF6F00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={[s.solarBtn, { borderColor: '#FFC107' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Text style={{ fontSize: 20 }}>☀️</Text>
-                    <Text style={[s.solarTxt, { color: '#1a1a1a' }]}>Open Solar Pack</Text>
-                  </View>
+                  <Text style={[s.solarTxt, { color: '#1a1a1a' }]}>Open Solar Pack</Text>
                   <Text style={[s.solarSol, { color: '#1a1a1a' }]}>{solBal}/{SOLAR_PACK_COST} Sol 🔆</Text>
                 </LinearGradient>
               </Pressable>
             ) : (
               <View style={[s.solarBtn, s.solarBtnDim]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={{ fontSize: 20 }}>☀️</Text>
-                  <Text style={s.solarTxt}>Open Solar Pack</Text>
-                </View>
+                <Text style={s.solarTxt}>Open Solar Pack</Text>
                 <Text style={s.solarSol}>{solBal}/{SOLAR_PACK_COST} Sol 🔆</Text>
               </View>
             )}
@@ -261,6 +262,7 @@ const s = StyleSheet.create({
     paddingVertical: 18, paddingHorizontal: 20, borderRadius: 16,
   },
   tree: { fontSize: 22 },
+  packFlash: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16, backgroundColor: '#ffffff' },
   packTxt: { fontFamily: F.display, fontSize: 16, color: C.text },
   hint: { fontFamily: F.sans, fontSize: 10, color: '#666', textAlign: 'center', marginTop: 6, marginBottom: 12 },
   // solar pack — lit gradient when affordable, dim otherwise (demo styles)
