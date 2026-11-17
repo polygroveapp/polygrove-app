@@ -9,7 +9,6 @@
 // screen (absolute, bottom) so content scrolls behind the glass — screens
 // leave NAV_HEIGHT + insets.bottom under their content.
 
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -18,6 +17,7 @@ import Animated, { makeMutable, useAnimatedStyle, withSpring } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F } from '../constants/polygrove';
 import CompassIcon from './CompassIcon';
+import GlassTrack from './GlassTrack';
 
 const TABS = [
   { id: 'home', icon: '⛺', label: 'Camp', href: '/' },   // "Camp" (user, 2026-09-28)
@@ -66,7 +66,8 @@ export default function BottomNav({ active, shown = true }: { active: Tab; shown
 
   return (
     <View style={[s.wrap, { paddingBottom: insets.bottom + 8 }]} pointerEvents="box-none">
-      <BlurView intensity={28} tint="dark" blurMethod="dimezisBlurView" style={s.track}
+      {/* the bar floats over the page, so its web fill is nearly solid: with no blur, text behind it must not show through */}
+      <GlassTrack style={s.track} webFill="rgba(19,31,19,0.94)"
         onLayout={e => setTrackW(e.nativeEvent.layout.width)}>
         {index >= 0 && slot > 0 && (
           <Animated.View style={[s.thumb, thumb]}>
@@ -86,7 +87,7 @@ export default function BottomNav({ active, shown = true }: { active: Tab; shown
             <Text style={[s.label, t.id === active && s.labelOn]}>{t.label}</Text>
           </Pressable>
         ))}
-      </BlurView>
+      </GlassTrack>
     </View>
   );
 }

@@ -4,7 +4,7 @@
 // same frosted track, the same green-glass thumb with its top shine, gliding
 // to whichever segment you tap. Styling mirrors BottomNav.tsx.
 
-import { BlurView } from 'expo-blur';
+import GlassTrack from './GlassTrack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode, useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -26,7 +26,7 @@ export default function GlassSegments<K extends string>({ items, value, onChange
   // first render's 0 and the thumb drew as a sliver (2026-10-06)
   const thumb = useAnimatedStyle(() => ({ transform: [{ translateX: PAD + x.value * slot }], width: slot }), [slot]);
   return (
-    <BlurView intensity={28} tint="dark" blurMethod="dimezisBlurView" style={s.track} onLayout={e => setW(e.nativeEvent.layout.width)}>
+    <GlassTrack style={s.track} webFill="rgba(255,255,255,0.06)" onLayout={e => setW(e.nativeEvent.layout.width)}>
       {slot > 0 ? (
         <Animated.View style={[s.thumb, thumb]}>
           <LinearGradient colors={['rgba(129,199,132,0.38)', 'rgba(76,175,80,0.16)', 'rgba(255,255,255,0.08)']}
@@ -46,7 +46,7 @@ export default function GlassSegments<K extends string>({ items, value, onChange
           </Pressable>
         );
       })}
-    </BlurView>
+    </GlassTrack>
   );
 }
 
