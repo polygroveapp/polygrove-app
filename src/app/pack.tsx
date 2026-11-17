@@ -35,6 +35,7 @@ import { SOLAR_PACK_COST, canAffordSolar, loadSol, spendSol } from '../lib/sol';
 import { loadTips, markTip, queuePacksPopup, tipSeen } from '../lib/tips';
 import { campSpot, currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
 import { getPinDraw } from '../lib/mapLook';
+import LeafBurst, { LEAF_BURST_MS } from '../components/LeafBurst';
 import { pinRanking } from '../lib/nearby';
 import { getPin } from '../lib/pin';
 import {
@@ -94,6 +95,9 @@ export default function PackOpening() {
   const insets = useSafeAreaInsets();
   // ?solar=1 → a Solar Pack: costs Sol, ignores the daily limit
   const solar = useLocalSearchParams<{ solar?: string }>().solar === '1';
+  // DAILY DISCOVERY DEALS ONE CARD (user, 2026-11-17: "make it so you … get 1 card at a
+  // time"); a Solar Pack is still five. Either way up to SKIPS spares stand behind for passes.
+  const need = solar ? PACK_SIZE : 1;
   // every pack pops the queue's front (one code path, photos already on
   // disk); the queue refills its tail in the background
   const [pack, setPack] = useState<Stashed[] | null>(null);
@@ -127,17 +131,17 @@ export default function PackOpening() {
       if (spot) {
         try {
           p = await Promise.race([
-            loadCatalog().then(() => drawNear(eco.eid, spot.lng, spot.lat, PACK_SIZE, new Set())).then(cs => cs.map(liveStash)),
+            loadCatalog().then(() => drawNear(eco.eid, spot.lng, spot.lat, need, new Set())).then(cs => cs.map(liveStash)),
             new Promise<null>(res => setTimeout(() => res(null), 6000)),   // a weak signal must not hang the pack
           ]);
           if (p && p.length) near = spot; else p = null;
         } catch { p = null; }
       }
-      if (!p) p = popPack(eco.eid);
+      if (!p) { const q = need === PACK_SIZE ? popPack(eco.eid) : popCards(eco.eid, need); p = q && q.length === need ? q : null; }
       if (!p) {
         try {
           await loadCatalog();
-          p = drawLive(eco.eid, PACK_SIZE, new Set()).map(liveStash);
+          p = drawLive(eco.eid, need, new Set()).map(liveStash);
           topUp();
         } catch { setNoNet(true); return; }
       }
@@ -179,9 +183,9 @@ export default function PackOpening() {
   const [skipped, setSkipped] = useState(0);
   const [swiping, setSwiping] = useState(false);   // a card is mid-flight
   // skips available = spares actually dealt (offline may have fewer)
-  const maxSkips = pack ? Math.max(0, pack.length - PACK_SIZE) : 0;
+  const maxSkips = pack ? Math.max(0, pack.length - need) : 0;
   const canSkip = skipped < maxSkips;
-  const done = kept >= PACK_SIZE;
+  const done = kept >= need;
   // unshown spares go back to the front of the queue
   useEffect(() => {
     if (done && pack && eid != null && idx < pack.length) returnCards(eid, pack.slice(idx));
@@ -191,6 +195,7 @@ export default function PackOpening() {
   // "Your Pack" gallery). A first pack still queues "How Packs Work" for the
   // next time Camp comes forward.
   const keptIds = useRef<string[]>([]);
+  const [leaves, setLeaves] = useState(0);   // goes up each time a card is journaled: a burst of leaves
   const over = !!pack && (done || idx >= pack.length);
   useEffect(() => {
     if (!over) return;
@@ -198,7 +203,8 @@ export default function PackOpening() {
     // STRAIGHT HOME (user, 2026-10-08: "remove this screen" — the pack's own
     // gallery, "Your Pack · 5 journaled", with Take Solar Quiz / Journal, is gone;
     // the cards are in the journal and the Camp page has both buttons)
-    const t = setTimeout(() => router.replace({ pathname: '/', params: { tab: '1' } }), 100);
+    // …once the last card's leaves have flown (2026-11-17; it left after 100 ms before)
+    const t = setTimeout(() => router.replace({ pathname: '/', params: { tab: '1' } }), keptIds.current.length ? LEAF_BURST_MS - 250 : 100);
     return () => clearTimeout(t);
   }, [over, router]);
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
@@ -229,7 +235,7 @@ export default function PackOpening() {
   );
   if (!pack) return <View style={s.root} />;
 
-  if (over) return <View style={s.root} />;   // on its way home
+  if (over) return <View style={s.root}><LeafBurst fire={leaves} /></View>;   // on its way home, the last leaves still flying
 
   const onSwiped = (dir: 1 | -1) => {
     if (dir === 1) {
@@ -244,7 +250,8 @@ export default function PackOpening() {
     setIdx(i => i + 1);
   };
   // the demo: setTimeout(() => onSwipe(d), 300)
-  const onFling = (dir: 1 | -1) => { setSwiping(true); setTimeout(() => { onSwiped(dir); setSwiping(false); }, 300); };
+  // a kept card sets the leaves off as it flies (user, 2026-11-17)
+  const onFling = (dir: 1 | -1) => { setSwiping(true); if (dir === 1) setLeaves(n => n + 1); setTimeout(() => { onSwiped(dir); setSwiping(false); }, 300); };
   const swipeFor = (dir: 1 | -1) => setAuto(a => ({ dir, n: (a?.n ?? 0) + 1 }));
 
   return (
@@ -260,7 +267,7 @@ export default function PackOpening() {
             journaled the next one kept ends the pack, so the spare cards waiting
             behind it are not drawn — swiping it away used to flash a card you were
             never going to get. A skip still brings the next spare up as the top card. */}
-        {(kept >= PACK_SIZE - 1 ? pack.slice(idx, idx + 1) : pack.slice(idx)).reverse().map(st => (
+        {(kept >= need - 1 ? pack.slice(idx, idx + 1) : pack.slice(idx)).reverse().map(st => (
           <SwipeSlot key={st.card.id} top={st === pack[idx]} onFling={onFling} canSkip={canSkip} auto={auto}>
             <View style={cardSize}>
               <PolygroveCard card={st.card} demoFrame />
@@ -279,14 +286,16 @@ export default function PackOpening() {
         </Pressable>
         <Text style={s.hintC}>swipe</Text>
         <Pressable hitSlop={14} disabled={swiping} onPress={() => swipeFor(1)}>
-          <Text style={s.hintR}>journal {kept}/{PACK_SIZE} ▸</Text>
+          <Text style={s.hintR}>journal {kept}/{need} ▸</Text>
         </Pressable>
       </View>
 
       {/* "When Collecting Field Notes" — the demo's swipe tip, word for word */}
+      <LeafBurst fire={leaves} />
+
       <TipCard visible={tip}>
         <Text style={s.tipTitle}>When Collecting Field Notes</Text>
-        <Text style={s.tipSub}>Collect <Text style={s.tipGreen}>5 field note</Text> cards to add to your journal.</Text>
+        <Text style={s.tipSub}>Collect <Text style={s.tipGreen}>{need === 1 ? '1 field note' : `${need} field note`}</Text> {need === 1 ? 'card' : 'cards'} to add to your journal.</Text>
         <View style={s.tipRule} />
         <Text style={s.tipHead}>Swipe Actions</Text>
         <View style={s.tipRow}>

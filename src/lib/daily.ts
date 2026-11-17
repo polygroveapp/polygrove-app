@@ -47,9 +47,9 @@ export function useDiscoveryCountdown(): { ready: boolean; label: string } {
     return () => clearInterval(t);
   }, []);
   const ms = nextDiscoveryAt() - now;
-  if (ALWAYS_OPEN) return { ready: true, label: 'Next pack: unlimited' };   // (user, 2026-11-17: "next pack: infinite … or unlimited"); it read "Open as many as you like" until 2026-11-16 (user: remove it)
+  if (ALWAYS_OPEN) return { ready: true, label: 'Next card: Daily' };   // (user, 2026-11-17; "Next pack: unlimited" earlier that day, "Open as many as you like" before)
   if (ms <= 0) return { ready: true, label: '' };   // ("Resets every 24 hours" until 2026-11-16: the button says Daily)
   const mins = Math.ceil(ms / 60_000);   // whole minutes first, so it never reads "23h 60m"
   const h = Math.floor(mins / 60), m = mins % 60;
-  return { ready: false, label: `Next pack in ${h > 0 ? `${h}h ` : ''}${m}m` };
+  return { ready: false, label: `Next card in ${h > 0 ? `${h}h ` : ''}${m}m` };
 }

@@ -183,7 +183,7 @@ export default function Home() {
                 <Text style={s.journalTxt}>Open Journal 📖</Text>
               </LinearGradient>
             </Pressable>
-            <Text style={[s.hint, { marginBottom: 16 }]}>Browse to take quizzes</Text>
+            <Text style={[s.hint, { marginBottom: 16 }]}>Browse to take quizzes and earn <Text style={{ color: C.gold }}>Sol 🔆</Text></Text>
 
 
             {/* the ecoregion: place on the map · photo · first sentence — order is
@@ -199,7 +199,7 @@ export default function Home() {
       <TipCard visible={packsTip} maxWidth={380}>
         <Text style={s.tipTitle}> 🌲 How Packs Work 🌲</Text>
         <Text style={s.tipBody}>
-          In the game you will get one <Text style={{ color: C.green }}>Discovery Pack</Text> to open every day. To get more
+          In the game you will get one <Text style={{ color: C.green }}>Daily Discovery</Text> card every day. To get more
           cards you can open Solar Packs with <Text style={{ color: '#FFD700' }}>Sol Points 🔆</Text> which you earn through
           taking Solar Quizzes.{'\n\n'}
           <Text style={{ color: C.text }}>Try a Solar Quiz out for yourself!</Text>
