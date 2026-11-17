@@ -7,10 +7,10 @@ import { useEffect, useState } from 'react';
 
 const KEY = 'polygrove.daily.v1';
 export const RESET_MS = 24 * 60 * 60 * 1000;
-// ONE A DAY AGAIN (user, 2026-11-16: "if you press it you get one … and then it greys out
-// saying come back tomorrow"). From 2026-10-02 to then the wait was off ("make it so daily
-// packs always open"); flip this to true to bring that back.
-export const ALWAYS_OPEN = false;
+// ALWAYS OPEN (user, 2026-11-17: "make it so the daily discovery is a pack you can open
+// up infinitely"; first asked 2026-10-02). One a day came back for a day on 2026-11-16
+// ("it greys out saying come back tomorrow") — that code stays; flip this to false for it.
+export const ALWAYS_OPEN = true;
 let _lastAt = 0;
 let _loaded: Promise<void> | null = null;
 
@@ -47,7 +47,7 @@ export function useDiscoveryCountdown(): { ready: boolean; label: string } {
     return () => clearInterval(t);
   }, []);
   const ms = nextDiscoveryAt() - now;
-  if (ALWAYS_OPEN) return { ready: true, label: '' };   // it read "Open as many as you like" until 2026-11-16 (user: remove it)
+  if (ALWAYS_OPEN) return { ready: true, label: 'Next pack: unlimited' };   // (user, 2026-11-17: "next pack: infinite … or unlimited"); it read "Open as many as you like" until 2026-11-16 (user: remove it)
   if (ms <= 0) return { ready: true, label: '' };   // ("Resets every 24 hours" until 2026-11-16: the button says Daily)
   const mins = Math.ceil(ms / 60_000);   // whole minutes first, so it never reads "23h 60m"
   const h = Math.floor(mins / 60), m = mins % 60;
