@@ -6,7 +6,7 @@
 
 import { useRouter } from 'expo-router';
 import { openWeb as openPage } from '../lib/web';   // `openWeb` here is the card's own food-web expander
-import { ReactNode, RefObject, useEffect, useRef, useState } from 'react';
+import { ReactNode, RefObject, useEffect, useRef, useState, createContext, useContext } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { interpolate, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -39,6 +39,10 @@ let _glowSeq = 0;
 // missing: an INCOMPLETE card, previewed "as it could be" — the facts the
 // database doesn't have yet are written in red.
 const MISSING_RED = '#E57373';
+// NO DROP SHADOW inside a sideways scroller (the journal's card row): a scroller clips at its
+// own edge, and the card's wide shadow, cut off there, drew a hard line across the page
+// between the cards and the hexagons (user, 2026-11-17). The row sets this; the card obeys.
+export const FlatCard = createContext(false);
 // the least height at which a face shows everything without clipping (see fitStyle)
 const FIT_H = 505, FIT_H_DEMO = 545;   // the pack's card (demoFrame) has a bigger photo
 // photoFrom (user, 2026-10-07: the pick question's cards each showed their
@@ -93,6 +97,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
   const [flipped, setFlipped] = useState(false);
   const [srcPop, setSrcPop] = useState<{ label: string; source: string; confidence: string } | null>(null);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);   // the space the card was given
+  const flat = useContext(FlatCard);
 
   // "Tap to expand" opens the food web FULL SCREEN (user, 2026-10-06: "like
   // it was before and on the website" — the website's fwExpand overlay). For
@@ -173,7 +178,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
       onLayout={e => { const { width, height } = e.nativeEvent.layout; if (!box || Math.abs(box.w - width) > 0.5 || Math.abs(box.h - height) > 0.5) setBox({ w: width, h: height }); }}>
       <View style={fitStyle}>
       {/* FRONT — .face.front */}
-      <Animated.View style={[s.phone, demoFrame && s.phoneDemo, frontStyle]}>
+      <Animated.View style={[s.phone, demoFrame && s.phoneDemo, flat && s.phoneFlat, frontStyle]}>
         <View style={s.site}>
           <Text style={s.siteGlyph}>⚑</Text>
           <Text style={s.siteMid}>polygrove.io</Text>
@@ -221,7 +226,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
       </Animated.View>
 
       {/* BACK — .face.back */}
-      <Animated.View style={[s.phone, demoFrame && s.phoneDemo, backStyle]}>
+      <Animated.View style={[s.phone, demoFrame && s.phoneDemo, flat && s.phoneFlat, backStyle]}>
         <View style={s.head}>
           <HexPhoto uri={own ?? alt?.url ?? pf(face.id, 120)} frame={frame} width={46} height={52} borderColor={tc} borderWidth={4} />
           <View style={{ flex: 1, marginLeft: 12 }}>
@@ -468,6 +473,7 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 40, shadowOffset: { width: 0, height: 14 },
     elevation: 12, backfaceVisibility: 'hidden', overflow: 'hidden',
   },
+  phoneFlat: { shadowOpacity: 0, elevation: 0 },
   // .dc-site
   site: { flexDirection: 'row', alignItems: 'center', paddingTop: 2, paddingBottom: 7 },
   siteGlyph: { color: '#666666', fontSize: 14, fontFamily: F.sans, lineHeight: 17, width: 23, textAlign: 'center' },

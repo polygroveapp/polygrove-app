@@ -35,7 +35,6 @@ import { SOLAR_PACK_COST, canAffordSolar, loadSol, spendSol } from '../lib/sol';
 import { loadTips, markTip, queuePacksPopup, tipSeen } from '../lib/tips';
 import { campSpot, currentEco, ecoMembers, loadCurrentEco } from '../lib/ecoregions';
 import { getPinDraw } from '../lib/mapLook';
-import LeafBurst, { LEAF_BURST_MS } from '../components/LeafBurst';
 import { pinRanking } from '../lib/nearby';
 import { getPin } from '../lib/pin';
 import {
@@ -100,7 +99,9 @@ export default function PackOpening() {
   const need = solar ? PACK_SIZE : 1;
   // …AND IT IS SIMPLY UNLOCKED (user, 2026-11-17: "for the daily you don't get to pass you
   // just unlock the card and press ok"): no swiping and no spares — the card goes into the
-  // journal as it is shown, leaves fly, and an OK button takes you back to Camp
+  // journal as it is shown. Under it a gold Take Solar Quiz button starts that card's quiz
+  // ("put Take Solar Quiz gold button instead of the ok button"), and a small link goes back
+  // to Camp. (Leaves burst out for a few hours that day; "and remove animation".)
   const daily = !solar;
   const [okPressed, setOkPressed] = useState(false);
   // every pack pops the queue's front (one code path, photos already on
@@ -200,7 +201,6 @@ export default function PackOpening() {
   // "Your Pack" gallery). A first pack still queues "How Packs Work" for the
   // next time Camp comes forward.
   const keptIds = useRef<string[]>([]);
-  const [leaves, setLeaves] = useState(0);   // goes up each time a card is journaled: a burst of leaves
   // the daily card is journaled the moment it is shown
   const unlocked = useRef(false);
   useEffect(() => {
@@ -209,7 +209,6 @@ export default function PackOpening() {
     addToCollection(eid ?? currentEco()!.eid, pack[0].card);
     keptIds.current.push(pack[0].card.id);
     snapshotStashed(pack[0]);   // journal = offline forever
-    setLeaves(n => n + 1);
   }, [daily, pack, eid]);
   const over = !!pack && (done || idx >= pack.length);
   useEffect(() => {
@@ -218,8 +217,7 @@ export default function PackOpening() {
     // STRAIGHT HOME (user, 2026-10-08: "remove this screen" — the pack's own
     // gallery, "Your Pack · 5 journaled", with Take Solar Quiz / Journal, is gone;
     // the cards are in the journal and the Camp page has both buttons)
-    // …once the last card's leaves have flown (2026-11-17; it left after 100 ms before)
-    const t = setTimeout(() => router.replace({ pathname: '/', params: { tab: '1' } }), !daily && keptIds.current.length ? LEAF_BURST_MS - 250 : 100);
+    const t = setTimeout(() => router.replace({ pathname: '/', params: { tab: '1' } }), 100);
     return () => clearTimeout(t);
   }, [over, router, daily]);
   // the DEMO's sizing, verbatim (RecentCardGallery: height min(600px,
@@ -231,7 +229,7 @@ export default function PackOpening() {
   // the status bar — with the footer directly beneath it
   const cardSize = {
     width: Math.min(win.width - 40, 340),
-    height: win.height - insets.top - insets.bottom - 16 - (daily ? 92 : 62),   // the daily card leaves room for its OK button
+    height: win.height - insets.top - insets.bottom - 16 - (daily ? 118 : 62),   // the daily card leaves room for its quiz button and the link under it
   };
 
   if (noNet) return (
@@ -250,7 +248,7 @@ export default function PackOpening() {
   );
   if (!pack) return <View style={s.root} />;
 
-  if (over) return <View style={s.root}><LeafBurst fire={leaves} /></View>;   // on its way home, the last leaves still flying
+  if (over) return <View style={s.root} />;   // on its way home
 
   const onSwiped = (dir: 1 | -1) => {
     if (dir === 1) {
@@ -265,8 +263,7 @@ export default function PackOpening() {
     setIdx(i => i + 1);
   };
   // the demo: setTimeout(() => onSwipe(d), 300)
-  // a kept card sets the leaves off as it flies (user, 2026-11-17)
-  const onFling = (dir: 1 | -1) => { setSwiping(true); if (dir === 1) setLeaves(n => n + 1); setTimeout(() => { onSwiped(dir); setSwiping(false); }, 300); };
+  const onFling = (dir: 1 | -1) => { setSwiping(true); setTimeout(() => { onSwiped(dir); setSwiping(false); }, 300); };
   const swipeFor = (dir: 1 | -1) => setAuto(a => ({ dir, n: (a?.n ?? 0) + 1 }));
 
   return (
@@ -300,9 +297,18 @@ export default function PackOpening() {
       {/* footer (user, 2026-09-29): "Pass" (not skip) · SWIPE · journal k/5 — and the
           two sides are buttons: a tap swipes the top card that way */}
       {daily ? (
-        <Pressable onPress={() => setOkPressed(true)} style={s.okBtn} accessibilityRole="button">
-          <Text style={s.okTxt}>OK</Text>
-        </Pressable>
+        <View style={s.dailyFoot}>
+          {/* straight to this card's Solar Quiz; the pack screen is replaced, so the quiz's ‹ goes to Camp */}
+          <Pressable accessibilityRole="button" style={s.quizBtn}
+            onPress={() => { if (!tipSeen('firstPack')) markTip('firstPack'); router.replace({ pathname: '/quiz/[id]', params: { id: pack[0].card.id } }); }}>
+            <LinearGradient colors={['#5a4a12', '#8a6d1a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.quizGrad}>
+              <Text style={s.okTxt}>Take Solar Quiz ☀️</Text>
+            </LinearGradient>
+          </Pressable>
+          <Pressable onPress={() => setOkPressed(true)} hitSlop={10} accessibilityRole="button">
+            <Text style={s.backTxt}>Back to Camp</Text>
+          </Pressable>
+        </View>
       ) : (
       <View style={s.hintRow}>
         <Pressable hitSlop={14} disabled={!canSkip || swiping} onPress={() => swipeFor(-1)}>
@@ -318,8 +324,6 @@ export default function PackOpening() {
       )}
 
       {/* "When Collecting Field Notes" — the demo's swipe tip, word for word */}
-      <LeafBurst fire={leaves} />
-
       <TipCard visible={tip}>
         <Text style={s.tipTitle}>When Collecting Field Notes</Text>
         <Text style={s.tipSub}>Collect <Text style={s.tipGreen}>{need === 1 ? '1 field note' : `${need} field note`}</Text> {need === 1 ? 'card' : 'cards'} to add to your journal.</Text>
@@ -437,7 +441,10 @@ const s = StyleSheet.create({
   // the demo's footer: 12px #666 · 10px #555 uppercase, 2px tracking · 12px #4CAF50 600
   hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 4, paddingHorizontal: 20 },
   // the daily card's one button
-  okBtn: { alignSelf: 'center', width: '100%', maxWidth: 340, marginTop: 12, paddingVertical: 15, borderRadius: 16, backgroundColor: '#2E7D32', alignItems: 'center' },
+  dailyFoot: { alignSelf: 'center', width: '100%', maxWidth: 340, marginTop: 12, alignItems: 'center', gap: 10 },
+  quizBtn: { alignSelf: 'stretch', borderRadius: 16, overflow: 'hidden' },
+  quizGrad: { paddingVertical: 15, alignItems: 'center' },
+  backTxt: { fontFamily: F.sansMed, fontSize: 12, color: '#9a9a9a' },
   okTxt: { fontFamily: F.display, fontSize: 16, color: C.text },
   hintL: { fontFamily: F.sansMed, fontSize: 12, color: C.text },   // Pass in WHITE (user, 2026-09-29)
   hintC: { fontFamily: F.sansBold, fontSize: 10, color: '#8B5035', textTransform: 'uppercase', letterSpacing: 2, marginTop: 3 },   // SWIPE in the header's BROWN (user, 2026-09-29; grey was tried)

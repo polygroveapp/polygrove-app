@@ -9,12 +9,12 @@
 // steps to the next or previous cell, and the comb follows.
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { SharedValue, runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { F } from '../constants/polygrove';
 import { Frame } from '../lib/catalog';
 import HexThumb from './HexThumb';
+import { FlatCard } from './PolygroveCard';
 
 export type Comb = {
   key: string;
@@ -36,51 +36,61 @@ const PITCH = H * 0.75 + GAP / 2, STEP = W + GAP;
 // step through its comb. A screen with several combs renders ONE of these
 // above them all, controlling each comb's pick (user, 2026-10-06: "put this
 // above cards from your sightings. only one can be displayed at once").
+// IT IS A PLAIN SIDEWAYS SCROLL (user, 2026-11-17: "make the friction to swipe left or
+// right on the journal screens … just a scroll — no friction"). From 2026-10-06 the row
+// was moved by a pan gesture and a spring, which on a phone's browser felt sticky: the
+// finger had to travel 8 px before anything moved and the spring pulled against a fling.
+// Now the system's own scroller carries the row, with its own momentum, and each card
+// snaps to the middle when it comes to rest.
 export function ShownCard({ cells, picked, onPick }: { cells: Comb[]; picked: string | null; onPick: (key: string | null) => void }) {
   const win = useWindowDimensions();
   const idx = cells.findIndex(c => c.key === picked);
   const cardSize = { width: Math.min(win.width - 48, 340), height: Math.min(530, Math.round(win.height * 0.61)) };
-  const step = cardSize.width + 18;
-  // ONE FLUID MOTION (user, 2026-10-06): the row's position is a fractional
-  // index that follows the finger and springs to the nearest card, carried
-  // on by the fling — the neighbours ride alongside, as in a hand of cards
-  const pos = useSharedValue(Math.max(0, idx));
-  const start = useSharedValue(0);
-  const SNAP = { damping: 22, stiffness: 190, mass: 0.7 };
-  const land = (t: number) => { if (cells[t]) onPick(cells[t].key); };
+  const GAP = 18;
+  const step = cardSize.width + GAP;
+  const side = Math.max(0, (win.width - cardSize.width) / 2);   // room either side, so the first and last card can sit in the middle
   const n = cells.length;
-  const pan = Gesture.Pan()
-    .activeOffsetX([-8, 8])
-    .onStart(() => { start.value = pos.value; })
-    .onChange(e => {
-      const raw = start.value - e.translationX / step;
-      pos.value = raw < 0 ? raw * 0.35 : raw > n - 1 ? n - 1 + (raw - (n - 1)) * 0.35 : raw;
-    })
-    .onEnd(e => {
-      const target = Math.max(0, Math.min(n - 1, Math.round(pos.value - (e.velocityX / step) * 0.25)));
-      pos.value = withSpring(target, { ...SNAP, velocity: -e.velocityX / step });
-      runOnJS(land)(target);
-    });
-  // the comb picked a new cell (a tap): glide there
-  useEffect(() => { if (idx >= 0 && Math.abs(pos.value - idx) > 0.001) pos.value = withSpring(idx, SNAP); }, [idx]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const ref = useRef<ScrollView>(null);
+  const at = useRef(-1);          // the card the scroller is resting on
+  const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // the comb picked a new cell (a tap), or the first showing: bring that card to the middle
+  useEffect(() => {
+    if (idx < 0 || idx === at.current) return;
+    const first = at.current < 0;
+    at.current = idx;
+    ref.current?.scrollTo({ x: idx * step, animated: !first });
+  }, [idx, step]);
+  useEffect(() => () => { if (settle.current) clearTimeout(settle.current); }, []);
   if (idx < 0) return null;
-  // the card on show and up to two neighbours each side: enough to fill a fling
-  const lo = Math.max(0, idx - 2), hi = Math.min(n - 1, idx + 2);
-  const slots: ReactNode[] = [];
-  for (let i = lo; i <= hi; i++) slots.push(<Slot key={cells[i].key} i={i} pos={pos} step={step} active={i === idx} size={cardSize}>{cells[i].card?.()}</Slot>);
+  // the row has stopped moving (no scroll event for a moment): the card in the middle is the pick
+  const onScroll = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+    const i = Math.max(0, Math.min(n - 1, Math.round(e.nativeEvent.contentOffset.x / step)));
+    if (settle.current) clearTimeout(settle.current);
+    const pick = () => { if (i !== at.current && cells[i]) { at.current = i; onPick(cells[i].key); } };
+    // a long fling: follow it as it goes, so the cards it passes are drawn and not blank
+    if (Math.abs(i - at.current) >= 2) pick(); else settle.current = setTimeout(pick, 90);
+  };
   return (
     <View style={s.cardWrap}>
-      <GestureDetector gesture={pan} touchAction="pan-y">
-        <Animated.View style={[cardSize, { overflow: 'visible' }]}>{slots}</Animated.View>
-      </GestureDetector>
+      <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false}
+        onScroll={onScroll} scrollEventThrottle={16}
+        contentOffset={{ x: Math.max(0, idx) * step, y: 0 }}
+        snapToInterval={step} decelerationRate="fast" disableIntervalMomentum={false}
+        style={[{ width: win.width, height: cardSize.height, flexGrow: 0 }, WEB_SNAP_ROW]}
+        contentContainerStyle={{ paddingHorizontal: side }}>
+        {cells.map((c, i) => (
+          // only the card on show and three neighbours each side are drawn; the rest hold their place as blank cards
+          <View key={c.key} style={[cardSize, i < n - 1 && { marginRight: GAP }, WEB_SNAP_CARD, Math.abs(i - idx) > 3 && s.cardGhost]}>
+            {Math.abs(i - idx) <= 3 ? <FlatCard.Provider value>{c.card?.()}</FlatCard.Provider> : null}
+          </View>
+        ))}
+      </ScrollView>
     </View>
   );
 }
-
-function Slot({ i, pos, step, active, size, children }: { i: number; pos: SharedValue<number>; step: number; active: boolean; size: { width: number; height: number }; children: ReactNode }) {
-  const at = useAnimatedStyle(() => ({ transform: [{ translateX: (i - pos.value) * step }] }));
-  return <Animated.View pointerEvents={active ? 'auto' : 'none'} style={[size, { position: 'absolute', top: 0, left: 0 }, at]}>{children}</Animated.View>;
-}
+// the browser's own snapping (React Native's snapToInterval does nothing on the web)
+const WEB_SNAP_ROW = Platform.OS === 'web' ? ({ scrollSnapType: 'x mandatory' } as object) : null;
+const WEB_SNAP_CARD = Platform.OS === 'web' ? ({ scrollSnapAlign: 'center' } as object) : null;
 
 // glowKey: the fresh Solar card (the journal's gold pulse) — picked at the start.
 // picked/onPick: a screen that shows the card itself (ShownCard) controls the
@@ -175,7 +185,8 @@ export default function Honeycomb({ cells, label, glowKey, rows = 3, picked: pic
 
 const s = StyleSheet.create({
   label: { fontFamily: F.sansBold, fontSize: 11, color: '#777', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-  cardWrap: { alignItems: 'center', marginBottom: 12, gap: 6 },
+  cardGhost: { backgroundColor: '#1a1a1a', borderRadius: 22, borderWidth: 1, borderColor: '#333333' },
+  cardWrap: { alignItems: 'center', marginBottom: 12, gap: 6 },   // the scroller inside is as wide as the window and centred, so it overhangs a padded parent evenly
   cell: { width: W, height: H, alignItems: 'center', justifyContent: 'center' },
   cellOn: { transform: [{ scale: 1.08 }] },
   fallback: { position: 'absolute', fontSize: 22 },
