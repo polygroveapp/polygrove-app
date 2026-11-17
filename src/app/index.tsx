@@ -14,7 +14,6 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNav, { NAV_HEIGHT } from '../components/BottomNav';
 import EcoHero from '../components/EcoHero';
-import SolarPicker from '../components/SolarPicker';
 import TipCard from '../components/TipCard';
 import { C, F } from '../constants/polygrove';
 import { loadCatalog } from '../lib/catalog';
@@ -32,7 +31,6 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const [ready, setReady] = useState(false);
   const [offline, setOffline] = useState(false);
-  const [picker, setPicker] = useState(false);
   // the demo's openPack(): "Opening..." for 300ms, then the deck appears in
   // place — `tab` tells the navigator not to slide the screen in
   const [opening, setOpening] = useState(false);
@@ -176,31 +174,25 @@ export default function Home() {
               <Text style={{ color: C.gold }}>Sol Points 🔆</Text>
             </Text>
 
+            {/* THE JOURNAL, under the Solar Pack and BROWN (user, 2026-11-17: "move the journal button
+                to below the open solar pack, remove the solar quiz button and make the journal
+                brown"). It sat under the ecoregion beside a Solar Quiz button until then; a card's
+                Solar Quiz now starts from its button in the Journal. */}
+            <Pressable onPress={() => router.push('/deck')} style={s.journalBtn} accessibilityRole="button">
+              <LinearGradient colors={['#5A3622', '#8B5035']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.journalGrad}>
+                <Text style={s.journalTxt}>📖 Journal</Text>
+              </LinearGradient>
+            </Pressable>
+
 
             {/* the ecoregion: place on the map · photo · first sentence — order is
-                stats → packs → this → journal/quiz (user, 2026-09-28) */}
+                stats → packs → journal → this (user, 2026-09-28; the journal moved up 2026-11-17) */}
             <EcoHero eco={eco} />
-
-            {/* journal · solar quiz (a random journaled card that isn't fully mastered) */}
-            <View style={s.row2}>
-              <Pressable onPress={() => router.push('/deck')} style={s.reviewBtn}>
-                <Text style={s.reviewTxt}>📖 Journal</Text>
-              </Pressable>
-              {/* pops the three-card picker (user, 2026-09-28) */}
-              <Pressable disabled={!owned.length} style={[s.quizBtn, !owned.length && { opacity: 0.45 }]}
-                onPress={() => setPicker(true)}>
-                <LinearGradient colors={['#1B5E20', '#2E7D32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  style={s.quizGrad}>
-                  <Text style={s.quizTxt}>☀️ Solar Quiz</Text>
-                </LinearGradient>
-              </Pressable>
-            </View>
 
           </View>
         )}
       </ScrollView>
       <BottomNav active="home" />
-      <SolarPicker visible={picker} owned={owned} onClose={() => setPicker(false)} />
       {/* the demo's first-pack popup, word for word; its button starts a quiz
           on a random journaled card that isn't fully mastered */}
       <TipCard visible={packsTip} maxWidth={380}>
@@ -274,16 +266,10 @@ const s = StyleSheet.create({
   solarBtnDim: { backgroundColor: 'rgba(255,111,0,0.2)', borderColor: 'rgba(255,111,0,0.3)' },
   solarTxt: { fontFamily: F.display, fontSize: 16, color: '#666' },
   solarSol: { fontFamily: F.sansBold, fontSize: 12, color: '#666' },
-  // review / quiz
-  row2: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  reviewBtn: {
-    flex: 1, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 16, alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: '#333',
-  },
-  reviewTxt: { fontFamily: F.display, fontSize: 13, color: '#aaa' },
-  quizBtn: { flex: 1, borderRadius: 16, overflow: 'hidden' },
-  quizGrad: { paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center' },
-  quizTxt: { fontFamily: F.display, fontSize: 13, color: C.text },
+  // the journal: the ecoregion label's brown, a full-width button like the packs
+  journalBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: 'rgba(139,80,53,0.6)' },
+  journalGrad: { paddingVertical: 15, paddingHorizontal: 20, alignItems: 'center' },
+  journalTxt: { fontFamily: F.display, fontSize: 16, color: C.text },
   // "How Packs Work" (demo values)
   tipTitle: { fontFamily: F.display, fontSize: 16, color: C.text, marginBottom: 14 },
   tipBody: { fontFamily: F.sans, fontSize: 13, color: '#aaa', lineHeight: 21.5, marginBottom: 20 },
