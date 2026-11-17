@@ -169,9 +169,10 @@ export default function Home() {
                 <Text style={s.solarSol}>{solBal}/{SOLAR_PACK_COST} Sol 🔆</Text>
               </View>
             )}
+            {/* the yellow is on the THING you do — "Solar Pack", "Solar Quizzes" — and Sol Points is
+                plain with its emoji (user, 2026-11-17; Sol Points was the yellow one before) */}
             <Text style={s.hint}>
-              {solOk ? 'Open a Solar Pack with ' : 'Take a quiz to earn '}
-              <Text style={{ color: C.gold }}>Sol Points 🔆</Text>
+              {solOk ? <>Open a <Text style={{ color: C.gold }}>Solar Pack</Text> with Sol Points 🔆</> : 'Take a quiz to earn Sol Points 🔆'}
             </Text>
 
             {/* THE JOURNAL, under the Solar Pack and BROWN (user, 2026-11-17: "move the journal button
@@ -183,7 +184,7 @@ export default function Home() {
                 <Text style={s.journalTxt}>Open Journal 📖</Text>
               </LinearGradient>
             </Pressable>
-            <Text style={[s.hint, { marginBottom: 16 }]}>Browse to take Solar Quizzes and earn <Text style={{ color: C.gold }}>Sol Points 🔆</Text></Text>
+            <Text style={[s.hint, { marginBottom: 16 }]}>Browse to take <Text style={{ color: C.gold }}>Solar Quizzes</Text> and earn Sol Points 🔆</Text>
 
 
             {/* the ecoregion: place on the map · photo · first sentence — order is
