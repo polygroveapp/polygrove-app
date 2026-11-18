@@ -24,6 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import CardAura, { CardGlow } from '../components/CardAura';
 import PolygroveCard from '../components/PolygroveCard';
 import TipCard from '../components/TipCard';
 import { C, F } from '../constants/polygrove';
@@ -290,6 +291,8 @@ export default function PackOpening() {
     <View style={[s.root, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 10 }]}>
       {/* the demo's backdrop: the app's dark green gradient, not flat black */}
       <LinearGradient colors={['#0a0f0a', '#1a2e1a', '#0f1a0f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.bg} />
+      {/* the daily card stands in turning light (user, 2026-11-18) — under the card, never over it */}
+      {daily ? <CardAura centerY={insets.top + 16 + cardSize.height / 2} /> : null}
       <View style={s.stage} onTouchStart={() => { if (!touched) setTouched(true); }}>
         {/* the demo's deck.map: EVERY remaining card is mounted and stacked
             (keyed, so none remounts when the top one leaves); the last one
@@ -302,6 +305,7 @@ export default function PackOpening() {
         {daily ? (
           <View style={s.overlay} pointerEvents="box-none">
             <View style={cardSize}>
+              <CardGlow />
               <PolygroveCard card={pack[0].card} demoFrame />
             </View>
           </View>

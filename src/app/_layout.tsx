@@ -4,15 +4,30 @@ import { useFonts } from 'expo-font';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import MapOverlay from '../components/MapOverlay';
+import PhoneFrame, { wantsFrame } from '../components/PhoneFrame';
 import Splash from '../components/Splash';
 import { C } from '../constants/polygrove';
 import { launchReset } from '../lib/launch';
 import { offlineReady } from '../lib/offline';
 
+// A WIDE BROWSER WINDOW shows the game at phone size on black (user, 2026-11-18); see
+// PhoneFrame.web.tsx. The app itself then runs inside that frame, not here, so nothing of
+// the app (fonts, the map, the saved journal) is loaded twice by this outer page.
 export default function RootLayout() {
+  const [framed, setFramed] = useState(wantsFrame);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const on = () => setFramed(wantsFrame());
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return framed ? <PhoneFrame /> : <AppRoot />;
+}
+
+function AppRoot() {
   const [fontsLoaded] = useFonts({
     DelaGothicOne_400Regular,
     DMSans_400Regular,

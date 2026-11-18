@@ -123,7 +123,7 @@ export default function PolygroveDB() {
         <GlassSegments value={where} onChange={setWhere} items={[
           // Camp · Ecoregion · All, left to right (user, 2026-11-16; All was first)
           { key: 'pin', label: '📍 Camp Location' },   // KEPT SIMPLE (user, 2026-11-17: "the camp emoji should be a pin … for DB the Near pin should be camp"): the pin IS the camp. ("📍 Pin", "⛺ Camp", "📍 Campsite", "📍 Near pin" before)
-          { key: 'tent', label: 'Ecoregion', icon: <EcoregionIcon size={17} /> },   // "Ecoregion" with a drawn ecoregion border (user, 2026-11-17: "the one that says camp should be ecoregion and have a ecoregion border")
+          { key: 'tent', label: 'Current Ecoregion', icon: <EcoregionIcon size={17} /> },   // with a drawn ecoregion border (user, 2026-11-17: "the one that says camp should be ecoregion and have a ecoregion border"); "Current Ecoregion", not just "Ecoregion" (user, 2026-11-18)
           { key: 'all', label: '🌲 All' }   // the tree, PolygroveDB's own emoji (user, 2026-11-16)
         ]} />
       </View>
