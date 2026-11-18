@@ -16,7 +16,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withSe
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CloseX from '../components/CloseX';
 import PolygroveCard from '../components/PolygroveCard';
-import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
+import { C, F, cardColor } from '../constants/polygrove';
 import { Card, cardById, getCards, loadCatalog } from '../lib/catalog';
 import { countsOf, isFullyLocked, loadMastery, useMastery } from '../lib/mastery';
 import { offlineReady } from '../lib/offline';
@@ -83,7 +83,7 @@ export default function Gallery() {
 
   const close = () => (router.canGoBack() ? router.back() : router.replace(isPack ? '/' : '/deck'));
   const cur = cards[idx];
-  const accent = cur ? TROPHIC_COLOR[cur.trophic] || C.greenSoft : C.greenSoft;
+  const accent = cardColor(cur, C.greenSoft);
 
   return (
     // the whole backdrop closes: any tap outside the card (the dark area, the
@@ -97,7 +97,7 @@ export default function Gallery() {
           <View style={s.dots}>
             {cards.map((c, i) => (
               <Pressable key={c.id} onPress={() => go(i)} hitSlop={4}
-                style={[s.dot, i === idx && { width: 16, backgroundColor: TROPHIC_COLOR[c.trophic] || accent }]} />
+                style={[s.dot, i === idx && { width: 16, backgroundColor: cardColor(c, accent) }]} />
             ))}
           </View>
         </View>

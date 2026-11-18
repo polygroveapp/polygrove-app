@@ -6,6 +6,8 @@
 //   <CardAura centerY=… />  the rays, a full-screen layer placed under the card
 //   <CardGlow />            the breathing edge, placed inside the card's own box
 // With "reduce motion" on, the rays and the glow are shown still.
+// THE SOLAR PACK HAS IT TOO (user, 2026-11-18: "can you do the same animation for the open
+// pack background"): the same motion in the Solar Pack's gold (`tone="gold"`).
 
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -32,6 +34,12 @@ function fan(n: number, wide: number, thin: number): string {
 // each copy has its own gradient ids (see CompassIcon: a shared id resolves to the first copy in the page)
 let _seq = 0;
 
+export type AuraTone = 'green' | 'gold';
+const TONES: Record<AuraTone, { a: string; b: string; glow: string }> = {
+  green: { a: '#81C784', b: '#FFE082', glow: 'rgba(129,199,132,0.6)' },   // Daily Discovery
+  gold: { a: '#FFC107', b: '#FFF3C4', glow: 'rgba(255,193,7,0.55)' },     // Solar Pack
+};
+
 function Rays({ d, color, peak, id }: { d: string; color: string; peak: number; id: string }) {
   return (
     <Svg width={D} height={D} viewBox={`0 0 ${D} ${D}`}>
@@ -48,7 +56,7 @@ function Rays({ d, color, peak, id }: { d: string; color: string; peak: number; 
   );
 }
 
-export default function CardAura({ centerY }: { centerY: number }) {
+export default function CardAura({ centerY, tone = 'green' }: { centerY: number; tone?: AuraTone }) {
   const still = useReducedMotion();
   const [u] = useState(() => `aura${++_seq}`);
   const turn = useSharedValue(0);   // 0..1, one slow lap
@@ -66,15 +74,15 @@ export default function CardAura({ centerY }: { centerY: number }) {
   return (
     <Animated.View style={[s.fill, fade]} pointerEvents="none">
       <View style={[s.hub, { top: centerY }]}>
-        <Animated.View style={[s.disc, spinA]}><Rays d={a} color="#81C784" peak={0.34} id={`${u}a`} /></Animated.View>
-        <Animated.View style={[s.disc, spinB]}><Rays d={b} color="#FFE082" peak={0.2} id={`${u}b`} /></Animated.View>
+        <Animated.View style={[s.disc, spinA]}><Rays d={a} color={TONES[tone].a} peak={0.34} id={`${u}a`} /></Animated.View>
+        <Animated.View style={[s.disc, spinB]}><Rays d={b} color={TONES[tone].b} peak={0.2} id={`${u}b`} /></Animated.View>
       </View>
     </Animated.View>
   );
 }
 
 // the card's edge, breathing — sits inside the card's box, under the card
-export function CardGlow({ radius = 22 }: { radius?: number }) {
+export function CardGlow({ radius = 22, tone = 'green' }: { radius?: number; tone?: AuraTone }) {
   const still = useReducedMotion();
   const beat = useSharedValue(0.55);
   useEffect(() => {
@@ -85,7 +93,7 @@ export function CardGlow({ radius = 22 }: { radius?: number }) {
     return () => cancelAnimation(beat);
   }, [still, beat]);
   const style = useAnimatedStyle(() => ({ opacity: beat.value }));
-  return <Animated.View pointerEvents="none" style={[s.glow, { borderRadius: radius }, style]} />;
+  return <Animated.View pointerEvents="none" style={[s.glow, { borderRadius: radius, boxShadow: `0px 0px 34px 12px ${TONES[tone].glow}` }, style]} />;
 }
 
 const s = StyleSheet.create({
@@ -93,8 +101,5 @@ const s = StyleSheet.create({
   fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' },
   hub: { position: 'absolute', left: '50%', width: 0, height: 0 },
   disc: { position: 'absolute', left: -R, top: -R, width: D, height: D },
-  glow: {
-    position: 'absolute', top: 6, left: 6, right: 6, bottom: 6,
-    boxShadow: '0px 0px 34px 12px rgba(129,199,132,0.6)',
-  },
+  glow: { position: 'absolute', top: 6, left: 6, right: 6, bottom: 6 },
 });

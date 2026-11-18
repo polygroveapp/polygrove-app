@@ -11,7 +11,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensio
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { interpolate, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
-import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
+import { C, F, cardColor } from '../constants/polygrove';
 import { Card, fmtImperial, fmtSize, parseSize, photoCommonsPage, photoFor, photoForDb, framingFor, secondPhotoOf, sizeFrac, sizeRange, soundsFor } from '../lib/catalog';
 import SoundButton from './SoundButton';
 import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
@@ -68,8 +68,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
   const noteCard = noteFrom ?? raw;
   // explorer's troColor: purple = trophic role is INFERRED (GloBI prey records),
   // not measured — the accent itself flags the uncertainty.
-  const tc = card.provenance?.feeding?.confidence === 'inferred'
-    ? '#c084fc' : TROPHIC_COLOR[card.trophic] || '#81C784';
+  const tc = cardColor(card);
   // the recording plays on quiz cards too (user, 2026-10-07: "let them play it on the
   // question if it comes up") — it is the photo species' call, so it tells no more than the photo
   const sound = soundsFor(face.sci)[0];

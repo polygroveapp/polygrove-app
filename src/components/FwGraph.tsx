@@ -5,7 +5,7 @@
 
 import { Platform } from 'react-native';
 import { G, Image as SvgImage, ClipPath, Defs, Line, Polygon, Svg, TSpan, Text as SvgText } from 'react-native-svg';
-import { F, TROPHIC_COLOR } from '../constants/polygrove';
+import { F, cardColor } from '../constants/polygrove';
 import { Card, cardByName, photoFor } from '../lib/catalog';
 
 // rnsvg's onPress on web leaks RN responder props into the DOM (console noise) —
@@ -47,7 +47,7 @@ export default function FwGraph({ card, viewW, viewH, nodeR, centerR, fontSize, 
   const prey = (card.foodweb?.eats || []).slice(0, 4);
   if (!preds.length && !prey.length) return null;
   const inst = `fw${_seq++}`;
-  const tc = TROPHIC_COLOR[card.trophic] || '#81C784';
+  const tc = cardColor(card);
   const rowOff = Math.min(viewW, viewH) * radiusFactor;
   // a one-sided web (only eaten-by, or only eats) is re-centred on its own
   // half so the drawing sits in the middle, not in the top or bottom half
@@ -81,7 +81,7 @@ export default function FwGraph({ card, viewW, viewH, nodeR, centerR, fontSize, 
       })}
       {nodes.map((sp, i) => {
         const t = cardByName(sp.name);
-        const accent = t ? (TROPHIC_COLOR[t.trophic] || '#8fa08f') : '#8fa08f';
+        const accent = cardColor(t, '#8fa08f');
         const nph = t ? photoFor(t.id, 120) : undefined;
         const cid = `${inst}n${i}`;
         const lines = fwWrap(sp.name);

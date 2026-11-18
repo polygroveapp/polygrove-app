@@ -291,8 +291,10 @@ export default function PackOpening() {
     <View style={[s.root, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 10 }]}>
       {/* the demo's backdrop: the app's dark green gradient, not flat black */}
       <LinearGradient colors={['#0a0f0a', '#1a2e1a', '#0f1a0f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.bg} />
-      {/* the daily card stands in turning light (user, 2026-11-18) — under the card, never over it */}
-      {daily ? <CardAura centerY={insets.top + 16 + cardSize.height / 2} /> : null}
+      {/* the cards stand in turning light (user, 2026-11-18) — under the card, never over it:
+          green for the Daily Discovery, gold for a Solar Pack ("the same animation for the
+          open pack background") */}
+      <CardAura centerY={insets.top + 16 + cardSize.height / 2} tone={daily ? 'green' : 'gold'} />
       <View style={s.stage} onTouchStart={() => { if (!touched) setTouched(true); }}>
         {/* the demo's deck.map: EVERY remaining card is mounted and stacked
             (keyed, so none remounts when the top one leaves); the last one
@@ -302,6 +304,12 @@ export default function PackOpening() {
             journaled the next one kept ends the pack, so the spare cards waiting
             behind it are not drawn — swiping it away used to flash a card you were
             never going to get. A skip still brings the next spare up as the top card. */}
+        {/* a Solar Pack's glow sits behind the whole stack, so it stays put while cards are swiped away */}
+        {daily ? null : (
+          <View style={s.overlay} pointerEvents="none">
+            <View style={cardSize}><CardGlow tone="gold" /></View>
+          </View>
+        )}
         {daily ? (
           <View style={s.overlay} pointerEvents="box-none">
             <View style={cardSize}>

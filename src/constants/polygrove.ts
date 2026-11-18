@@ -30,6 +30,19 @@ export const TROPHIC_COLOR: Record<string, string> = {
   Carnivore: '#E57373',
 };
 
+// PURPLE = THE FEEDING ROLE IS INFERRED, not measured (the website's troColor). Every border,
+// dot or label that wears ONE CARD's colour goes through cardColor(), so an inferred card is
+// purple everywhere — its card, its row in PolygroveDB, its hexagon on Sightings, its node in
+// a food web (user, 2026-11-18: "triple check that any borders that are supposed to be purple
+// are in fact purple" — only the card itself and the Solar picker checked; six other places
+// showed the plain role colour). Filter chips stay TROPHIC_COLOR: they name a role, not a card.
+export const INFERRED_COLOR = '#c084fc';
+export function cardColor(card: { trophic?: string | null; provenance?: Record<string, { confidence?: string }> } | null | undefined, fallback = '#81C784'): string {
+  if (!card) return fallback;
+  if (card.provenance?.feeding?.confidence === 'inferred') return INFERRED_COLOR;
+  return TROPHIC_COLOR[card.trophic ?? ''] || fallback;
+}
+
 export const TROPHIC_ORDER = ['Producer', 'Decomposer', 'Herbivore', 'Omnivore', 'Carnivore'];
 
 // the demo's Geology Mastery System (App.jsx MASTERY) — one tier per quiz

@@ -14,7 +14,7 @@ import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
 import EcoregionIcon from '../components/EcoregionIcon';
 import GlassSegments from '../components/GlassSegments';
 import HexThumb from '../components/HexThumb';
-import { C, F, TROPHIC_COLOR, TROPHIC_ORDER } from '../constants/polygrove';
+import { C, F, TROPHIC_COLOR, TROPHIC_ORDER, cardColor } from '../constants/polygrove';
 import { Card, getCards, loadCatalog, photoForDb } from '../lib/catalog';
 import { campSpot, loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
 import { ecoRanking, pinRanking } from '../lib/nearby';
@@ -122,9 +122,9 @@ export default function PolygroveDB() {
       <View style={{ marginBottom: 12 }}>
         <GlassSegments value={where} onChange={setWhere} items={[
           // Camp · Ecoregion · All, left to right (user, 2026-11-16; All was first)
-          { key: 'pin', label: '📍 Camp Location' },   // KEPT SIMPLE (user, 2026-11-17: "the camp emoji should be a pin … for DB the Near pin should be camp"): the pin IS the camp. ("📍 Pin", "⛺ Camp", "📍 Campsite", "📍 Near pin" before)
-          { key: 'tent', label: 'Current Ecoregion', icon: <EcoregionIcon size={17} /> },   // with a drawn ecoregion border (user, 2026-11-17: "the one that says camp should be ecoregion and have a ecoregion border"); "Current Ecoregion", not just "Ecoregion" (user, 2026-11-18)
-          { key: 'all', label: '🌲 All' }   // the tree, PolygroveDB's own emoji (user, 2026-11-16)
+          { key: 'pin', label: '📍 Camp Location', grow: 1.15 },   // KEPT SIMPLE (user, 2026-11-17: "the camp emoji should be a pin … for DB the Near pin should be camp"): the pin IS the camp. ("📍 Pin", "⛺ Camp", "📍 Campsite", "📍 Near pin" before)
+          { key: 'tent', label: 'Current Ecoregion', icon: <EcoregionIcon size={17} />, grow: 1.45 },   // with a drawn ecoregion border (user, 2026-11-17: "the one that says camp should be ecoregion and have a ecoregion border"); "Current Ecoregion", not just "Ecoregion" (user, 2026-11-18)
+          { key: 'all', label: '🌲 All', grow: 0.6 }   // the tree, PolygroveDB's own emoji (user, 2026-11-16)
         ]} />
       </View>
       {where === 'pin' && !spot ? <Text style={s.hint}>Press “Camp here” on the Map tab first — this lists what is seen around your camp location.</Text> : null}
@@ -178,7 +178,7 @@ export default function PolygroveDB() {
           onEndReached={() => setShownBy(prev => ({ key: filterKey, n: Math.min(rows.length, (prev.key === filterKey ? prev.n : PAGE) + PAGE) }))}
           ListEmptyComponent={!ready || rankLoading ? <ActivityIndicator color={C.green} style={{ marginTop: 40 }} /> : <Text style={s.msg}>No species match.</Text>}
           renderItem={({ item: c }) => {
-            const tc = TROPHIC_COLOR[c.trophic] || C.greenSoft;
+            const tc = cardColor(c, C.greenSoft);
             return (
               <Pressable onPress={() => router.push({ pathname: '/species/[id]', params: { id: c.id } })} style={s.row}>
                 <HexThumb uri={photoForDb(c.id, 120)} width={46} height={52} borderColor={tc} borderWidth={2.5} />

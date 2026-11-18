@@ -17,7 +17,7 @@ import PolygroveCard from '../../components/PolygroveCard';
 import QuizButton from '../../components/QuizButton';
 import RangeMap from '../../components/RangeMap';
 import SeasonStrip from '../../components/SeasonStrip';
-import { C, F, TROPHIC_COLOR } from '../../constants/polygrove';
+import { C, F, cardColor } from '../../constants/polygrove';
 import { cardById, getCards, inatPhotoOf, loadCatalog } from '../../lib/catalog';
 import { DossierSection, Seasonality, dossierSections, rangeOf, seasonalityOf } from '../../lib/dossier';
 import { EcoMeta, ecoMeta, loadEcoMeta } from '../../lib/ecoregions';
@@ -79,7 +79,7 @@ export default function Species() {
     </View>
   );
 
-  const tc = TROPHIC_COLOR[card.trophic] || C.greenSoft;   // the group label wears the role colour, like the card's border (user, 2026-10-06: 'mammal is yellow')
+  const tc = cardColor(card, C.greenSoft);   // the group label wears the role colour, like the card's border (user, 2026-10-06: 'mammal is yellow')
   const climate = card.climate as Climate | undefined;
   const diet = (card.diet as DietItem[] | undefined) ?? [];
   const prov = card.provenance ?? {};

@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
+import { C, F, cardColor } from '../constants/polygrove';
 import { cardById, loadCatalog, photoFor } from '../lib/catalog';
 import { loadCollection, useCollection } from '../lib/collection';
 import { loadCurrentEco, useCurrentEco } from '../lib/ecoregions';
@@ -54,7 +54,7 @@ export default function Journal() {
           columnWrapperStyle={{ gap: 10 }}
           renderItem={({ item }) => {
             const card = cardById(item.id);
-            const tc = card ? TROPHIC_COLOR[card.trophic] || C.dim : C.dim;
+            const tc = cardColor(card, C.dim);
             const photo = photoFor(item.id, 320);
             return (
               <Pressable onPress={() => router.push(`/species/${item.id}`)} style={[s.cell, { borderColor: tc }]}>

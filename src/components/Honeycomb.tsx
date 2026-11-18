@@ -15,6 +15,7 @@ import { F } from '../constants/polygrove';
 import { Frame } from '../lib/catalog';
 import HexThumb from './HexThumb';
 import { useCardSize } from '../lib/cardSize';
+import { useMouseDragScroll } from '../lib/dragScroll';
 import { FlatCard } from './PolygroveCard';
 
 export type Comb = {
@@ -62,6 +63,8 @@ export function ShownCard({ cells, picked, onPick }: { cells: Comb[]; picked: st
     ref.current?.scrollTo({ x: idx * step, animated: !first });
   }, [idx, step]);
   useEffect(() => () => { if (settle.current) clearTimeout(settle.current); }, []);
+  // on a computer the row can be held with the mouse and pulled from card to card
+  useMouseDragScroll(ref, { step, count: n, ready: idx >= 0 });
   if (idx < 0) return null;
   // the row has stopped moving (no scroll event for a moment): the card in the middle is the pick
   const onScroll = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
@@ -134,6 +137,7 @@ export default function Honeycomb({ cells, label, glowKey, rows = 3, picked: pic
   const idx = cells.findIndex(c => c.key === picked);
   const cur = idx >= 0 ? cells[idx] : null;
   const list = useRef<FlatList<{ c: Comb; r: number }[]>>(null);
+  useMouseDragScroll(list, { ready: cells.length > 0 });   // the comb can be pulled along with a mouse too
   // the comb follows the pick: whenever the picked cell changes, its column scrolls into view
   useEffect(() => {
     if (idx < 0) return;

@@ -19,7 +19,7 @@ import GlassSegments from '../components/GlassSegments';
 import Honeycomb, { Comb, ShownCard } from '../components/Honeycomb';
 import ViewToggle from '../components/ViewToggle';
 import { ViewMode, useViewMode } from '../lib/viewmode';
-import { C, F, TROPHIC_COLOR } from '../constants/polygrove';
+import { C, F, TROPHIC_COLOR, cardColor } from '../constants/polygrove';
 import { cardById, framingFor, loadCatalog, photoFor } from '../lib/catalog';
 import { Naturalist, searchNaturalists } from '../lib/inatPublic';
 import { ALL_FACTS, Earned, chooseMe, forgetMe, loadSightings, niceDate, partialCard, smallPhoto, syncSightings, useSightings, useSightingsRun } from '../lib/sightings';
@@ -329,7 +329,7 @@ function Cells({ cells, view, picked, onPick }: { cells: Comb[]; view: ViewMode;
 function combOf(photo: string | null | undefined, cardId: string | null, rest: Omit<Comb, 'uri' | 'frame' | 'border' | 'fallback'>, trophic?: string | null): Comb {
   const card = cardId ? cardById(cardId) : undefined;
   const role = card?.trophic || trophic || '';
-  const border = role ? TROPHIC_COLOR[role] || C.greenSoft : '#666';
+  const border = card ? cardColor(card, C.greenSoft) : role ? TROPHIC_COLOR[role] || C.greenSoft : '#666';
   const uri = smallPhoto(photo) || (cardId ? photoFor(cardId, 250) : undefined);
   return { ...rest, cardId, uri, frame: photo || !cardId ? undefined : framingFor(cardId), border, fallback: '🌿' };
 }
