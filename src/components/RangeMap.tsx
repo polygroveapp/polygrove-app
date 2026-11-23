@@ -8,8 +8,9 @@ import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebFrame as WebView } from './WebFrame';
 import { C, F } from '../constants/polygrove';
+import { DB_SITE } from '../constants/site';
 
-const URL = (sci: string, live: boolean) => `https://polygrovedb.pages.dev/map?range=${encodeURIComponent(sci)}${live ? '&live=1' : ''}`;
+const URL = (sci: string, live: boolean) => `${DB_SITE}/map?range=${encodeURIComponent(sci)}${live ? '&live=1' : ''}`;
 
 export default function RangeMap({ sci, height = 230 }: { sci: string; height?: number }) {
   const [ready, setReady] = useState(false);

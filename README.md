@@ -4,8 +4,8 @@
 ecoregions, open packs of real species that live there, and master each card
 through a six-question quiz about how it fits into its ecosystem.
 
-**Try it in your browser:** https://polygrovedb.pages.dev/app/
-· The species database behind it: https://polygrovedb.pages.dev
+**Try it in your browser:** https://polygroveapp.com
+· The species database behind it: https://polygrovedb.org
 · Data pipeline: [polygrovedb](https://github.com/polygroveapp/polygrovedb)
 
 <p>
@@ -52,7 +52,7 @@ you or your chosen place to a server. Your collection lives on your phone.
 src/app/         screens (Expo Router): map, camp, pack, journal, quiz, PolygroveDB, sightings
 src/components/  cards, honeycomb journal, map overlay, food-web graph, quiz button, WebFrame bridge
 src/lib/         catalog loading, quiz builder, mastery, offline queue, iNaturalist sync
-scripts/         deploy-web.sh: exports the web build into the PolygroveDB site at /app
+scripts/         deploy-app-site.sh: exports the web build and publishes it to polygroveapp.com
 ```
 
 ## Running it

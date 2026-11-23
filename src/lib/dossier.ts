@@ -2,7 +2,9 @@
 // explorer: the 'lead sentence' row of 'Wikipedia extracts (sourced)' — which is
 // the article's SECOND sentence since 2026-09-25 (the interesting one).
 
-const BASE = 'https://polygrovedb.pages.dev/data/dossier';
+import { DB_SITE } from '../constants/site';
+
+const BASE = `${DB_SITE}/data/dossier`;
 
 function djb2(s: string) {
   let h = 5381;
@@ -75,7 +77,7 @@ export async function dossierSections(sci: string): Promise<{ globi: DossierSect
 // RANGE BY RECORDS: every ecoregion a species is recorded in, as
 // [ecoregion id, permille of its records], descending — data/range shards,
 // keyed like the dossier
-const RANGE_BASE = 'https://polygrovedb.pages.dev/data/range';
+const RANGE_BASE = `${DB_SITE}/data/range`;
 const _range: Record<number, Promise<Record<string, [number, number][]>>> = {};
 export async function rangeOf(sci: string): Promise<[number, number][]> {
   const sh = djb2(sci);
@@ -89,6 +91,6 @@ export async function rangeOf(sci: string): Promise<[number, number][]> {
 export type Seasonality = { raw: number[]; corr: number[]; n: number };
 let _seas: Promise<Record<string, Seasonality>> | null = null;
 export function seasonalityOf(cardId: string): Promise<Seasonality | null> {
-  _seas ||= fetch('https://polygrovedb.pages.dev/data/seasonality.json').then(r => (r.ok ? r.json() : {})).catch(() => { _seas = null; return {}; });
+  _seas ||= fetch(`${DB_SITE}/data/seasonality.json`).then(r => (r.ok ? r.json() : {})).catch(() => { _seas = null; return {}; });
   return _seas.then(all => all[cardId] ?? null);
 }

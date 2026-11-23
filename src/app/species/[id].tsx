@@ -23,6 +23,7 @@ import { DossierSection, Seasonality, dossierSections, rangeOf, seasonalityOf } 
 import { EcoMeta, ecoMeta, loadEcoMeta } from '../../lib/ecoregions';
 import { offlineReady } from '../../lib/offline';
 import { openWeb } from '../../lib/web';
+import { DB_SITE } from '../../constants/site';
 
 const CONF_COLOR: Record<string, string> = { measured: '#66bb6a', definitional: '#64b5f6', derived: '#ffb74d', inferred: '#e57373' };
 type Climate = { tempC?: number | null; precipMm?: number | null; zone?: string | null };
@@ -170,8 +171,8 @@ export default function Species() {
             </View>
           ))}
         </View>
-        <Pressable onPress={() => openWeb(`https://polygrovedb.pages.dev/#${card.id}`)} hitSlop={8} style={{ alignItems: 'center', marginTop: 24 }}>
-          <Text style={s.link}>This species on polygrovedb.pages.dev ›</Text>
+        <Pressable onPress={() => openWeb(`${DB_SITE}/#/species/${card.id}`)} hitSlop={8} style={{ alignItems: 'center', marginTop: 24 }}>
+          <Text style={s.link}>This species on polygrovedb.org ›</Text>
         </Pressable>
       </ScrollView>
     </View>

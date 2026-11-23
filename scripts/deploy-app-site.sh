@@ -1,8 +1,8 @@
 #!/bin/sh
 # THE GAME'S OWN WEBSITE (user, 2026-11-17: "the DB should be the DB and the app should be
 # polygroveapp"). Exports the Expo web build for the TOP of a site and uploads it to the
-# Cloudflare Pages project `polygroveapp` — polygroveapp.pages.dev, and polygroveapp.com once
-# that address is connected. It is a single-page app with no 404.html, so Pages answers every
+# Cloudflare Pages project `polygroveapp` — polygroveapp.com (polygroveapp.pages.dev forwards
+# there, see public/index.html). It is a single-page app with no 404.html, so Pages answers every
 # route with index.html and the app's router does the rest (no _redirects needed here).
 # The game still reads its data and its map page from the PolygroveDB site.
 set -e

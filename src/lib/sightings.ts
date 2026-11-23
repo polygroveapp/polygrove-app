@@ -29,6 +29,7 @@ import { loadEcoMeta } from './ecoregions';
 import { Naturalist, Spot, countOf, gradedOf } from './inatPublic';
 import { ecoregionAt } from './locate';
 import { snapshotStashed } from './offline';
+import { DB_SITE } from '../constants/site';
 
 // one observation, as a card shows it
 export type SightingInfo = {
@@ -137,7 +138,7 @@ export function niceDate(d: string | null | undefined): string | null {
 type PoolRow = [string, string, number, string | null, string | null, string | null, string | null, string | null, string | null];
 let _pool: Promise<Map<string, PoolRow>> | null = null;
 function loadPool() {
-  _pool ||= fetch('https://polygrovedb.pages.dev/data/pool.json')
+  _pool ||= fetch(`${DB_SITE}/data/pool.json`)
     .then(r => { if (!r.ok) throw new Error(`pool ${r.status}`); return r.json(); })
     .then((rows: PoolRow[]) => new Map(rows.map(r => [String(r[0]).toLowerCase(), r])))
     .catch(e => { _pool = null; throw e; });

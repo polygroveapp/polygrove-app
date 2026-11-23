@@ -43,8 +43,9 @@ import { ecoregionAt } from '../lib/locate';
 import { getCards, loadCatalog, photoFor } from '../lib/catalog';
 import { collectedEcoregions, loadCollection, owns, useCollection } from '../lib/collection';
 import { cleanLead, ecoDeckSize, ecoMembers, ecoMeta, loadCurrentEco, loadEcoMeta, setCurrentEco, useCurrentEco, wikiUrl } from '../lib/ecoregions';
+import { DB_SITE } from '../constants/site';
 
-const PICKER_URL = 'https://polygrovedb.pages.dev/map';   // Pages serves map.html here
+const PICKER_URL = `${DB_SITE}/map`;   // Pages serves map.html here
 const HEADER_H = 62;   // the "Where are you?" bar, below the safe area
 // the sheet is a FIXED height whatever it shows: the pin sits in the middle
 // of the map above it, so a sheet that grew with its content would move the

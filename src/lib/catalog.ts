@@ -3,6 +3,8 @@
 // Key all user state by species_id (stable GBIF id), never by the slug: slugs
 // follow common names and a rename would orphan progress (decided 2026-09-24).
 
+import { DB_SITE } from '../constants/site';
+
 export type FoodwebLink = { name: string; evidence: number; card: boolean; inSet: boolean };
 export type Card = {
   id: string;              // slug — display + routing only
@@ -25,7 +27,7 @@ export type Card = {
   [k: string]: unknown;    // quiz payloads (q3/q4/...) ride along untyped for now
 };
 
-const BASE = 'https://polygrovedb.pages.dev/data';
+const BASE = `${DB_SITE}/data`;
 
 let _cards: Card[] | null = null;
 let _photos: Record<string, string> = {};

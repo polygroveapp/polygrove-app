@@ -7,8 +7,9 @@
 // files were asked for, as when the map is looked at.
 
 import { loadEcoMeta } from './ecoregions';
+import { DB_SITE } from '../constants/site';
 
-const HD = (eid: number) => `https://polygrovedb.pages.dev/data/eco_hd/${eid}.json`;
+const HD = (eid: number) => `${DB_SITE}/data/eco_hd/${eid}.json`;
 type Ring = number[][];
 type Poly = Ring[];   // outer ring, then holes
 const _polys = new Map<number, Poly[]>();

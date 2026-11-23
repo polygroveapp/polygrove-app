@@ -4,7 +4,9 @@
 // around a spot (data/near/<bx>_<by>.json, 5° blocks). Each gives
 // Map<slug, records>, most-recorded first.
 
-const BASE = 'https://polygrovedb.pages.dev/data';
+import { DB_SITE } from '../constants/site';
+
+const BASE = `${DB_SITE}/data`;
 const _eco: Record<number, Promise<[string, number][]>> = {};
 export function ecoRanking(eid: number): Promise<[string, number][]> {
   _eco[eid] ||= fetch(`${BASE}/eco_species/${eid}.json`).then(r => (r.ok ? r.json() : [])).catch(() => { delete _eco[eid]; return []; });

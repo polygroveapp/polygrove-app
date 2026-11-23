@@ -9,6 +9,7 @@ import CloseX from '../components/CloseX';
 import { C, F } from '../constants/polygrove';
 import { openWeb } from '../lib/web';
 import GreenBackdrop, { GREEN_BG } from '../components/GreenBackdrop';
+import { DB_SITE } from '../constants/site';
 
 const open = (u: string) => openWeb(u);
 
@@ -36,7 +37,7 @@ export default function About() {
           trait databases for size and diet, RESOLVE ecoregions for where things live. Tap a fact on any
           card’s back to see its source and how sure we are.
         </Text>
-        <Pressable onPress={() => open('https://polygrovedb.pages.dev/?db')}>
+        <Pressable onPress={() => open(`${DB_SITE}/?db`)}>
           <Text style={s.link}>Explore the full database ›</Text>
         </Pressable>
 
@@ -46,7 +47,7 @@ export default function About() {
           original file with its author and license.
         </Text>
 
-        <Text style={s.foot}>content: polygrovedb.pages.dev · GBIF, Wikipedia & 25 open sources</Text>
+        <Text style={s.foot}>content: polygrovedb.org · GBIF, Wikipedia & 25 open sources</Text>
       </ScrollView>
       {/* About is reached from Social now (2026-09-29), so that is the tab that stays lit */}
       <CloseX onPress={() => (router.canGoBack() ? router.back() : router.replace('/sightings'))} />

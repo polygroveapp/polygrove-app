@@ -8,6 +8,61 @@
     <meta name="theme-color" content="#0A0F09" />
     <meta name="color-scheme" content="dark" />
     <title>Polygrove</title>
+    <!--
+      A SAVED GAME MOVES WITH THE ADDRESS (2026-11-23). A browser keeps the journal, the
+      camp and the rest per address, so when the game moved to polygroveapp.com a returning
+      player would have started with nothing. Two halves, both run before the game loads:
+        1. at the game's OLD address of this same build (polygroveapp.pages.dev) the saved
+           game is read and the visitor is sent to polygroveapp.com with it after the "#".
+           The database site's old /app/ address does the same from its own page
+           (polygrovedb/explorer/app/index.html — keep the two copies of carry() the same).
+        2. at the new address a "#carry=…" is stored, once, and taken out of the address.
+      The part of an address after # is never sent to a server: it passes from one page to
+      the next inside the browser, so the game still sends nothing about a player anywhere.
+      A carried game only replaces what is here when its journal is BIGGER — a few cards
+      tried at the new address never wipe out, or get wiped out by, a long-kept journal
+      the wrong way round. Preview addresses (anything.polygroveapp.pages.dev) are left alone.
+    -->
+    <script>
+    (function(){
+      var NEW='https://polygroveapp.com/';
+      var FAMILY=/^polygrove\.(collection|mastery|sol|daily|stars|tips|eco|pin|pinDraw|custom|follows|mapLook|mapBorders|mapObs)\.v\d+$|^polygrove\.view\.v1\./;
+      function carry(){
+        try{
+          var o={}, n=0;
+          for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(FAMILY.test(k)){ o[k]=localStorage.getItem(k); n++; } }
+          var slim=null, raw=localStorage.getItem('polygrove.sightings.v1');
+          if(raw){ try{ var j=JSON.parse(raw); if(j&&j.me) slim={v:0,me:j.me,earned:j.earned||[]}; }catch(e){} }
+          if(!n&&!slim) return '';
+          var enc=function(x){ return btoa(unescape(encodeURIComponent(JSON.stringify(x)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); };
+          var LIMIT=180000;   // an address this long still works in every current browser
+          if(slim) o['polygrove.sightings.v1']=JSON.stringify(slim);
+          var out=enc(o);
+          if(out.length>LIMIT&&slim){ o['polygrove.sightings.v1']=JSON.stringify({v:0,me:slim.me,earned:[]}); out=enc(o); }
+          if(out.length>LIMIT){ delete o['polygrove.custom.v1']; out=enc(o); }
+          return out.length>LIMIT?'':'#carry='+out;
+        }catch(e){ return ''; }
+      }
+      // how many cards a stored journal holds ({ecoregion: {species: card}})
+      function cards(json){ try{ var d=JSON.parse(json||'{}'), t=0; for(var e in d) for(var s in d[e]) t++; return t; }catch(e){ return 0; } }
+      try{
+        if(location.hostname==='polygroveapp.pages.dev'){ location.replace(NEW+carry()); return; }
+        var m=/^#carry=([A-Za-z0-9_-]+)$/.exec(location.hash);
+        if(!m) return;
+        history.replaceState(null,'',location.pathname+location.search);
+        var b=m[1].replace(/-/g,'+').replace(/_/g,'/'); while(b.length%4) b+='=';
+        var o=JSON.parse(decodeURIComponent(escape(atob(b))));
+        var here=localStorage.getItem('polygrove.collection.v2'), camp=localStorage.getItem('polygrove.eco.v1');
+        var incoming=cards(o['polygrove.collection.v2']);
+        // an untouched game takes whatever arrives; a game in progress only gives way to a bigger journal
+        if((here||camp) && incoming<=cards(here)) return;
+        var old=[];
+        for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(/^polygrove\./.test(k)) old.push(k); }
+        for(var q=0;q<old.length;q++) localStorage.removeItem(old[q]);
+        for(var key in o) if((FAMILY.test(key)||key==='polygrove.sightings.v1')&&typeof o[key]==='string') localStorage.setItem(key,o[key]);
+      }catch(e){}
+    })();
+    </script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       html,

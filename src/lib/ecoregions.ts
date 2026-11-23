@@ -7,6 +7,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 import { Card, getCards, onPhotosLoaded, photoFor, photosLoaded } from './catalog';
+import { DB_SITE } from '../constants/site';
 
 // lead = the Wikipedia article's first sentence; photo = its lead image (CC/PD, credited)
 export type EcoMeta = {
@@ -32,8 +33,8 @@ export function campSpot(camp: CurrentEco | null, pin: { lng: number; lat: numbe
   return pin && pin.eid === camp.eid ? { lng: pin.lng, lat: pin.lat } : null;
 }
 
-const META_URL = 'https://polygrovedb.pages.dev/data/eco_meta.json';
-export const ECO_GEOMETRY_URL = 'https://polygrovedb.pages.dev/data/eco_simple.geojson';
+const META_URL = `${DB_SITE}/data/eco_meta.json`;
+export const ECO_GEOMETRY_URL = `${DB_SITE}/data/eco_simple.geojson`;
 const KEY = 'polygrove.eco.v1';
 
 let _meta: Record<string, EcoMeta> | null = null;

@@ -15,8 +15,9 @@ import { WebFrame as WebView } from './WebFrame';
 import { F } from '../constants/polygrove';
 import { cleanLead, CurrentEco, ecoMeta, loadEcoMeta, wikiUrl } from '../lib/ecoregions';
 import { MINI_VERSION, saveMiniMap, useMiniMap } from '../lib/minimap';
+import { DB_SITE } from '../constants/site';
 
-const MINI_URL = 'https://polygrovedb.pages.dev/map?mini=';
+const MINI_URL = `${DB_SITE}/map?mini=`;
 // the page's address carries the picture version, and the WebView keeps no cache: a redraw must
 // never come from a stale copy of the page (2026-10-07: v7 pictures were redrawn from an old one)
 
