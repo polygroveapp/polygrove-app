@@ -53,14 +53,9 @@ export function optionPhoto(name: string): { uri: string; id?: string; credit?: 
   const o = _optPhoto[name];
   return o ? { uri: o.url, credit: o } : undefined;
 }
-// A SECOND PHOTO for the quiz's last question (user, 2026-10-18: "don't put the
-// original photo of the animal if we can, put a second photo of the species"):
-// "Is this your card?" showed the card's own picture, so remembering the image
-// was enough. data/second_photos.json (polygrovedb's fetch_second_photos.py) has
-// another licensed iNaturalist photo of the species, never the one on the card.
-// Quiz cards are not collected, so iNaturalist is allowed here, as for options.
-let _second: Record<string, InatPhoto> = {};
-export const secondPhotoOf = (id: string): InatPhoto | undefined => _second[id];
+// The quiz's last question shows each card's own photo again (user, 2026-11-24). The
+// second photos tried from 2026-10-18 are still on the site (data/second_photos.json,
+// polygrovedb's fetch_second_photos.py) but the app no longer loads them.
 export const inatPhotoOf = (id: string): InatPhoto | undefined => (_photos[id] ? undefined : _inat[id]);
 // how each photo sits in the card's hexagon (framing.json — only the cards
 // whose subject a centre crop would cut): [aspect, scale, cx, cy]
@@ -85,7 +80,6 @@ export function loadCatalog(onStage?: (s: string) => void) {
     for (const c of cards) { const q = quiz[c.id]; if (q) Object.assign(c, q); }
     onStage?.('Fetching photos…');
     const [photos, inat] = await Promise.all([fetchPhotos(), fetchInat()]);   // together: deck membership reads both
-    fetch(`${BASE}/second_photos.json`).then(r => (r.ok ? r.json() : {})).then((o: Record<string, InatPhoto>) => { _second = o || {}; }).catch(() => {});
     fetch(`${BASE}/option_photos.json`).then(r => (r.ok ? r.json() : {})).then((o: Record<string, InatPhoto>) => { _optPhoto = o || {}; }).catch(() => {});
     // a failed photo index must not stick (2026-10-06: a sheet read "37 / 0
     // species in deck" — with no index every deck counted as empty, while the

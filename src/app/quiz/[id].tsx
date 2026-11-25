@@ -319,7 +319,7 @@ function PickCards({ q, done, onAnswer, onReshuffle }: { q: Extract<Q, { type: '
                     is the photo and the field note, never the name */}
                 {/* every card wears the CORRECT card's facts; only its photo (with its recording)
                     and its field note come from the species it is built on (user, 2026-10-07) */}
-                <PolygroveCard card={targetCard ?? c.card} photoFrom={c.card} noteFrom={c.noteFrom ?? c.card} nameAs={done ? undefined : target} secondPhoto />
+                <PolygroveCard card={targetCard ?? c.card} photoFrom={c.card} noteFrom={c.noteFrom ?? c.card} nameAs={done ? undefined : target} />
               </Slot>
             );
           })}

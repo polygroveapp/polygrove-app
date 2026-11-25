@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { interpolate, interpolateColor, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Defs, RadialGradient, Rect, Stop, Svg } from 'react-native-svg';
 import { C, F, cardColor } from '../constants/polygrove';
-import { Card, fmtImperial, fmtSize, parseSize, photoCommonsPage, photoFor, photoForDb, framingFor, secondPhotoOf, sizeFrac, sizeRange, soundsFor } from '../lib/catalog';
+import { Card, fmtImperial, fmtSize, parseSize, photoCommonsPage, photoFor, photoForDb, framingFor, sizeFrac, sizeRange, soundsFor } from '../lib/catalog';
 import SoundButton from './SoundButton';
 import { GlobiRow, fieldNote, globiRecords } from '../lib/dossier';
 import { FactKey, SightingInfo, niceDate } from '../lib/sightings';
@@ -54,13 +54,14 @@ const FIT_H = 505, FIT_H_DEMO = CARD_FULL_H;   // the pack's card (demoFrame, th
 // the name shown when the names are revealed — come from this other card. A
 // recording always belongs to the photo it plays over (user, same day: "a
 // woodpecker audio should always go with a woodpecker photo").
-// secondPhoto (user, 2026-10-18): the quiz's last question shows ANOTHER photo of
-// the species where there is one, so the card's own picture can't be matched by eye
+// The quiz's last question shows each card's OWN photo (user, 2026-11-24: "the question is
+// is this your card, so it should be the photo of the card"). From 2026-10-18 until then it
+// showed a second iNaturalist photo of the species instead.
 // dbPhoto (user, 2026-10-08): the PolygroveDB tab's species page may show an
 // iNaturalist fill-in photo; a card anywhere else never does
-export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, photoFrom, nameAs, demoFrame = true, sighting, missing, dbPhoto = false, secondPhoto = false }:
+export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, photoFrom, nameAs, demoFrame = true, sighting, missing, dbPhoto = false }:
   { card: Card; anonymous?: boolean; noteFrom?: Card; photoFrom?: Card; nameAs?: { name: string; sci: string }; demoFrame?: boolean;
-    sighting?: SightingInfo; missing?: FactKey[]; dbPhoto?: boolean; secondPhoto?: boolean }) {
+    sighting?: SightingInfo; missing?: FactKey[]; dbPhoto?: boolean }) {
   const lacks = (k: FactKey) => !!missing?.includes(k);
   const face = photoFrom ?? raw;   // whose picture (and sound) this is
   const card = nameAs ? { ...raw, name: `${nameAs.name}?`, sci: nameAs.sci } : anonymous ? { ...raw, name: '???', sci: '· · ·' } : { ...raw, name: face.name, sci: face.sci };
@@ -74,10 +75,9 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
   const sound = soundsFor(face.sci)[0];
   const own = sighting?.photo || undefined;             // your photo, uncropped by our framing data
   const pf = dbPhoto ? photoForDb : photoFor;
-  const alt = !own && secondPhoto ? secondPhotoOf(face.id) : undefined;   // its ⓘ opens the iNaturalist photo page, credited there
-  const photo = own ?? alt?.url ?? pf(face.id, 500);
-  const frame = own || alt ? undefined : framingFor(face.id);
-  const commons = sighting ? sighting.uri : alt ? alt.page : photoCommonsPage(face.id);
+  const photo = own ?? pf(face.id, 500);
+  const frame = own ? undefined : framingFor(face.id);
+  const commons = sighting ? sighting.uri : photoCommonsPage(face.id);
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => {
     let on = true;
@@ -228,7 +228,7 @@ export default function PolygroveCard({ card: raw, anonymous = false, noteFrom, 
       {/* BACK — .face.back */}
       <Animated.View style={[s.phone, demoFrame && s.phoneDemo, flat && s.phoneFlat, backStyle]}>
         <View style={s.head}>
-          <HexPhoto uri={own ?? alt?.url ?? pf(face.id, 120)} frame={frame} width={46} height={52} borderColor={tc} borderWidth={4} />
+          <HexPhoto uri={own ?? pf(face.id, 120)} frame={frame} width={46} height={52} borderColor={tc} borderWidth={4} />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.name} numberOfLines={1}>{card.name}</Text>
             <Text style={s.sci} numberOfLines={1}>{card.sci}</Text>
